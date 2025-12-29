@@ -41,7 +41,7 @@ export default function AdminDashboard() {
   );
 
   return (
-    <>
+    <div className="max-w-7xl p-6">
       <h1 className="text-xl font-semibold text-gray-900 mb-6">
         Admin Dashboard
       </h1>
@@ -52,6 +52,6 @@ export default function AdminDashboard() {
         <Card label="Pending Approvals" value={stats.pendingVendors} />
         <Card label="Products" value={stats.products} />
       </div>
-    </>
+    </div>
   );
 }

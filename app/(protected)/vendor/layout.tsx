@@ -8,6 +8,7 @@ import {
   Package,
   User,
   Menu,
+  MessageSquareText,
   X,
 } from "lucide-react";
 
@@ -16,6 +17,11 @@ const navItems = [
     name: "Dashboard",
     href: "/vendor/dashboard",
     icon: LayoutDashboard,
+  },
+   {
+    name: "Enquiries",
+    href: "/vendor/enquiries",       
+    icon: MessageSquareText,
   },
   {
     name: "Products",

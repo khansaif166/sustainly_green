@@ -10,6 +10,15 @@ import { auth, db, setLocalPersistence } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { sendEmailVerification } from "firebase/auth";
+
+// React Icons
+import {
+  HiBadgeCheck,
+  HiGlobeAlt,
+  HiShieldCheck,
+  HiOfficeBuilding,
+} from "react-icons/hi";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -18,7 +27,6 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -26,18 +34,24 @@ export default function RegisterPage() {
 
     try {
       await setLocalPersistence();
+
+      // 1️⃣ Create user
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const user = cred.user as User;
 
+      // 2️⃣ Set display name
       await updateProfile(user, { displayName: email.split("@")[0] });
 
+      // 3️⃣ Save user profile
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         email: user.email,
         role,
+        emailVerified: false, // 👈 OPTIONAL (for Firestore reference)
         createdAt: serverTimestamp(),
       });
 
+      // 4️⃣ Vendor doc
       if (role === "VENDOR") {
         await setDoc(doc(db, "vendors", user.uid), {
           uid: user.uid,
@@ -48,7 +62,11 @@ export default function RegisterPage() {
         });
       }
 
-      router.push("/login");
+      // 5️⃣ SEND EMAIL VERIFICATION
+      await sendEmailVerification(user);
+
+      // 6️⃣ Redirect to verify email screen
+      router.push("/verify-email");
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Registration failed");
@@ -58,26 +76,68 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        {/* Card */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <main className="min-h-screen grid grid-cols-1 md:grid-cols-2">
+      {/* ================= LEFT BRAND PANEL ================= */}
+      <div className="hidden md:flex relative flex-col justify-center px-12 bg-gradient-to-br from-green-900 to-emerald-700 text-white">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-20"
+          style={{ backgroundImage: "url('/images/register-bg.jpg')" }}
+        />
+
+        <div className="relative z-10 max-w-lg">
+          <h1 className="text-3xl font-bold leading-tight">
+            Sign in to your <br /> global business workspace
+          </h1>
+
+          <p className="mt-4 text-sm text-green-100">
+            Manage products, connect with verified buyers, and grow your
+            business across international markets on a trusted B2B platform.
+          </p>
+
+          <ul className="mt-6 space-y-4 text-sm">
+            <li className="flex items-center gap-3">
+              <HiBadgeCheck className="text-xl text-green-300" />
+              Trusted buyers & verified vendors worldwide
+            </li>
+            <li className="flex items-center gap-3">
+              <HiGlobeAlt className="text-xl text-green-300" />
+              Global reach across multiple countries
+            </li>
+            <li className="flex items-center gap-3">
+              <HiShieldCheck className="text-xl text-green-300" />
+              Secure, compliant & scalable infrastructure
+            </li>
+            <li className="flex items-center gap-3">
+              <HiOfficeBuilding className="text-xl text-green-300" />
+              Built for enterprises, SMEs & manufacturers
+            </li>
+          </ul>
+
+          <p className="mt-10 text-xs text-green-200">
+            Sustainly · Powering global sustainable B2B trade
+          </p>
+        </div>
+      </div>
+
+      {/* ================= RIGHT FORM (NO CARD, BOLD INPUTS) ================= */}
+      <div className="flex items-center justify-center px-6 bg-gray-50">
+        <div className="w-full max-w-md">
           {/* Header */}
-          <div className="mb-6 text-center">
-            <h1 className="text-xl font-semibold text-gray-900">
+          <div className="mb-10">
+            <h2 className="text-2xl font-semibold text-gray-900">
               Create your account
-            </h1>
-            <p className="text-sm text-gray-900 mt-1">
-              Join Sustainly and grow sustainably
+            </h2>
+            <p className="text-sm text-gray-600 mt-2">
+              Get started in less than a minute
             </p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
+              <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-2">
+                Work Email
               </label>
               <input
                 type="email"
@@ -85,44 +145,46 @@ export default function RegisterPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
                 required
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm
-                           focus:outline-none focus:ring-1 focus:ring-black"
+                className="w-full bg-transparent border-b-2 border-gray-300
+                           py-2 text-lg font-medium text-gray-900
+                           focus:outline-none focus:border-black"
               />
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-2">
                 Password
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a strong password"
+                placeholder="Minimum 8 characters"
                 required
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm
-                           focus:outline-none focus:ring-1 focus:ring-black"
+                className="w-full bg-transparent border-b-2 border-gray-300
+                           py-2 text-lg font-medium text-gray-900
+                           focus:outline-none focus:border-black"
               />
             </div>
 
-            {/* Role Selection */}
+            {/* Role */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-3">
                 Register as
               </label>
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 {["BUYER", "VENDOR"].map((r) => (
                   <button
                     key={r}
                     type="button"
                     onClick={() => setRole(r as any)}
-                    className={`flex-1 rounded-full px-4 py-2 text-sm border transition
+                    className={`flex-1 rounded-full px-5 py-2 text-sm font-semibold border transition
                       ${
                         role === r
                           ? "bg-black text-white border-black"
-                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                          : "bg-transparent text-gray-700 border-gray-300 hover:bg-gray-100"
                       }`}
                   >
                     {r === "BUYER" ? "Buyer" : "Vendor"}
@@ -131,24 +193,22 @@ export default function RegisterPage() {
               </div>
 
               {role === "VENDOR" && (
-                <p className="mt-2 text-xs text-gray-900">
-                  Vendors will need admin approval before listing products.
+                <p className="mt-3 text-xs text-gray-500">
+                  Vendor accounts require admin approval.
                 </p>
               )}
             </div>
 
             {/* Error */}
             {error && (
-              <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-sm text-red-700">
-                {error}
-              </div>
+              <div className="text-sm text-red-600 font-medium">{error}</div>
             )}
 
             {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-full bg-black text-white py-2 text-sm font-medium
+              className="w-full rounded-full bg-black text-white py-3 text-sm font-semibold
                          hover:bg-gray-900 transition disabled:opacity-60"
             >
               {loading ? "Creating account..." : "Create account"}
@@ -156,21 +216,20 @@ export default function RegisterPage() {
           </form>
 
           {/* Footer */}
-          <div className="mt-6 text-center text-sm text-gray-900">
-            Already have an account?{" "}
+          <div className="mt-8 text-sm text-gray-600">
+            Already registered?{" "}
             <Link
               href="/login"
-              className="font-medium text-black hover:underline"
+              className="font-semibold text-black hover:underline"
             >
               Sign in
             </Link>
           </div>
-        </div>
 
-        {/* Note */}
-        <p className="mt-4 text-center text-xs text-gray-400">
-          Secure signup powered by Firebase Authentication
-        </p>
+          <p className="mt-6 text-xs text-gray-400">
+            Secure registration powered by Firebase Authentication
+          </p>
+        </div>
       </div>
     </main>
   );

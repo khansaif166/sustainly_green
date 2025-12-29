@@ -64,7 +64,7 @@ export default function AdminVendorsPage() {
   }
 
   return (
-    <main className="space-y-6">
+    <main className="max-w-7xl p-6">
       {/* HEADER */}
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">

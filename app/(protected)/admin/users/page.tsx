@@ -32,7 +32,7 @@ export default function AdminUsers() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl p-6">
       {/* ---------- HEADER ---------- */}
       <div className="flex items-center justify-between">
         <div>

@@ -83,7 +83,7 @@ export default function VendorDashboardPage() {
   const isApproved = vendor?.approved === true;
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
+    <main className="min-h-screen bg-gray-50 pb-8">
       <div className="max-w-7xl mx-auto space-y-8">
 
         {/* ================= HEADER ================= */}

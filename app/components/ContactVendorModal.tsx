@@ -1,102 +1,261 @@
 "use client";
 
 import { useState } from "react";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { X } from "lucide-react";
 
-export default function ContactVendorModal({
+
+export default function BuyerRFQModal({
   open,
   onClose,
-  product,
+  vendorId,
+  productId,
 }: {
   open: boolean;
   onClose: () => void;
-  product: {
-    id: string;
-    title: string;
-    vendorId: string;
-  };
+  vendorId: string;
+  productId?: string;
 }) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
+    requirementTitle: "",
+    requirementType: "PRODUCT",
+    estimatedQuantity: "",
+    deliveryCountry: "",
+    requiredTimeline: "",
+    additionalDetails: "",
+    buyerName: "",
+    buyerEmail: "",
+    buyerPhone: "",
   });
 
   if (!open) return null;
 
-  async function submit() {
-    if (!form.name || !form.email || !form.phone) {
-      alert("Please fill required fields");
+  async function submitRFQ() {
+    setError("");
+
+    // ✅ FIXED VALIDATION (only fields that exist in UI)
+    if (
+      !form.requirementTitle.trim() ||
+      !form.estimatedQuantity.trim() ||
+      !form.deliveryCountry.trim() ||
+      !form.requiredTimeline ||
+      !form.buyerName.trim() ||
+      !form.buyerEmail.trim()
+    ) {
+      setError("Please fill all required fields.");
       return;
     }
 
     setLoading(true);
 
-    await addDoc(collection(db, "enquiries"), {
-      productId: product.id,
-      productTitle: product.title,
-      vendorId: product.vendorId,
+    try {
+      await addDoc(collection(db, "rfqs"), {
+        // Buyer RFQ data
+        buyerId: auth.currentUser!.uid,
+        requirementTitle: form.requirementTitle,
+        requirementType: form.requirementType,
+        estimatedQuantity: form.estimatedQuantity,
+        deliveryCountry: form.deliveryCountry,
+        requiredTimeline: form.requiredTimeline,
+        additionalDetails: form.additionalDetails,
 
-      buyerName: form.name,
-      buyerEmail: form.email,
-      buyerPhone: form.phone,
-      buyerMessage: form.message,
+        // Buyer contact
+        buyerName: form.buyerName,
+        buyerEmail: form.buyerEmail,
+        buyerPhone: form.buyerPhone || null,
 
-      status: "NEW",
-      createdAt: serverTimestamp(),
-    });
+        // Relations
+        vendorId,
+        productId: productId || null,
 
-    setLoading(false);
-    onClose();
-    alert("Enquiry sent successfully!");
+        // RFQ lifecycle
+        status: "RFQ_REQUESTED",
+
+        // Vendor response placeholder
+        vendorResponse: {
+          message: "",
+          respondedAt: null,
+          contactShared: false,
+        },
+
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      onClose();
+      alert("RFQ sent successfully. Vendor will respond soon.");
+    } catch (e) {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Contact Vendor</h2>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-lg overflow-hidden">
+        {/* Header */}
+        <div className="flex justify-between items-center px-6 py-4 border-b">
+          <h2 className="text-lg font-semibold">Request a Quote</h2>
+          <button onClick={onClose}>
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
 
-        <input
-          placeholder="Your Name *"
-          className="input"
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
-        <input
-          placeholder="Email *"
-          className="input"
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-        />
-        <input
-          placeholder="Phone *"
-          className="input"
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
-        />
-        <textarea
-          rows={3}
-          placeholder="Your requirement (optional)"
-          className="input"
-          onChange={(e) => setForm({ ...form, message: e.target.value })}
-        />
+        {/* Body */}
+        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+          <div>
+            <label className="label">What do you need? *</label>
+            <input
+              className="input"
+              placeholder="Eg: 2 kW Off Grid Solar System"
+              value={form.requirementTitle}
+              onChange={(e) =>
+                setForm({ ...form, requirementTitle: e.target.value })
+              }
+            />
+          </div>
 
-        <div className="flex gap-3 justify-end pt-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm border rounded-full"
-          >
+          <div className="grid md:grid-cols-2 gap-4">
+            <select
+              className="input"
+              value={form.requirementType}
+              onChange={(e) =>
+                setForm({ ...form, requirementType: e.target.value })
+              }
+            >
+              <option value="PRODUCT">Product</option>
+              <option value="SERVICE">Service</option>
+              <option value="CONSULTANCY">Consultancy / Training</option>
+            </select>
+
+            <input
+              className="input"
+              placeholder="Estimated Quantity (Eg: 100 units)"
+              value={form.estimatedQuantity}
+              onChange={(e) =>
+                setForm({ ...form, estimatedQuantity: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <input
+              className="input"
+              placeholder="Delivery Country"
+              value={form.deliveryCountry}
+              onChange={(e) =>
+                setForm({ ...form, deliveryCountry: e.target.value })
+              }
+            />
+
+            <select
+              className="input"
+              value={form.requiredTimeline}
+              onChange={(e) =>
+                setForm({ ...form, requiredTimeline: e.target.value })
+              }
+            >
+              <option value="">When do you need it?</option>
+              <option value="URGENT_0_7_DAYS">Urgent (0–7 days)</option>
+              <option value="WITHIN_1_MONTH">Within 1 month</option>
+              <option value="1_3_MONTHS">1–3 months</option>
+              <option value="3_MONTHS_PLUS">3 months+</option>
+            </select>
+          </div>
+
+          <textarea
+            rows={3}
+            className="input"
+            placeholder="Additional details (specs, certifications, expectations)"
+            value={form.additionalDetails}
+            onChange={(e) =>
+              setForm({ ...form, additionalDetails: e.target.value })
+            }
+          />
+
+          {/* Buyer */}
+          <div className="border-t pt-4 space-y-4">
+            <h3 className="text-sm font-semibold">Your Contact Details</h3>
+
+            <input
+              className="input"
+              placeholder="Your Name *"
+              value={form.buyerName}
+              onChange={(e) =>
+                setForm({ ...form, buyerName: e.target.value })
+              }
+            />
+
+            <input
+              className="input"
+              placeholder="Email *"
+              value={form.buyerEmail}
+              onChange={(e) =>
+                setForm({ ...form, buyerEmail: e.target.value })
+              }
+            />
+
+            <input
+              className="input"
+              placeholder="Phone / WhatsApp (optional)"
+              value={form.buyerPhone}
+              onChange={(e) =>
+                setForm({ ...form, buyerPhone: e.target.value })
+              }
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t flex justify-end gap-3">
+          <button onClick={onClose} className="btn-outline">
             Cancel
           </button>
           <button
-            onClick={submit}
+            onClick={submitRFQ}
             disabled={loading}
-            className="px-5 py-2 text-sm rounded-full bg-black text-white"
+            className="btn-primary"
           >
-            {loading ? "Sending..." : "Send Enquiry"}
+            {loading ? "Submitting..." : "Submit RFQ"}
           </button>
         </div>
       </div>
+
+      <style jsx global>{`
+        .input {
+          width: 100%;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.75rem;
+          padding: 0.6rem 0.75rem;
+          font-size: 0.875rem;
+        }
+        .label {
+          font-size: 0.8rem;
+          font-weight: 500;
+          margin-bottom: 0.25rem;
+          display: block;
+        }
+        .btn-primary {
+          background: black;
+          color: white;
+          padding: 0.5rem 1.25rem;
+          border-radius: 9999px;
+          font-size: 0.875rem;
+        }
+        .btn-outline {
+          border: 1px solid #e5e7eb;
+          padding: 0.5rem 1.25rem;
+          border-radius: 9999px;
+          font-size: 0.875rem;
+        }
+      `}</style>
     </div>
   );
 }

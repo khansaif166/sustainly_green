@@ -70,7 +70,7 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <main className="space-y-6">
+    <main className="max-w-7xl p-6">
       {/* HEADER */}
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Product Review</h1>
@@ -120,7 +120,7 @@ export default function AdminProductsPage() {
                       key={i}
                       src={img}
                       alt={p.title}
-                      className="h-20 w-20 rounded-lg border object-cover flex-shrink-0"
+                      className="h-20 w-20 rounded-lg border object-cover"
                     />
                   ))}
                 </div>

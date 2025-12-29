@@ -49,7 +49,7 @@ export default function VendorMyProfilePage() {
 
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-10">
-      <div className="max-w-5xl mx-auto bg-white rounded-2xl border p-6">
+      <div className="max-w-7xl mx-auto bg-white rounded-2xl p-6">
         <h1 className="text-2xl font-semibold">{vendor.companyName}</h1>
         <p className="text-sm text-gray-600 mt-1">
           {vendor.businessType} · {vendor.primaryCategory}

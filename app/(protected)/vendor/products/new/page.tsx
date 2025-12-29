@@ -174,7 +174,7 @@ export default function AddProductPage() {
         <form onSubmit={handleSubmit} className="space-y-8">
 
           {/* BASIC INFO */}
-          <section className="bg-white rounded-2xl border p-6 space-y-5">
+          <section className="bg-white rounded-2xl p-6 space-y-5">
             <h2 className="section">Basic Listing Info</h2>
 
             {/* Listing Type */}
@@ -285,7 +285,7 @@ export default function AddProductPage() {
           </section>
 
           {/* COMMERCIAL */}
-          <section className="bg-white rounded-2xl border p-6 space-y-5">
+          <section className="bg-white rounded-2xl p-6 space-y-5">
             <h2 className="section">Commercial Info</h2>
 
             <div>
@@ -354,7 +354,7 @@ export default function AddProductPage() {
           </section>
 
           {/* SUSTAINABILITY */}
-          <section className="bg-white rounded-2xl border p-6 space-y-5">
+          <section className="bg-white rounded-2xl p-6 space-y-5">
             <h2 className="section">Sustainability</h2>
 
             <div>
@@ -391,7 +391,7 @@ export default function AddProductPage() {
           </section>
 
           {/* LOGISTICS */}
-          <section className="bg-white rounded-2xl border p-6 space-y-5">
+          <section className="bg-white rounded-2xl p-6 space-y-5">
             <h2 className="section">Logistics & Availability</h2>
 
             <div>

@@ -110,7 +110,7 @@ export default function VendorProductsPage() {
               <img
                 src={p.images[0]}
                 alt={p.title}
-                className="h-40 w-full object-cover"
+                className="h-70 w-full object-cover"
               />
             ) : (
               <div className="h-40 bg-gray-100 flex items-center justify-center text-xs text-gray-500">
