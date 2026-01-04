@@ -44,7 +44,7 @@ export default function AdminLayout({
         {/* Brand */}
         <div className="px-6 py-5 border-b">
           <h2 className="text-lg font-semibold text-gray-900">
-            Sustainly Admin
+            Admin Panel
           </h2>
         </div>
 

@@ -14,6 +14,8 @@ import {
 } from "firebase/firestore";
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Header from "./components/Header";
+import Footer from "./components/layouts/Footer";
 
 /* ---------------- TYPES ---------------- */
 type Product = {
@@ -26,7 +28,7 @@ type Product = {
 type Category = {
   id: string;
   name: string;
-  imageUrl?: string; // ✅ FIXED
+  imageUrl?: string; 
 };
 
 export default function HomePage() {
@@ -104,23 +106,31 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="bg-gray-50 min-h-screen">
+    <main className="bg-gray-50 min-h-screen w-full">
+      <Header />
       {/* ================= HERO ================= */}
-      <section className="max-w-7xl mx-auto rounded-2xl pt-16 pb-12">
-        <section className="relative overflow-hidden  rounded-4xl">
+      <section className="max-w-full mx-auto rounded-2xl pt-5 pb-12  px-4">
+        <section className="relative overflow-hidden  rounded-4xl h-125">
           {/* Background Image */}
-          <div
-            className="absolute inset-0 bg-cover bg-top bg-white/80 backdrop-blur-sm"
-            style={{
-              backgroundImage: "url('/bgg.jpg')",
-            }}
-          />
+          <div className="absolute inset-0">
+  {/* Background Image */}
+  <div
+    className="absolute inset-0 bg-cover bg-top"
+    style={{
+      backgroundImage: "url('/bgg.jpg')",
+    }}
+  />
+
+  {/* Black Overlay */}
+  <div className="absolute inset-0 bg-black/40" />
+</div>
+
 
           {/* Overlay */}
           <div className="absolute inset-0" />
 
           {/* Content */}
-          <div className="relative max-w-7xl mx-auto px-6 pt-16 pb-12">
+          <div className="relative  mx-auto px-6 pt-16 pb-12">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
               {/* LEFT CONTENT */}
               <div>
@@ -128,14 +138,14 @@ export default function HomePage() {
                   Sustainable B2B Marketplace
                 </span>
 
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 leading-tight">
+                <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
                   Discover Verified <br />
-                  <span className="text-black">Sustainable Products</span>{" "}
+                  <span className="text-white">Sustainable Products</span>{" "}
                   <br />
                   From Trusted Vendors
                 </h1>
 
-                <p className="mt-4 text-gray-600 text-sm max-w-xl">
+                <p className="mt-4 text-white text-sm max-w-xl">
                   Sustainly connects buyers with verified eco-friendly vendors
                   worldwide.
                 </p>
@@ -171,7 +181,7 @@ export default function HomePage() {
       </section>
 
       {/* ================= CATEGORIES ================= */}
-      <section className="max-w-7xl mx-auto px-6 py-10">
+      <section className="max-w-full px-10 mx-auto">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
@@ -237,7 +247,7 @@ export default function HomePage() {
       </section>
 
       {/* ================= FEATURED PRODUCTS ================= */}
-      <section className="max-w-7xl mx-auto px-6 py-12">
+      <section className="max-w-full mx-auto px-6 py-12">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-sm font-semibold text-gray-900">
             Featured Products
@@ -256,14 +266,14 @@ export default function HomePage() {
         ) : products.length === 0 ? (
           <p className="text-sm text-gray-500">No approved products yet.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {products.map((p) => (
               <Link
                 key={p.id}
                 href={`/products/${p.id}`}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition"
+                className="bg-white rounded-2xl border border-gray-100 p-4  transition"
               >
-                <div className="h-88 object-contain bg-gray-100 rounded-lg mb-3 overflow-hidden">
+                <div className=" h-48 md:h-88 object-contain bg-gray-100 rounded-lg mb-3 overflow-hidden">
                   {p.images?.[0] && (
                     <img
                       src={p.images[0]}
@@ -286,31 +296,73 @@ export default function HomePage() {
       </section>
 
       {/* ================= CTA ================= */}
-      <section className="max-w-7xl mx-auto px-6 py-14">
-        <div className="bg-black rounded-2xl p-8 text-center">
-          <h3 className="text-white text-xl font-semibold">
-            Ready to join the sustainable economy?
-          </h3>
-          <p className="text-gray-300 text-sm mt-2">
-            Create your account and start connecting today.
-          </p>
+      <section className="max-w-full mx-auto px-6 py-16">
+        <div
+          className="
+      relative overflow-hidden
+      rounded-3xl p-10 text-center
+      bg-gradient-to-r
+      from-[var(--color-primary-green)]
+      to-[var(--color-ocean-blue)]
+      shadow-[0_30px_80px_rgba(0,0,0,0.18)]
+    "
+        >
+          {/* Soft overlay for depth */}
+          <div
+            className="
+        absolute inset-0
+        bg-white/5
+        backdrop-blur-sm
+        pointer-events-none
+      "
+          />
 
-          <div className="mt-5 flex justify-center gap-3">
-            <Link
-              href="/register"
-              className="rounded-full bg-white text-black px-5 py-2 text-sm font-medium"
-            >
-              Create Account
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-full border border-white/30 text-white px-5 py-2 text-sm font-medium"
-            >
-              Login
-            </Link>
+          <div className="relative z-10 max-w-2xl mx-auto">
+            <h3 className="text-white text-2xl font-semibold">
+              Ready to join the sustainable economy?
+            </h3>
+
+            <p className="text-white/90 text-sm mt-2">
+              Create your account and start connecting with verified buyers &
+              vendors worldwide.
+            </p>
+
+            <div className="mt-6 flex justify-center gap-4 flex-wrap">
+              <Link
+                href="/register"
+                className="
+            rounded-full
+            bg-[var(--color-solar-yellow)]
+            text-black
+            px-6 py-2.5
+            text-sm font-semibold
+            hover:brightness-95
+            transition
+          "
+              >
+                Create Account
+              </Link>
+
+              <Link
+                href="/login"
+                className="
+            rounded-full
+            border border-white/40
+            text-white
+            px-6 py-2.5
+            text-sm font-medium
+            hover:bg-white/10
+            transition
+          "
+              >
+                Login
+              </Link>
+            </div>
           </div>
         </div>
       </section>
+
+      <Footer />
     </main>
   );
 }

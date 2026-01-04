@@ -68,13 +68,13 @@ export default function LoginPage() {
       }
 
       if (userData.role === "BUYER") {
-        router.push("/buyer/dashboard");
+        router.push("/");
         return;
       }
 
       if (userData.role === "VENDOR") {
         if (!userData.vendorProfileComplete) {
-          router.push("/vendor/onboarding");
+          router.push("/");
           return;
         }
 
@@ -111,6 +111,8 @@ export default function LoginPage() {
     await sendEmailVerification(auth.currentUser);
     setResent(true);
   }
+
+  
 
   return (
     <main className="min-h-screen grid grid-cols-1 md:grid-cols-2">

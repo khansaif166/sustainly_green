@@ -11,7 +11,9 @@ import {
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
-import { FileText, CheckCircle, XCircle } from "lucide-react";
+import { FileText } from "lucide-react";
+
+/* ================= TYPES ================= */
 
 type RFQ = {
   id: string;
@@ -29,11 +31,13 @@ type RFQ = {
   };
 };
 
+/* ================= PAGE ================= */
+
 export default function BuyerRFQsPage() {
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* ================= LOAD BUYER RFQS ================= */
+  /* ================= LOAD RFQS ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) return;
@@ -52,95 +56,121 @@ export default function BuyerRFQsPage() {
     return () => unsub();
   }, []);
 
-  /* ================= STATUS BADGE ================= */
-  function badge(status: string) {
+  /* ================= STATUS STYLES ================= */
+  function statusStyle(status: string) {
     switch (status) {
       case "RFQ_REQUESTED":
-        return "bg-yellow-100 text-yellow-700";
+        return "bg-[rgba(244,196,48,0.15)] text-[var(--color-solar-yellow)]";
       case "QUOTED":
-        return "bg-blue-100 text-blue-700";
+        return "bg-[rgba(10,76,138,0.15)] text-[var(--color-ocean-blue)]";
       case "ACCEPTED":
-        return "bg-green-100 text-green-700";
+        return "bg-[rgba(11,110,79,0.15)] text-[var(--color-primary-green)]";
       case "REJECTED":
-        return "bg-red-100 text-red-700";
+        return "bg-[rgba(220,38,38,0.15)] text-red-500";
       default:
         return "bg-gray-100 text-gray-600";
     }
   }
 
   return (
-    <main className="space-y-6">
-      {/* HEADER */}
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">
+    <main className="space-y-8">
+      {/* ================= HEADER ================= */}
+      <section>
+        <h1 className="text-2xl font-semibold text-(--color-text-primary)">
           My RFQs
         </h1>
-        <p className="text-sm text-gray-500">
-          Track and manage your quotation requests
+        <p className="text-sm text-(--color-text-secondary)] mt-1">
+          Track vendor responses, pricing and request status
         </p>
-      </div>
+      </section>
 
-      {/* EMPTY */}
+      {/* ================= EMPTY ================= */}
       {!loading && rfqs.length === 0 && (
-        <p className="text-sm text-gray-500">
+        <div className="text-sm text-(--color-text-secondary)">
           You haven’t submitted any RFQs yet.
-        </p>
+        </div>
       )}
 
-      {/* RFQ GRID */}
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* ================= RFQ CARDS ================= */}
+      <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
         {rfqs.map((r) => (
           <div
             key={r.id}
-            className="bg-white border rounded-2xl p-5 shadow-sm flex flex-col justify-between"
+            className="
+              rounded-3xl p-5
+              bg-white
+              shadow-[0_10px_30px_rgba(0,0,0,0.06)]
+              hover:shadow-[0_20px_50px_rgba(0,0,0,0.10)]
+              transition-all
+              flex flex-col justify-between
+            "
           >
-            {/* HEADER */}
-            <div className="flex justify-between items-start mb-3">
+            {/* ================= HEADER ================= */}
+            <div className="flex justify-between items-start gap-4">
               <div>
-                <h2 className="font-semibold text-gray-900 text-sm line-clamp-2">
+                <h2 className="font-semibold text-sm text-(--color-text-primary) line-clamp-2">
                   {r.requirementTitle}
                 </h2>
-                <p className="text-xs text-gray-500 mt-1">
+
+                <p className="text-xs text-(--color-text-secondary) mt-1">
                   {r.deliveryCountry} • {r.estimatedQuantity}
                 </p>
               </div>
 
               <span
-                className={`text-xs px-3 py-1 rounded-full font-medium ${badge(
-                  r.status
-                )}`}
+                className={`
+                  text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap
+                  ${statusStyle(r.status)}
+                `}
               >
                 {r.status.replaceAll("_", " ")}
               </span>
             </div>
 
-            {/* DETAILS */}
-            <div className="text-sm text-gray-600 space-y-1 mb-4">
+            {/* ================= DETAILS ================= */}
+            <div className="mt-4 space-y-2 text-sm text-(--color-text-secondary)">
               <p>
-                <b>Timeline:</b>{" "}
+                <span className="text-black">
+                  Timeline:
+                </span>{" "}
                 {r.requiredTimeline.replaceAll("_", " ")}
               </p>
 
               {r.status === "QUOTED" && r.vendorResponse && (
-                <p className="text-blue-700 text-sm font-medium">
+                <p className="font-medium text-(--color-ocean-blue)">
                   Quoted: {r.vendorResponse.currency}{" "}
                   {r.vendorResponse.price}
                 </p>
               )}
             </div>
 
-            {/* VENDOR MESSAGE */}
+            {/* ================= MESSAGE ================= */}
             {r.vendorResponse?.message && (
-              <div className="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700 mb-4 line-clamp-2">
+              <div
+                className="
+                  mt-4 p-3 rounded-xl
+                  bg-(--color-bg-soft)]
+                  text-xs text-(--color-text-secondary)
+                  line-clamp-2
+                "
+              >
                 {r.vendorResponse.message}
               </div>
             )}
 
-            {/* ACTION */}
-            <div className="flex justify-end">
+            {/* ================= ACTION ================= */}
+            <div className="mt-5 flex justify-end">
               <Link
                 href={`/buyer/rfqs/${r.id}`}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-black text-white hover:bg-gray-900"
+                className="
+                  inline-flex items-center gap-2
+                  text-sm font-medium
+                  px-5 py-2 rounded-full
+                  bg-(--color-primary-green)
+                  text-white
+                  hover:opacity-90
+                  transition
+                "
               >
                 <FileText className="h-4 w-4" />
                 View RFQ
@@ -148,7 +178,7 @@ export default function BuyerRFQsPage() {
             </div>
           </div>
         ))}
-      </div>
+      </section>
     </main>
   );
 }

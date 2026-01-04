@@ -16,6 +16,28 @@
   :root {
     --background: #ffffff;
     --foreground: #000000;
+
+    /* ================= BRAND CORE ================= */
+    --color-primary-green: #0b6e4f;
+    --color-ocean-blue: #0a4c8a;
+
+    /* ================= SUPPORT COLORS ================= */
+    --color-leaf-green: #6bcf9b;
+    --color-earth-sand: #e6d8a3;
+    --color-solar-yellow: #f4c430;
+
+    /* ================= TEXT ================= */
+    --color-text-primary: #1f2933;
+    --color-text-secondary: #080808;
+    --color-text-muted: #d1d5db;
+
+    /* ================= BACKGROUNDS ================= */
+    --color-bg-white: #ffffff;
+    --color-bg-soft: #f9fafb;
+    --color-bg-footer: #111827;
+
+    /* ================= BORDERS ================= */
+    --color-border: #e5e7eb;
   }
 }
 
@@ -41,11 +63,10 @@ body {
   body {
     line-height: 1.5;
   }
-
 }
 
 html,
 body {
-font-family: var(--font-poppins), system-ui, -apple-system, BlinkMacSystemFont,
-  "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-poppins), system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
 }

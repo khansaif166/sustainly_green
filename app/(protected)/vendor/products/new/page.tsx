@@ -37,6 +37,7 @@ export default function AddProductPage() {
   const [subCategoryId, setSubCategoryId] = useState("");
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<File[]>([]);
+  const [coverIndex, setCoverIndex] = useState(0);
 
   const [availableFor, setAvailableFor] = useState<string[]>([]);
   const [priceType, setPriceType] = useState("");
@@ -106,20 +107,26 @@ export default function AddProductPage() {
     e.preventDefault();
     if (!vendorApproved || !user) return;
 
-    if (images.length === 0 || images.length > 5) {
-      alert("Please upload 1–5 images.");
-      return;
-    }
+    // if (images.length === 0 || images.length > 5) {
+    //   alert("Please upload 1–5 images.");
+    //   return;
+    // }
 
     setLoading(true);
 
     try {
       const imageUrls: string[] = [];
-      for (const file of images) {
-        const path = `products/${user.uid}/${Date.now()}_${file.name}`;
-        const url = await uploadFileWithProgress(file, path);
-        imageUrls.push(url);
-      }
+      const orderedImages = [
+  images[coverIndex],
+  ...images.filter((_, i) => i !== coverIndex),
+];
+
+for (const file of orderedImages) {
+  const path = `products/${user.uid}/${Date.now()}_${file.name}`;
+  const url = await uploadFileWithProgress(file, path);
+  imageUrls.push(url);
+}
+
 
       await addDoc(collection(db, "products"), {
         vendorId: user.uid,
@@ -155,12 +162,15 @@ export default function AddProductPage() {
       setLoading(false);
     }
   }
+  const uploadLabel =
+    images.length === 0
+      ? "Click to upload images"
+      : images.map((f) => f.name).join(", ");
 
   /* ---------- UI ---------- */
   return (
     <main className="min-h-screen bg-gray-50 pb-10">
       <div className="max-w-7xl mx-auto space-y-8">
-
         {/* HEADER */}
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
@@ -172,7 +182,6 @@ export default function AddProductPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-
           {/* BASIC INFO */}
           <section className="bg-white rounded-2xl p-6 space-y-5">
             <h2 className="section">Basic Listing Info</h2>
@@ -186,9 +195,7 @@ export default function AddProductPage() {
                     key={t}
                     type="button"
                     onClick={() => toggle(listingType, t, setListingType)}
-                    className={`chip ${
-                      listingType.includes(t) && "active"
-                    }`}
+                    className={`chip ${listingType.includes(t) && "active"}`}
                   >
                     {t}
                   </button>
@@ -263,26 +270,99 @@ export default function AddProductPage() {
 
             {/* Images */}
             <div>
-              <label className="label">Images *</label>
+              <label className="label">Images</label>
+
               <label className="upload-box">
                 <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) =>
-                    setImages(
-                      e.target.files ? Array.from(e.target.files) : []
-                    )
-                  }
-                />
-                Click to upload images
+  type="file"
+  multiple
+  accept="image/*"
+  className="hidden"
+  onChange={(e) => {
+    if (!e.target.files) return;
+
+    const selected = Array.from(e.target.files);
+
+    setImages((prev) => {
+      const combined = [...prev, ...selected].slice(0, 5);
+      return combined;
+    });
+
+    e.target.value = "";
+  }}
+/>
+
+
+                <span className="truncate max-w-full text-center">
+                  {uploadLabel}
+                </span>
               </label>
+
               <p className="help">
-                Upload 1–5 images. First image will be used as cover.
+                Upload up to 5 images. First image will be used as cover.
               </p>
             </div>
           </section>
+
+          {images.length > 0 && (
+  <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-4">
+    {images.map((file, index) => {
+      const url = URL.createObjectURL(file);
+
+      return (
+        <div
+          key={index}
+          className={`relative rounded-xl overflow-hidden border-2
+            ${
+              coverIndex === index
+                ? "border-black"
+                : "border-gray-200"
+            }
+          `}
+        >
+          {/* IMAGE */}
+          <img
+            src={url}
+            alt={`preview-${index}`}
+            className="h-24 w-full object-cover"
+          />
+
+          {/* COVER BADGE */}
+          {coverIndex === index && (
+            <span className="absolute top-1 left-1 text-[10px] bg-black text-white px-2 py-0.5 rounded-full">
+              Cover
+            </span>
+          )}
+
+          {/* ACTIONS */}
+          <div className="absolute inset-x-0 bottom-0 flex justify-between bg-black/60 px-1 py-1">
+            <button
+              type="button"
+              onClick={() => setCoverIndex(index)}
+              className="text-[10px] text-white"
+            >
+              Set Cover
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setImages((prev) =>
+                  prev.filter((_, i) => i !== index)
+                );
+                if (coverIndex === index) setCoverIndex(0);
+              }}
+              className="text-[10px] text-red-300"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+)}
+
 
           {/* COMMERCIAL */}
           <section className="bg-white rounded-2xl p-6 space-y-5">
@@ -296,9 +376,7 @@ export default function AddProductPage() {
                     key={a}
                     type="button"
                     onClick={() => toggle(availableFor, a, setAvailableFor)}
-                    className={`chip ${
-                      availableFor.includes(a) && "active"
-                    }`}
+                    className={`chip ${availableFor.includes(a) && "active"}`}
                   >
                     {a}
                   </button>
@@ -320,8 +398,7 @@ export default function AddProductPage() {
               </select>
             </div>
 
-            {(priceType === "Fixed Price" ||
-              priceType === "Starts From") && (
+            {(priceType === "Fixed Price" || priceType === "Starts From") && (
               <div className="grid md:grid-cols-3 gap-4">
                 <input
                   className="input"
@@ -358,9 +435,7 @@ export default function AddProductPage() {
             <h2 className="section">Sustainability</h2>
 
             <div>
-              <label className="label">
-                Sustainability Tags (max 3)
-              </label>
+              <label className="label">Sustainability Tags (max 3)</label>
               <div className="flex flex-wrap gap-2">
                 {tags.map((t) => (
                   <button
@@ -384,9 +459,7 @@ export default function AddProductPage() {
               maxLength={100}
               placeholder="Key sustainability claim (eg: Made from 70% recycled PET)"
               value={sustainabilityClaim}
-              onChange={(e) =>
-                setSustainabilityClaim(e.target.value)
-              }
+              onChange={(e) => setSustainabilityClaim(e.target.value)}
             />
           </section>
 
@@ -401,12 +474,8 @@ export default function AddProductPage() {
                   <button
                     key={r}
                     type="button"
-                    onClick={() =>
-                      toggle(shipRegions, r, setShipRegions)
-                    }
-                    className={`chip ${
-                      shipRegions.includes(r) && "active"
-                    }`}
+                    onClick={() => toggle(shipRegions, r, setShipRegions)}
+                    className={`chip ${shipRegions.includes(r) && "active"}`}
                   >
                     {r}
                   </button>
@@ -451,7 +520,7 @@ export default function AddProductPage() {
           outline: none;
           border-color: black;
           background: white;
-          box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+          box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
         }
         .label {
           font-size: 0.875rem;

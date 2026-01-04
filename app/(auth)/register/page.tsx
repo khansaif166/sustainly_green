@@ -21,12 +21,15 @@ import {
 } from "react-icons/hi";
 
 export default function RegisterPage() {
+  const [name, setName] = useState(""); // ✅ NEW
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"BUYER" | "VENDOR">("BUYER");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
   const router = useRouter();
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -39,19 +42,22 @@ export default function RegisterPage() {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const user = cred.user as User;
 
-      // 2️⃣ Set display name
-      await updateProfile(user, { displayName: email.split("@")[0] });
+      // 2️⃣ Set display name in Firebase Auth
+      await updateProfile(user, {
+        displayName: name,
+      });
 
-      // 3️⃣ Save user profile
+      // 3️⃣ Save user profile in Firestore
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
+        name, // ✅ SAVE NAME
         email: user.email,
         role,
-        emailVerified: false, // 👈 OPTIONAL (for Firestore reference)
+        emailVerified: false,
         createdAt: serverTimestamp(),
       });
 
-      // 4️⃣ Vendor doc
+      // 4️⃣ Vendor doc (if vendor)
       if (role === "VENDOR") {
         await setDoc(doc(db, "vendors", user.uid), {
           uid: user.uid,
@@ -62,10 +68,10 @@ export default function RegisterPage() {
         });
       }
 
-      // 5️⃣ SEND EMAIL VERIFICATION
+      // 5️⃣ Send email verification
       await sendEmailVerification(user);
 
-      // 6️⃣ Redirect to verify email screen
+      // 6️⃣ Redirect
       router.push("/verify-email");
     } catch (err: any) {
       console.error(err);
@@ -119,8 +125,8 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* ================= RIGHT FORM (NO CARD, BOLD INPUTS) ================= */}
-      <div className="flex items-center justify-center px-6 bg-gray-50">
+      {/* ================= RIGHT FORM ================= */}
+      <div className="flex items-center justify-center px-6 bg-gray-50 pt-10">
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="mb-10">
@@ -133,7 +139,24 @@ export default function RegisterPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-2">
+            {/* Name */}
+            <div>
+              <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                required
+                className="w-full bg-transparent border-b-2 border-gray-300
+                           py-2 text-lg font-medium text-gray-900
+                           focus:outline-none focus:border-black"
+              />
+            </div>
+
             {/* Email */}
             <div>
               <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-2">

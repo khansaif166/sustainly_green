@@ -41,7 +41,6 @@ export default function BuyerProfilePage() {
       if (snap.exists()) {
         setForm(snap.data() as any);
       } else {
-        // First time buyer
         setForm({
           name: u.displayName || "",
           email: u.email || "",
@@ -80,43 +79,48 @@ export default function BuyerProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
-        Loading profile...
+      <div className="min-h-screen flex items-center justify-center text-sm text-[var(--color-text-secondary)]">
+        Loading profile…
       </div>
     );
   }
 
   return (
-    <main className="space-y-8 max-w-3xl">
-      {/* HEADER */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">
-          My Profile
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Manage your contact details used for RFQs
-        </p>
-      </div>
+    <main className="max-w-full space-y-8">
 
-      {/* CARD */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6">
+      {/* ================= CARD ================= */}
+      <section
+        className="
+          rounded-3xl p-6
+          bg-[var(--color-bg-white)]
+          shadow-[0_10px_40px_rgba(0,0,0,0.08)]
+          space-y-6 w-full
+        "
+      >
         {/* ICON */}
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center">
-            <User className="h-6 w-6 text-gray-600" />
+        <div className="flex items-center gap-4 w-full">
+          <div
+            className="
+              h-12 w-12 rounded-xl
+              bg-[var(--color-bg-soft)]
+              flex items-center justify-center
+            "
+          >
+            <User className="h-6 w-6 text-[var(--color-primary-green)]" />
           </div>
+
           <div>
-            <p className="text-sm font-semibold text-gray-900">
+            <p className="text-sm font-semibold text-[var(--color-text-primary)]">
               Buyer Information
             </p>
-            <p className="text-xs text-gray-500">
-              This info is shared with vendors after RFQ acceptance
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              Shared with vendors only after RFQ acceptance
             </p>
           </div>
         </div>
 
         {/* FORM */}
-        <div className="grid gap-4">
+        <div className="grid gap-5">
           {/* NAME */}
           <div>
             <label className="label">Full Name *</label>
@@ -130,11 +134,11 @@ export default function BuyerProfilePage() {
             />
           </div>
 
-          {/* EMAIL (READONLY) */}
+          {/* EMAIL */}
           <div>
             <label className="label">Email</label>
             <input
-              className="input bg-gray-50"
+              className="input bg-[var(--color-bg-soft)] cursor-not-allowed"
               value={form.email}
               disabled
             />
@@ -155,39 +159,57 @@ export default function BuyerProfilePage() {
         </div>
 
         {/* SAVE */}
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-2">
           <button
             onClick={saveProfile}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-full bg-black text-white px-5 py-2 text-sm hover:bg-gray-900 disabled:opacity-60"
+            className="
+              inline-flex items-center gap-2
+              rounded-full
+              bg-[var(--color-solar-yellow)]
+              text-black
+              px-6 py-2.5
+              text-sm font-semibold
+              hover:brightness-95
+              transition
+              disabled:opacity-60
+            "
           >
             <Save className="h-4 w-4" />
-            {saving ? "Saving..." : "Save Profile"}
+            {saving ? "Saving…" : "Save Profile"}
           </button>
         </div>
-      </div>
+      </section>
 
       {/* INFO */}
-      <p className="text-xs text-gray-500">
-        Your contact details will be visible to vendors only after you
-        accept a quote.
+      <p className="text-xs text-[var(--color-text-secondary)]">
+        Your contact details are visible to vendors only after you accept a quote.
       </p>
 
-      {/* GLOBAL STYLES */}
+      {/* ================= GLOBAL INPUT STYLES ================= */}
       <style jsx global>{`
         .input {
           width: 100%;
-          border: 1px solid #e5e7eb;
+          border: 1px solid var(--color-border);
           border-radius: 0.75rem;
-          padding: 0.6rem 0.75rem;
+          padding: 0.65rem 0.75rem;
           font-size: 0.875rem;
+          color: var(--color-text-primary);
+          background: white;
         }
+
+        .input:focus {
+          outline: none;
+          border-color: var(--color-primary-green);
+          box-shadow: 0 0 0 2px rgba(11, 110, 79, 0.15);
+        }
+
         .label {
           display: block;
-          font-size: 0.8rem;
-          font-weight: 500;
-          color: #374151;
-          margin-bottom: 0.25rem;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: var(--color-text-secondary);
+          margin-bottom: 0.35rem;
         }
       `}</style>
     </main>

@@ -9,13 +9,14 @@ import { CheckCircle, XCircle } from "lucide-react";
 import { FiPhone, FiMail } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 
+/* ================= PAGE ================= */
+
 export default function BuyerRFQDetailPage() {
   const { id } = useParams();
   const router = useRouter();
 
   const [rfq, setRfq] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [buyerEmail, setBuyerEmail] = useState("");
 
   /* ================= LOAD RFQ ================= */
   useEffect(() => {
@@ -25,21 +26,16 @@ export default function BuyerRFQDetailPage() {
         return;
       }
 
-      setBuyerEmail(u.email || "");
-
       const snap = await getDoc(doc(db, "rfqs", id as string));
 
       if (!snap.exists()) {
-        alert("RFQ not found");
         router.push("/buyer/rfqs");
         return;
       }
 
       const data = snap.data();
 
-      // 🔐 Security check
       if (data.buyerEmail !== u.email) {
-        alert("Unauthorized access");
         router.push("/buyer/rfqs");
         return;
       }
@@ -53,57 +49,60 @@ export default function BuyerRFQDetailPage() {
 
   /* ================= ACTIONS ================= */
   async function acceptQuote() {
-    if (!id) return;
-
     await updateDoc(doc(db, "rfqs", id as string), {
       status: "ACCEPTED",
       contactShared: true,
       updatedAt: serverTimestamp(),
     });
 
-    setRfq((prev: any) => (prev ? { ...prev, status: "ACCEPTED" } : prev));
+    setRfq((p: any) => ({ ...p, status: "ACCEPTED" }));
   }
 
   async function rejectQuote() {
-    if (!id) return;
-
     await updateDoc(doc(db, "rfqs", id as string), {
       status: "REJECTED",
       updatedAt: serverTimestamp(),
     });
 
-    setRfq((prev: any) => (prev ? { ...prev, status: "REJECTED" } : prev));
+    setRfq((p: any) => ({ ...p, status: "REJECTED" }));
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
-        Loading RFQ...
+      <div className="min-h-screen flex items-center justify-center text-sm text-[var(--color-text-secondary)]">
+        Loading RFQ…
       </div>
     );
   }
-  if (!rfq) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
-        RFQ not found
-      </div>
-    );
-  }
+
+  if (!rfq) return null;
+
+  /* ================= UI ================= */
 
   return (
-    <main className="space-y-6 max-w-3xl">
-      {/* HEADER */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">
+    <main className="max-w-3xl space-y-8">
+      {/* ================= HEADER ================= */}
+      <section>
+        <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
           {rfq.requirementTitle}
         </h1>
-        <p className="text-sm text-gray-500">
-          RFQ Status: <b>{rfq.status.replaceAll("_", " ")}</b>
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+          Status:{" "}
+          <span className="font-medium text-[var(--color-primary-green)]">
+            {rfq.status.replaceAll("_", " ")}
+          </span>
         </p>
-      </div>
+      </section>
 
-      {/* RFQ DETAILS */}
-      <div className="bg-white border rounded-2xl p-6 space-y-3">
+      {/* ================= RFQ DETAILS ================= */}
+      <section
+        className="
+          rounded-3xl p-6
+          bg-white
+          shadow-[0_15px_40px_rgba(0,0,0,0.08)]
+          space-y-3
+        "
+      >
         <Detail label="Requirement Type" value={rfq.requirementType} />
         <Detail label="Quantity" value={rfq.estimatedQuantity} />
         <Detail label="Delivery Location" value={rfq.deliveryCountry} />
@@ -113,26 +112,34 @@ export default function BuyerRFQDetailPage() {
         />
 
         {rfq.additionalDetails && (
-          <div className="pt-3 text-sm text-gray-700">
-            <b>Additional Details:</b>
-            <p>{rfq.additionalDetails}</p>
+          <div className="pt-3 text-sm text-[var(--color-text-secondary)]">
+            <span className="font-medium text-[var(--color-text-primary)]">
+              Additional Details
+            </span>
+            <p className="mt-1">{rfq.additionalDetails}</p>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* VENDOR QUOTE */}
+      {/* ================= VENDOR QUOTE ================= */}
       {rfq.status === "QUOTED" && rfq.vendorResponse && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 space-y-3">
-          <h3 className="text-sm font-semibold text-blue-900">
+        <section
+          className="
+            rounded-3xl p-6
+            bg-[rgba(10,76,138,0.08)]
+            space-y-3
+          "
+        >
+          <h3 className="text-sm font-semibold text-[var(--color-ocean-blue)]">
             Vendor Quotation
           </h3>
 
-          <p className="text-lg font-semibold text-blue-900">
+          <p className="text-xl font-semibold text-[var(--color-ocean-blue)]">
             {rfq.vendorResponse.currency} {rfq.vendorResponse.price}
           </p>
 
           {rfq.vendorResponse.message && (
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-[var(--color-text-secondary)]">
               {rfq.vendorResponse.message}
             </p>
           )}
@@ -140,67 +147,98 @@ export default function BuyerRFQDetailPage() {
           <div className="flex gap-3 pt-4">
             <button
               onClick={acceptQuote}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-600 text-white text-sm"
+              className="
+                inline-flex items-center gap-2
+                px-5 py-2 rounded-full
+                bg-[var(--color-primary-green)]
+                text-white text-sm font-medium
+                hover:opacity-90
+              "
             >
               <CheckCircle className="h-4 w-4" />
-              Accept
+              Accept Quote
             </button>
 
             <button
               onClick={rejectQuote}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-red-300 text-red-600 text-sm"
+              className="
+                inline-flex items-center gap-2
+                px-5 py-2 rounded-full
+                border border-red-300
+                text-red-600 text-sm font-medium
+                hover:bg-red-50
+              "
             >
               <XCircle className="h-4 w-4" />
               Reject
             </button>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* ACCEPTED MESSAGE */}
+      {/* ================= ACCEPTED ================= */}
       {rfq.status === "ACCEPTED" && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
+        <section
+          className="
+            rounded-2xl p-4
+            bg-[rgba(11,110,79,0.12)]
+            text-sm text-[var(--color-primary-green)]
+          "
+        >
           You accepted this quote. Vendor contact details are now shared.
-        </div>
+        </section>
       )}
 
+      {/* ================= CONTACT ================= */}
       {rfq.status === "ACCEPTED" && rfq.vendorContact && (
-        <div className="border rounded-xl p-4 bg-white space-y-3">
-          <h3 className="text-sm font-semibold text-gray-900">
-            Vendor Contact Details
+        <section
+          className="
+            rounded-3xl p-6
+            bg-white
+            shadow-[0_12px_35px_rgba(0,0,0,0.08)]
+            space-y-3
+          "
+        >
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+            Vendor Contact
           </h3>
 
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <FiPhone className="h-4 w-4 text-gray-500" />
-            <span>{rfq.vendorContact.phone}</span>
+          <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+            <FiPhone /> {rfq.vendorContact.phone}
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <FiMail className="h-4 w-4 text-gray-500" />
-            <span>{rfq.vendorContact.email}</span>
+          <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+            <FiMail /> {rfq.vendorContact.email}
           </div>
 
           <a
             href={`https://wa.me/${rfq.vendorContact.phone}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-2 text-sm font-medium text-green-600 hover:underline"
+            className="
+              inline-flex items-center gap-2
+              text-sm font-medium
+              text-green-600
+              hover:underline
+            "
           >
-            <FaWhatsapp className="h-4 w-4" />
-            Chat on WhatsApp
+            <FaWhatsapp /> Chat on WhatsApp
           </a>
-        </div>
+        </section>
       )}
     </main>
   );
 }
 
-/* ================= SMALL COMPONENT ================= */
+/* ================= SUB COMPONENT ================= */
 
-function Detail({ label, value }: any) {
+function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <p className="text-sm text-gray-700">
-      <b>{label}:</b> {value}
+    <p className="text-sm text-[var(--color-text-secondary)]">
+      <span className="font-medium text-[var(--color-text-primary)]">
+        {label}:
+      </span>{" "}
+      {value}
     </p>
   );
 }

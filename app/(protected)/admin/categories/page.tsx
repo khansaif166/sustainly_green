@@ -152,13 +152,13 @@ export default function AdminCategoriesPage() {
       </div>
 
       {/* Category List */}
-      <div className="space-y-3">
+      <div className="space-y-3 ">
         {categories.map((c) => (
           <div
             key={c.id}
-            className="flex items-center justify-between border rounded-lg px-3 py-2 text-sm"
+            className="flex items-center justify-between border rounded-lg px-3 py-2 text-sm "
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 ">
               {c.imageUrl && (
                 <img
                   src={c.imageUrl}
