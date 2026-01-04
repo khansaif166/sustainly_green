@@ -79,7 +79,7 @@ export default function AdminVendorsPage() {
         <p className="text-sm text-gray-500">No vendor registrations found.</p>
       )}
 
-      <div className="space-y-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
         {vendors.map((v) => (
           <div
             key={v.uid}

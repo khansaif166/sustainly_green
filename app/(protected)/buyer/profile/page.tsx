@@ -3,12 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { User, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -87,25 +82,11 @@ export default function BuyerProfilePage() {
 
   return (
     <main className="max-w-full space-y-8">
-
       {/* ================= CARD ================= */}
-      <section
-        className="
-          rounded-3xl p-6
-          bg-[var(--color-bg-white)]
-          shadow-[0_10px_40px_rgba(0,0,0,0.08)]
-          space-y-6 w-full
-        "
-      >
+      <section className="rounded-3xl p-6 bg-[var(--color-bg-white)] shadow-[0_10px_40px_rgba(0,0,0,0.08)] space-y-6 w-full">
         {/* ICON */}
         <div className="flex items-center gap-4 w-full">
-          <div
-            className="
-              h-12 w-12 rounded-xl
-              bg-[var(--color-bg-soft)]
-              flex items-center justify-center
-            "
-          >
+          <div className="h-12 w-12 rounded-xl bg-[var(--color-bg-soft)] flex items-center justify-center">
             <User className="h-6 w-6 text-[var(--color-primary-green)]" />
           </div>
 
@@ -128,9 +109,7 @@ export default function BuyerProfilePage() {
               className="input"
               placeholder="Your full name"
               value={form.name}
-              onChange={(e) =>
-                setForm({ ...form, name: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </div>
 
@@ -151,9 +130,7 @@ export default function BuyerProfilePage() {
               className="input"
               placeholder="Mobile number"
               value={form.phone}
-              onChange={(e) =>
-                setForm({ ...form, phone: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
             />
           </div>
         </div>
@@ -163,17 +140,7 @@ export default function BuyerProfilePage() {
           <button
             onClick={saveProfile}
             disabled={saving}
-            className="
-              inline-flex items-center gap-2
-              rounded-full
-              bg-[var(--color-solar-yellow)]
-              text-black
-              px-6 py-2.5
-              text-sm font-semibold
-              hover:brightness-95
-              transition
-              disabled:opacity-60
-            "
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--color-solar-yellow)] text-black px-6 py-2.5 text-sm font-semibold hover:brightness-95 transition disabled:opacity-60"
           >
             <Save className="h-4 w-4" />
             {saving ? "Saving…" : "Save Profile"}
@@ -183,7 +150,8 @@ export default function BuyerProfilePage() {
 
       {/* INFO */}
       <p className="text-xs text-[var(--color-text-secondary)]">
-        Your contact details are visible to vendors only after you accept a quote.
+        Your contact details are visible to vendors only after you accept a
+        quote.
       </p>
 
       {/* ================= GLOBAL INPUT STYLES ================= */}

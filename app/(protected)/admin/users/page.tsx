@@ -55,7 +55,7 @@ export default function AdminUsers() {
       </div>
 
       {/* ---------- TABLE CARD ---------- */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm mt-10">
         {/* Table */}
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
