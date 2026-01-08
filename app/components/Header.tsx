@@ -8,38 +8,64 @@ import {
   Menu,
   X,
   User,
+  Package,
+  Building2,
+  Layers,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import type { User as FirebaseUser } from "firebase/auth";
 
 /* ---------------- TYPES ---------------- */
 type UserProfile = {
   name?: string;
-  email?: string;
-  phone?: string;
   role?: "ADMIN" | "BUYER" | "VENDOR";
+};
+
+type Suggestion = {
+  id: string;
+  title: string;
+  type: "product" | "vendor" | "category";
 };
 
 export default function Header() {
   const router = useRouter();
 
+  /* UI */
   const [show, setShow] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [openAccount, setOpenAccount] = useState(false);
+  const [openMobile, setOpenMobile] = useState(false);
 
+  /* AUTH */
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
-  const [openAccount, setOpenAccount] = useState(false);
-  const [openMobile, setOpenMobile] = useState(false);
+  /* SEARCH */
+  const [queryText, setQueryText] = useState("");
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
+
+  /* MASTER DATA */
+  const [products, setProducts] = useState<Suggestion[]>([]);
+  const [vendors, setVendors] = useState<Suggestion[]>([]);
+  const [categories, setCategories] = useState<Suggestion[]>([]);
 
   const accountRef = useRef<HTMLDivElement>(null);
 
-  /* ---------------- SCROLL HIDE / SHOW ---------------- */
+  /* ---------------- SCROLL HIDE ---------------- */
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
@@ -63,28 +89,68 @@ export default function Header() {
 
       setAuthUser(u);
       const snap = await getDoc(doc(db, "users", u.uid));
-      if (snap.exists()) {
-        setProfile(snap.data() as UserProfile);
-      }
+      if (snap.exists()) setProfile(snap.data() as UserProfile);
       setLoadingUser(false);
     });
 
     return () => unsub();
   }, []);
 
-  /* ---------------- CLOSE DROPDOWN ---------------- */
+  /* ---------------- LOAD SEARCH DATA (ONCE) ---------------- */
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (
-        accountRef.current &&
-        !accountRef.current.contains(e.target as Node)
-      ) {
-        setOpenAccount(false);
-      }
+    async function loadSearchData() {
+      const pSnap = await getDocs(
+        query(collection(db, "products"), where("approved", "==", true))
+      );
+      setProducts(
+        pSnap.docs.map((d) => ({
+          id: d.id,
+          title: d.data().title || "",
+          type: "product",
+        }))
+      );
+
+      const vSnap = await getDocs(collection(db, "vendors"));
+      setVendors(
+        vSnap.docs.map((d) => ({
+          id: d.id,
+          title: d.data().companyName || "",
+          type: "vendor",
+        }))
+      );
+
+      const cSnap = await getDocs(collection(db, "categories"));
+      setCategories(
+        cSnap.docs.map((d) => ({
+          id: d.id,
+          title: d.data().name || "",
+          type: "category",
+        }))
+      );
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+
+    loadSearchData();
   }, []);
+
+  /* ---------------- FILTER SUGGESTIONS ---------------- */
+  useEffect(() => {
+    if (!queryText.trim()) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    const q = queryText.toLowerCase();
+
+    const matches = [
+      ...products.filter((p) => p.title.toLowerCase().includes(q)).slice(0, 3),
+      ...vendors.filter((v) => v.title.toLowerCase().includes(q)).slice(0, 2),
+      ...categories.filter((c) => c.title.toLowerCase().includes(q)).slice(0, 2),
+    ];
+
+    setSuggestions(matches);
+    setShowDropdown(true);
+  }, [queryText, products, vendors, categories]);
 
   /* ---------------- DASHBOARD LINK ---------------- */
   const dashboardLink =
@@ -96,150 +162,236 @@ export default function Header() {
       ? "/vendor/dashboard"
       : "/";
 
-  /* ================= UI ================= */
+  /* ---------------- SEARCH ACTION ---------------- */
+  function handleSearch() {
+    if (!queryText.trim()) return;
+
+    router.push(
+      `/browse?q=${encodeURIComponent(queryText)}${
+        selectedCategory ? `&category=${selectedCategory}` : ""
+      }`
+    );
+    setShowDropdown(false);
+  }
+
   return (
     <header
-      className={`
-        sticky top-0 z-50
-        bg-(--color-bg-white)
-        border-b border-(--color-border)
-        transition-transform duration-300
-        ${show ? "translate-y-0" : "-translate-y-full"}
-      `}
+      className={`sticky top-0 z-50 bg-white border-b transition-transform duration-300 ${
+        show ? "translate-y-0" : "-translate-y-full"
+      }`}
     >
-      {/* ================= TOP BAR (DESKTOP ONLY) ================= */}
-      <div className="hidden lg:block border-b border-(--color-border) text-sm">
-        <div className="max-w-full mx-auto px-6 h-10 flex items-center justify-between">
-          <div className="flex items-center gap-4 text-(--color-text-secondary)">
-            {!loadingUser && !authUser && (
-              <>
-                <Link
-                  href="/login"
-                  className="text-(--color-ocean-blue) hover:underline"
-                >
-                  Sign in
-                </Link>
-                <span>or</span>
-                <Link
-                  href="/register"
-                  className="text-(--color-ocean-blue) hover:underline"
-                >
-                  Register
-                </Link>
-              </>
-            )}
-
+      {/* ================= TOP BAR (DESKTOP) ================= */}
+      <div className="hidden lg:block border-b text-sm">
+        <div className="px-6 h-10 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             {!loadingUser && authUser && (
               <>
-                <span className="font-medium text-[var(--color-text-primary)">
-                  Hi, {profile?.name || "User"}
-                </span>
-                <span>|</span>
-                <Link
-                  href={dashboardLink}
-                  className="text-(--color-ocean-blue) hover:underline"
-                >
-                  Dashboard
-                </Link>
+                <span>Hi, {profile?.name || "User"}</span>
+                <Link href={dashboardLink}>Dashboard</Link>
               </>
             )}
-
-            <span>|</span>
-            <Link href="/deals" className="hover:underline">Daily Deals</Link>
-            <Link href="/outlet" className="hover:underline">Brand Outlet</Link>
-            <Link href="/gift-cards" className="hover:underline">Gift Cards</Link>
-            <Link href="/help" className="hover:underline">Help & Contact</Link>
+            <Link href="/deals">Daily Deals</Link>
+            <Link href="/help">Help & Contact</Link>
           </div>
 
-          <div className="flex items-center gap-4 text-(--color-text-secondary)">
-            <Link href="/vendor" className="hover:underline">Sell</Link>
-            <Bell className="h-4 w-4 cursor-pointer" />
-            <ShoppingCart className="h-4 w-4 cursor-pointer" />
+          <div className="flex items-center gap-4">
+            <Link href="/vendor">Sell</Link>
+            <Bell className="h-4 w-4" />
+            <ShoppingCart className="h-4 w-4" />
           </div>
         </div>
       </div>
 
       {/* ================= MAIN HEADER ================= */}
-      <div className="max-w-full mx-auto px-4 py-4 flex items-center gap-4">
-
+      <div className="px-4 py-4 flex items-center gap-4">
         {/* LOGO */}
         <Link href="/" className="shrink-0">
-          <img src="/logo.png" alt="Logo" className="h-10" />
+          <img src="/logo.png" className="h-10" />
         </Link>
 
         {/* SEARCH (DESKTOP) */}
-        <div className="hidden lg:flex flex-1 items-center border-2 border-(--color-primary-green) rounded-full overflow-hidden">
-          <div className="px-3 text-(--color-text-muted)">
-            <Search className="h-5 w-5" />
+        <div className="relative hidden lg:flex flex-1">
+          <div className="flex w-full border-2 border-green-700 rounded-full overflow-hidden">
+            <div className="px-3 flex items-center text-gray-400">
+              <Search className="h-5 w-5" />
+            </div>
+
+            <input
+              value={queryText}
+              onChange={(e) => setQueryText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+              placeholder="Search products, vendors or categories"
+              className="flex-1 px-2 py-2 outline-none"
+            />
+
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="border-l px-3 text-sm"
+            >
+              <option value="">All Categories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={handleSearch}
+              className="bg-yellow-400 px-6 font-semibold"
+            >
+              Search
+            </button>
           </div>
-          <input
-            placeholder="Search for products or services"
-            className="flex-1 px-2 py-2 outline-none"
-          />
-          <select className="border-l px-3 py-2 text-sm outline-none">
-            <option>All Categories</option>
-          </select>
-          <button className="bg-(--color-solar-yellow) px-6 py-2 font-medium">
-            Search
-          </button>
-        </div>
 
-        {/* ACCOUNT ICON */}
-        <div className="relative ml-auto" ref={accountRef}>
-          <button
-            onClick={() => setOpenAccount((p) => !p)}
-            className="p-2 rounded-full bg-(--color-bg-soft)"
-          >
-            <User />
-          </button>
-
-          {openAccount && authUser && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl overflow-hidden">
-              <div className="px-4 py-3 border-b">
-                <p className="text-sm font-semibold">{profile?.name}</p>
-                <p className="text-xs text-gray-500 truncate">
-                  {authUser.email}
-                </p>
-              </div>
-
-              <button
-                onClick={() => router.push(dashboardLink)}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
-              >
-                Go to Dashboard
-              </button>
-
-              <button
-                onClick={async () => {
-                  await signOut(auth);
-                  router.push("/");
-                }}
-                className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 text-sm"
-              >
-                Logout
-              </button>
+          {/* SUGGESTIONS */}
+          {showDropdown && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 w-full bg-white rounded-xl shadow-xl mt-2 z-50">
+              {suggestions.map((s) => (
+                <button
+                  key={`${s.type}-${s.id}`}
+                  onClick={() => {
+                    setShowDropdown(false);
+                    if (s.type === "product")
+                      router.push(`/browse?q=${s.title}`);
+                    if (s.type === "vendor")
+                      router.push(`/find-vendors/${s.id}`);
+                    if (s.type === "category")
+                      router.push(`/browse?category=${s.id}`);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+                >
+                  {s.type === "product" && <Package className="h-4 w-4" />}
+                  {s.type === "vendor" && <Building2 className="h-4 w-4" />}
+                  {s.type === "category" && <Layers className="h-4 w-4" />}
+                  <span className="truncate">{s.title}</span>
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        {/* MOBILE MENU */}
-        <button
-          onClick={() => setOpenMobile((p) => !p)}
-          className="lg:hidden p-2 rounded-full hover(--color-bg-soft)"
-        >
-          {openMobile ? <X /> : <Menu />}
-        </button>
+        {/* AUTH (DESKTOP) */}
+        <div className="hidden lg:flex items-center gap-3 ml-auto">
+          {!loadingUser && !authUser && (
+            <>
+              <Link href="/login" className="text-sm font-medium hover:underline">
+                Sign in
+              </Link>
+              <Link
+                href="/register"
+                className="text-sm font-medium bg-black text-white px-4 py-1.5 rounded-full"
+              >
+                Register
+              </Link>
+            </>
+          )}
+
+          {!loadingUser && authUser && (
+            <div className="relative" ref={accountRef}>
+              <button
+                onClick={() => setOpenAccount((p) => !p)}
+                className="p-2 rounded-full bg-gray-100"
+              >
+                <User />
+              </button>
+
+              {openAccount && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg">
+                  <button
+                    onClick={() => router.push(dashboardLink)}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                  >
+                    Go to Dashboard
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await signOut(auth);
+                      router.push("/");
+                    }}
+                    className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 text-sm"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* MOBILE ICONS */}
+        <div className="flex items-center gap-2 ml-auto lg:hidden">
+          <button
+            onClick={() => setOpenMobile((p) => !p)}
+            className="p-2 rounded-full bg-gray-100"
+          >
+            {openMobile ? <X /> : <Menu />}
+          </button>
+        </div>
       </div>
 
       {/* ================= MOBILE MENU ================= */}
       {openMobile && (
-        <div className="lg:hidden bg-white border-t animate-slideDown">
-          <div className="px-6 py-4 space-y-4 text-sm flex flex-col">
-            <Link href="/deals">Daily Deals</Link>
-            <Link href="/outlet">Brand Outlet</Link>
-            <Link href="/gift-cards">Gift Cards</Link>
-            <Link href="/help">Help & Contact</Link>
-            <Link href="/vendor">Sell</Link>
+        <div className="lg:hidden bg-white border-t">
+          <div className="px-6 py-5 space-y-4 text-sm flex flex-col">
+            {!loadingUser && !authUser && (
+              <div className="flex gap-3">
+                <Link
+                  href="/login"
+                  onClick={() => setOpenMobile(false)}
+                  className="flex-1 text-center py-2 rounded-full border"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setOpenMobile(false)}
+                  className="flex-1 text-center py-2 rounded-full bg-black text-white"
+                >
+                  Register
+                </Link>
+              </div>
+            )}
+
+            {!loadingUser && authUser && (
+              <>
+                <p className="font-semibold">
+                  Hi, {profile?.name || "User"}
+                </p>
+                <button className="text-left"
+                  onClick={() => {
+                    setOpenMobile(false);
+                    router.push(dashboardLink);
+                  }}
+                >
+                  Go to Dashboard
+                </button>
+                <button 
+                  onClick={async () => {
+                    await signOut(auth);
+                    setOpenMobile(false);
+                    router.push("/");
+                  }}
+                  className="text-red-600 text-left"
+                >
+                  Logout
+                </button>
+              </>
+            )}
+
+            <hr />
+
+            <Link href="/deals" onClick={() => setOpenMobile(false)}>
+              Daily Deals
+            </Link>
+            <Link href="/help" onClick={() => setOpenMobile(false)}>
+              Help & Contact
+            </Link>
+            <Link href="/vendor" onClick={() => setOpenMobile(false)}>
+              Sell
+            </Link>
           </div>
         </div>
       )}

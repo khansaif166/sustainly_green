@@ -19,6 +19,7 @@ import {
   Clock,
   Building2,
   AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
 
 export default function VendorDashboardPage() {
@@ -52,7 +53,6 @@ export default function VendorDashboardPage() {
 
       setVendor(vendorSnap.data());
 
-      /* Fetch product stats */
       const q = query(
         collection(db, "products"),
         where("vendorId", "==", u.uid)
@@ -74,7 +74,7 @@ export default function VendorDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-gray-600">
+      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
         Loading dashboard…
       </div>
     );
@@ -83,21 +83,41 @@ export default function VendorDashboardPage() {
   const isApproved = vendor?.approved === true;
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <main className="min-h-screen bg-gray-50 pb-10">
+      <div className="max-w-7xl mx-auto space-y-8 px-4">
 
         {/* ================= HEADER ================= */}
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Vendor Dashboard
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Welcome back, <span className="font-medium">{vendor.company}</span>
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Vendor Dashboard
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Welcome back,{" "}
+              <span className="font-medium">
+                {vendor.companyName}
+              </span>
+            </p>
+          </div>
+
+          {/* GO TO SITE */}
+          <button
+            onClick={() => router.push("/")}
+            className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-sm hover:bg-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Go to Site
+          </button>
         </div>
 
         {/* ================= STATUS ================= */}
-        <div className="bg-white rounded-2xl border p-6 flex items-start gap-4">
+        <div
+          className={`rounded-2xl p-6 flex gap-4 shadow-sm ${
+            isApproved
+              ? "bg-green-50"
+              : "bg-yellow-50"
+          }`}
+        >
           {isApproved ? (
             <>
               <CheckCircle className="h-6 w-6 text-green-600 mt-0.5" />
@@ -105,7 +125,7 @@ export default function VendorDashboardPage() {
                 <p className="font-medium text-gray-900">
                   Account Approved
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-700 mt-1">
                   Your vendor account is verified. You can publish products and
                   services.
                 </p>
@@ -118,9 +138,9 @@ export default function VendorDashboardPage() {
                 <p className="font-medium text-gray-900">
                   Approval Pending
                 </p>
-                <p className="text-sm text-gray-600">
-                  Our team is reviewing your profile. You can prepare listings,
-                  but publishing will be enabled after approval.
+                <p className="text-sm text-gray-700 mt-1">
+                  Our team is reviewing your profile. Publishing will be enabled
+                  after approval.
                 </p>
               </div>
             </>
@@ -128,7 +148,7 @@ export default function VendorDashboardPage() {
         </div>
 
         {/* ================= STATS ================= */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-3 gap-4">
           <StatCard
             label="Total Listings"
             value={stats.total}
@@ -149,18 +169,16 @@ export default function VendorDashboardPage() {
         </div>
 
         {/* ================= QUICK ACTIONS ================= */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-3 gap-5">
 
-          {/* PRODUCTS */}
           <ActionCard
-            title="Your Products"
-            description="View, edit, and track all your listings"
+            title="Your Listings"
+            description="View, edit, and track all your products & services"
             icon={Package}
-            actionLabel="View Products"
+            actionLabel="View Listings"
             onClick={() => router.push("/vendor/products")}
           />
 
-          {/* ADD PRODUCT */}
           <ActionCard
             title="Add New Listing"
             description="Create a new product or service listing"
@@ -170,19 +188,18 @@ export default function VendorDashboardPage() {
             onClick={() => router.push("/vendor/products/new")}
           />
 
-          {/* PROFILE */}
           <ActionCard
             title="Company Profile"
             description="Manage business info and certificates"
             icon={Building2}
             actionLabel="Edit Profile"
-            onClick={() => router.push("/vendor/onboarding")}
+            onClick={() => router.push("/vendor/profile")}
           />
         </div>
 
         {/* ================= NEXT STEPS ================= */}
         {!isApproved && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-5 flex gap-3">
+          <div className="bg-yellow-50 rounded-2xl p-5 flex gap-3 shadow-sm">
             <AlertCircle className="h-5 w-5 text-yellow-700 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-yellow-900">
@@ -200,7 +217,7 @@ export default function VendorDashboardPage() {
   );
 }
 
-/* ================= REUSABLE COMPONENTS ================= */
+/* ================= COMPONENTS ================= */
 
 function StatCard({
   label,
@@ -215,7 +232,7 @@ function StatCard({
   };
 
   return (
-    <div className="bg-white rounded-2xl border p-5 flex items-center gap-4">
+    <div className="bg-white rounded-2xl p-5 flex items-center gap-4 shadow-sm">
       <Icon className={`h-6 w-6 ${colorMap[color]}`} />
       <div>
         <p className="text-sm text-gray-500">{label}</p>
@@ -236,8 +253,8 @@ function ActionCard({
   disabled,
 }: any) {
   return (
-    <div className="bg-white rounded-2xl border p-6 flex flex-col justify-between">
-      <div className="flex items-start gap-3 mb-4">
+    <div className="bg-white rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition">
+      <div className="flex gap-3 mb-5">
         <Icon className="h-6 w-6 text-gray-900 mt-0.5" />
         <div>
           <p className="font-medium text-gray-900">{title}</p>
@@ -250,7 +267,7 @@ function ActionCard({
       <button
         disabled={disabled}
         onClick={onClick}
-        className={`rounded-full px-4 py-2 text-sm w-full
+        className={`rounded-full px-4 py-2 text-sm w-full transition
           ${
             disabled
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"

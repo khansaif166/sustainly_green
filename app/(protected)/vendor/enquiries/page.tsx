@@ -15,7 +15,6 @@ import {
 /* ================= TYPES ================= */
 
 type RFQStatusOnly = "RFQ_REQUESTED" | "QUOTED" | "ACCEPTED" | "REJECTED";
-
 type RFQStatusFilter = RFQStatusOnly | "ALL";
 
 interface RFQ {
@@ -36,17 +35,20 @@ export default function VendorRFQsPage() {
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [active, setActive] = useState<RFQ | null>(null);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<RFQStatusFilter>("ALL");
+  const [statusFilter, setStatusFilter] =
+    useState<RFQStatusFilter>("ALL");
 
   /* ================= LOAD RFQS ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) return;
 
-      const q = query(collection(db, "rfqs"), where("vendorId", "==", u.uid));
+      const q = query(
+        collection(db, "rfqs"),
+        where("vendorId", "==", u.uid)
+      );
 
       const snap = await getDocs(q);
-
       setRfqs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as RFQ)));
       setLoading(false);
     });
@@ -56,20 +58,20 @@ export default function VendorRFQsPage() {
 
   /* ================= FILTER + SORT ================= */
 
-  const filteredRFQs =
+  const filtered =
     statusFilter === "ALL"
       ? rfqs
       : rfqs.filter((r) => r.status === statusFilter);
 
-  const statusOrder: Record<RFQStatusOnly, number> = {
+  const order: Record<RFQStatusOnly, number> = {
     RFQ_REQUESTED: 1,
     QUOTED: 2,
     ACCEPTED: 3,
     REJECTED: 4,
   };
 
-  const sortedRFQs = [...filteredRFQs].sort(
-    (a, b) => statusOrder[a.status] - statusOrder[b.status]
+  const sorted = [...filtered].sort(
+    (a, b) => order[a.status] - order[b.status]
   );
 
   /* ================= STATUS BADGE ================= */
@@ -77,34 +79,37 @@ export default function VendorRFQsPage() {
   function badge(status: RFQStatusOnly) {
     switch (status) {
       case "RFQ_REQUESTED":
-        return "bg-yellow-200 text-yellow-900";
+        return "bg-yellow-100 text-yellow-800";
       case "QUOTED":
         return "bg-blue-100 text-blue-700";
       case "ACCEPTED":
         return "bg-green-100 text-green-700";
       case "REJECTED":
         return "bg-red-100 text-red-700";
-      default:
-        return "bg-gray-100 text-gray-600";
     }
   }
 
   return (
     <main className="space-y-8 pb-12">
-      {/* ================= PAGE HEADER ================= */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+
+      {/* ================= HEADER ================= */}
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Buyer RFQs</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Buyer RFQs
+          </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Manage and respond to quotation requests from buyers
+            Manage and respond to quotation requests
           </p>
         </div>
 
-        <div className="text-sm text-gray-500">Total RFQs: {rfqs.length}</div>
+        <span className="text-sm text-gray-500">
+          Total RFQs: {rfqs.length}
+        </span>
       </div>
 
-      {/* ================= FILTER BAR ================= */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* ================= FILTER ================= */}
+      <div className="flex flex-wrap gap-3">
         {[
           { key: "ALL", label: "All" },
           { key: "RFQ_REQUESTED", label: "Pending" },
@@ -125,42 +130,32 @@ export default function VendorRFQsPage() {
             {f.label}
           </button>
         ))}
-
-        <span className="ml-auto text-sm text-gray-500">
-          Showing {sortedRFQs.length}
-        </span>
       </div>
 
-      {/* ================= LOADING / EMPTY ================= */}
-      {loading && <div className="text-sm text-gray-500">Loading RFQs…</div>}
+      {/* ================= STATES ================= */}
+      {loading && (
+        <p className="text-sm text-gray-500">Loading RFQs…</p>
+      )}
 
-      {!loading && sortedRFQs.length === 0 && (
-        <div className="bg-white border rounded-xl p-6 text-sm text-gray-500">
+      {!loading && sorted.length === 0 && (
+        <div className="bg-white rounded-2xl p-6 text-sm text-gray-500 shadow-sm">
           No RFQs found for this filter.
         </div>
       )}
 
       {/* ================= RFQ GRID ================= */}
-      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-        {sortedRFQs.map((r) => (
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {sorted.map((r) => (
           <div
             key={r.id}
-            className="bg-white border border-gray-200 rounded-2xl
-                       hover:shadow-md transition-shadow p-4"
+            className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition"
           >
-            {/* ===== TOP ===== */}
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <h2
-                  className="
-    text-lg font-semibold text-gray-900 leading-snug
-    w-60
-    line-clamp-1
-  "
-                >
+            {/* TOP */}
+            <div className="flex justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 line-clamp-1">
                   {r.requirementTitle}
                 </h2>
-
                 <p className="text-sm text-gray-600 mt-1">
                   <span className="font-medium text-gray-900">
                     {r.buyerName}
@@ -170,7 +165,7 @@ export default function VendorRFQsPage() {
               </div>
 
               <span
-                className={`shrink-0 text-xs px-3 py-1 rounded-full font-semibold ${badge(
+                className={`text-xs px-3 py-1 rounded-full font-semibold ${badge(
                   r.status
                 )}`}
               >
@@ -178,23 +173,23 @@ export default function VendorRFQsPage() {
               </span>
             </div>
 
-            {/* ===== META ===== */}
-            <div className="grid grid-cols-3 gap-2 mt-5 text-sm text-[12px]">
+            {/* META */}
+            <div className="grid grid-cols-3 gap-3 mt-5 text-xs">
               <div>
                 <p className="text-gray-400">Type</p>
-                <p className="font-semibold text-gray-900">{r.requirementType}</p>
+                <p className="font-semibold text-gray-900">
+                  {r.requirementType}
+                </p>
               </div>
-
               <div>
                 <p className="text-gray-400">Quantity</p>
-                <p className="font-semibold text-gray-900 text-[12px]">
+                <p className="font-semibold text-gray-900">
                   {r.estimatedQuantity}
                 </p>
               </div>
-
               <div>
                 <p className="text-gray-400">Timeline</p>
-                <p className="font-semibold text-gray-900 text-[12px]">
+                <p className="font-semibold text-gray-900">
                   {r.requiredTimeline
                     ? r.requiredTimeline.replaceAll("_", " ")
                     : "—"}
@@ -202,63 +197,52 @@ export default function VendorRFQsPage() {
               </div>
             </div>
 
-            {/* ===== BUYER MESSAGE ===== */}
+            {/* MESSAGE */}
             {r.additionalDetails && (
-              <div className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-700">
-                <p className="font-medium text-gray-900 mb-1">Buyer Message</p>
-                <p className="line-clamp-3">{r.additionalDetails}</p>
+              <div className="mt-4 bg-gray-50 rounded-xl p-4 text-sm">
+                <p className="font-medium text-gray-900 mb-1">
+                  Buyer Message
+                </p>
+                <p className="text-gray-700 line-clamp-3">
+                  {r.additionalDetails}
+                </p>
               </div>
             )}
 
-            {/* ===== ACTION ===== */}
+            {/* ACTION */}
             <div className="mt-6 flex justify-end">
               {r.status === "RFQ_REQUESTED" && (
                 <button
                   onClick={() => setActive(r)}
-                  className="inline-flex items-center gap-2
-                             px-5 py-2.5 rounded-lg
-                             bg-black text-white text-sm font-semibold
-                             hover:bg-gray-900 transition"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-black text-white text-sm font-semibold hover:bg-gray-900 transition"
                 >
-                  <FiSend className="h-4 w-4" />
+                  <FiSend />
                   Send Quote
                 </button>
               )}
 
               {r.status === "QUOTED" && (
-                <span
-                  className="inline-flex items-center gap-2
-                                 px-4 py-2 rounded-lg
-                                 bg-blue-50 text-blue-700 text-sm font-semibold
-                                 border border-blue-200"
-                >
-                  <FiMessageSquare />
-                  Quote Sent
-                </span>
+                <StatusPill
+                  icon={<FiMessageSquare />}
+                  label="Quote Sent"
+                  className="bg-blue-50 text-blue-700"
+                />
               )}
 
               {r.status === "ACCEPTED" && (
-                <span
-                  className="inline-flex items-center gap-2
-                                 px-4 py-2 rounded-lg
-                                 bg-green-50 text-green-700 text-sm font-semibold
-                                 border border-green-200"
-                >
-                  <FiCheckCircle />
-                  Accepted
-                </span>
+                <StatusPill
+                  icon={<FiCheckCircle />}
+                  label="Accepted"
+                  className="bg-green-50 text-green-700"
+                />
               )}
 
               {r.status === "REJECTED" && (
-                <span
-                  className="inline-flex items-center gap-2
-                                 px-4 py-2 rounded-lg
-                                 bg-red-50 text-red-700 text-sm font-semibold
-                                 border border-red-200"
-                >
-                  <FiXCircle />
-                  Rejected
-                </span>
+                <StatusPill
+                  icon={<FiXCircle />}
+                  label="Rejected"
+                  className="bg-red-50 text-red-700"
+                />
               )}
             </div>
           </div>
@@ -281,5 +265,18 @@ export default function VendorRFQsPage() {
         />
       )}
     </main>
+  );
+}
+
+/* ================= SMALL UI ================= */
+
+function StatusPill({ icon, label, className }: any) {
+  return (
+    <span
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${className}`}
+    >
+      {icon}
+      {label}
+    </span>
   );
 }

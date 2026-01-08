@@ -46,7 +46,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/vendors"
+                  href="/find-vendors"
                   className="hover:text-[#6BCF9B] transition"
                 >
                   Find Vendors
@@ -112,15 +112,15 @@ export default function Footer() {
             <ul className="space-y-3 text-[13px]">
               <li className="flex items-center gap-2">
                 <HiOutlineMail className="text-[#6BCF9B] text-base" />
-                support@sustainly.com
+                support@sustainlygreen.com
               </li>
               <li className="flex items-center gap-2">
                 <HiOutlinePhone className="text-[#6BCF9B] text-base" />
-                +1 (000) 000-0000
+                +44 20 39961521
               </li>
-              <li className="flex items-center gap-2">
-                <HiOutlineLocationMarker className="text-[#6BCF9B] text-base" />
-                Global Operations
+              <li className="flex items-center gap-2 w-[80%]">
+                <HiOutlineLocationMarker className="text-[#6BCF9B] text-base w-[35] h-[35]" />
+                Winchester House 259 - 269 Old Marylebone Road, London, NW1 5RA, United Kingdom.
               </li>
             </ul>
           </div>
