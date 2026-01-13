@@ -2,16 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-} from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 
 /* ================= TYPES ================= */
 
@@ -44,7 +38,7 @@ export default function BuyerRFQsPage() {
 
       const q = query(
         collection(db, "rfqs"),
-        where("buyerEmail", "==", u.email),
+        where("buyerId", "==", u.uid),
         orderBy("createdAt", "desc")
       );
 
@@ -74,6 +68,21 @@ export default function BuyerRFQsPage() {
 
   return (
     <main className="space-y-8">
+       <Link
+    href="/"
+    className="
+      inline-flex items-center gap-2
+      px-4 py-2 rounded-full
+      text-sm font-medium
+      bg-white/10 backdrop-blur
+      border border-white/20
+      hover:bg-white/20
+      transition
+    "
+  >
+    <ArrowLeft className="h-4 w-4" />
+    Back to Home
+  </Link>
       {/* ================= HEADER ================= */}
       <section>
         <h1 className="text-2xl font-semibold text-(--color-text-primary)">
@@ -130,16 +139,13 @@ export default function BuyerRFQsPage() {
             {/* ================= DETAILS ================= */}
             <div className="mt-4 space-y-2 text-sm text-(--color-text-secondary)">
               <p>
-                <span className="text-black">
-                  Timeline:
-                </span>{" "}
+                <span className="text-black">Timeline:</span>{" "}
                 {r.requiredTimeline.replaceAll("_", " ")}
               </p>
 
               {r.status === "QUOTED" && r.vendorResponse && (
                 <p className="font-medium text-(--color-ocean-blue)">
-                  Quoted: {r.vendorResponse.currency}{" "}
-                  {r.vendorResponse.price}
+                  Quoted: {r.vendorResponse.currency} {r.vendorResponse.price}
                 </p>
               )}
             </div>

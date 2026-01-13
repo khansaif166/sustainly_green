@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   X,
+  BarChart3,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -17,11 +18,27 @@ import { signOut } from "firebase/auth";
 /* ================= NAV CONFIG ================= */
 
 const nav = [
-  { name: "Dashboard", href: "/buyer/dashboard", icon: LayoutDashboard },
-  { name: "My RFQs", href: "/buyer/rfqs", icon: FileText },
-  { name: "Profile", href: "/buyer/profile", icon: User },
+  {
+    name: "Dashboard",
+    href: "/buyer/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    name: "My RFQs",
+    href: "/buyer/rfqs",
+    icon: FileText,
+  },
+  {
+    name: "Reports",
+    href: "/buyer/reports",
+    icon: BarChart3, // analytics / reports icon
+  },
+  {
+    name: "Profile",
+    href: "/buyer/profile",
+    icon: User,
+  },
 ];
-
 /* ================= LAYOUT ================= */
 
 export default function BuyerLayout({

@@ -165,7 +165,7 @@ export default function VendorRFQsPage() {
               </div>
 
               <span
-                className={`text-xs px-3 py-1 rounded-full font-semibold ${badge(
+                className={`text-xs px-3 py-1 rounded-full font-semibold h-[20px] ${badge(
                   r.status
                 )}`}
               >

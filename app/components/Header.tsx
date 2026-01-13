@@ -99,34 +99,51 @@ export default function Header() {
   /* ---------------- LOAD SEARCH DATA (ONCE) ---------------- */
   useEffect(() => {
     async function loadSearchData() {
-      const pSnap = await getDocs(
-        query(collection(db, "products"), where("approved", "==", true))
-      );
-      setProducts(
-        pSnap.docs.map((d) => ({
-          id: d.id,
-          title: d.data().title || "",
-          type: "product",
-        }))
-      );
+      /* PRODUCTS (PUBLIC APPROVED) */
+      try {
+        const pSnap = await getDocs(
+          query(collection(db, "products"), where("approved", "==", true))
+        );
+        setProducts(
+          pSnap.docs.map((d) => ({
+            id: d.id,
+            title: d.data().title || "",
+            type: "product",
+          }))
+        );
+      } catch (e) {
+        console.warn("Products fetch blocked:", e);
+      }
 
-      const vSnap = await getDocs(collection(db, "vendors"));
-      setVendors(
-        vSnap.docs.map((d) => ({
-          id: d.id,
-          title: d.data().companyName || "",
-          type: "vendor",
-        }))
-      );
+      /* VENDORS (PUBLIC APPROVED ONLY) */
+      try {
+        const vSnap = await getDocs(
+          query(collection(db, "vendors"), where("approved", "==", true))
+        );
+        setVendors(
+          vSnap.docs.map((d) => ({
+            id: d.id,
+            title: d.data().companyName || "",
+            type: "vendor",
+          }))
+        );
+      } catch (e) {
+        console.warn("Vendors fetch blocked:", e);
+      }
 
-      const cSnap = await getDocs(collection(db, "categories"));
-      setCategories(
-        cSnap.docs.map((d) => ({
-          id: d.id,
-          title: d.data().name || "",
-          type: "category",
-        }))
-      );
+      /* CATEGORIES (ALWAYS PUBLIC) */
+      try {
+        const cSnap = await getDocs(collection(db, "categories"));
+        setCategories(
+          cSnap.docs.map((d) => ({
+            id: d.id,
+            title: d.data().name || "",
+            type: "category",
+          }))
+        );
+      } catch (e) {
+        console.warn("Categories fetch blocked:", e);
+      }
     }
 
     loadSearchData();
@@ -145,7 +162,9 @@ export default function Header() {
     const matches = [
       ...products.filter((p) => p.title.toLowerCase().includes(q)).slice(0, 3),
       ...vendors.filter((v) => v.title.toLowerCase().includes(q)).slice(0, 2),
-      ...categories.filter((c) => c.title.toLowerCase().includes(q)).slice(0, 2),
+      ...categories
+        .filter((c) => c.title.toLowerCase().includes(q))
+        .slice(0, 2),
     ];
 
     setSuggestions(matches);
@@ -164,13 +183,22 @@ export default function Header() {
 
   /* ---------------- SEARCH ACTION ---------------- */
   function handleSearch() {
-    if (!queryText.trim()) return;
+    if (!queryText.trim() && !selectedCategory) return;
 
-    router.push(
-      `/browse?q=${encodeURIComponent(queryText)}${
-        selectedCategory ? `&category=${selectedCategory}` : ""
-      }`
-    );
+    const params = new URLSearchParams();
+
+    // default browse type
+    params.set("type", "Product");
+
+    if (queryText.trim()) {
+      params.set("q", queryText.trim());
+    }
+
+    if (selectedCategory) {
+      params.set("category", selectedCategory);
+    }
+
+    router.push(`/browse?${params.toString()}`);
     setShowDropdown(false);
   }
 
@@ -253,13 +281,24 @@ export default function Header() {
                 <button
                   key={`${s.type}-${s.id}`}
                   onClick={() => {
+                    const params = new URLSearchParams();
+
+                    params.set("type", "Product");
+
+                    if (s.type === "product") {
+                      params.set("q", s.title);
+                    }
+
+                    if (s.type === "vendor") {
+                      params.set("vendor", s.id);
+                    }
+
+                    if (s.type === "category") {
+                      params.set("category", s.id);
+                    }
+
+                    router.push(`/browse?${params.toString()}`);
                     setShowDropdown(false);
-                    if (s.type === "product")
-                      router.push(`/browse?q=${s.title}`);
-                    if (s.type === "vendor")
-                      router.push(`/find-vendors/${s.id}`);
-                    if (s.type === "category")
-                      router.push(`/browse?category=${s.id}`);
                   }}
                   className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
                 >
@@ -277,7 +316,10 @@ export default function Header() {
         <div className="hidden lg:flex items-center gap-3 ml-auto">
           {!loadingUser && !authUser && (
             <>
-              <Link href="/login" className="text-sm font-medium hover:underline">
+              <Link
+                href="/login"
+                className="text-sm font-medium hover:underline"
+              >
                 Sign in
               </Link>
               <Link
@@ -357,10 +399,9 @@ export default function Header() {
 
             {!loadingUser && authUser && (
               <>
-                <p className="font-semibold">
-                  Hi, {profile?.name || "User"}
-                </p>
-                <button className="text-left"
+                <p className="font-semibold">Hi, {profile?.name || "User"}</p>
+                <button
+                  className="text-left"
                   onClick={() => {
                     setOpenMobile(false);
                     router.push(dashboardLink);
@@ -368,7 +409,7 @@ export default function Header() {
                 >
                   Go to Dashboard
                 </button>
-                <button 
+                <button
                   onClick={async () => {
                     await signOut(auth);
                     setOpenMobile(false);

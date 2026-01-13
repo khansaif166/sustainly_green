@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { User, Save } from "lucide-react";
+import { User, Save, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function BuyerProfilePage() {
   const router = useRouter();
@@ -30,16 +31,14 @@ export default function BuyerProfilePage() {
 
       setBuyerId(u.uid);
 
-      const ref = doc(db, "buyers", u.uid);
+      const ref = doc(db, "users", u.uid);
       const snap = await getDoc(ref);
 
       if (snap.exists()) {
-        setForm(snap.data() as any);
-      } else {
         setForm({
-          name: u.displayName || "",
-          email: u.email || "",
-          phone: "",
+          name: snap.data().name || "",
+          email: snap.data().email || u.email || "",
+          phone: snap.data().phone || "",
         });
       }
 
@@ -59,11 +58,12 @@ export default function BuyerProfilePage() {
     setSaving(true);
 
     await setDoc(
-      doc(db, "buyers", buyerId),
+      doc(db, "users", buyerId),
       {
-        ...form,
+        name: form.name,
+        phone: form.phone,
+        role: "BUYER",
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
       },
       { merge: true }
     );
@@ -82,6 +82,21 @@ export default function BuyerProfilePage() {
 
   return (
     <main className="max-w-full space-y-8">
+      <Link
+        href="/"
+        className="
+      inline-flex items-center gap-2
+      px-4 py-2 rounded-full
+      text-sm font-medium
+      bg-white/10 backdrop-blur
+      border border-white/20
+      hover:bg-white/20
+      transition
+    "
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Link>
       {/* ================= CARD ================= */}
       <section className="rounded-3xl p-6 bg-[var(--color-bg-white)] shadow-[0_10px_40px_rgba(0,0,0,0.08)] space-y-6 w-full">
         {/* ICON */}
