@@ -5,9 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import { FiPhone, FiMail } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
+import Link from "next/link";
 
 /* ================= PAGE ================= */
 
@@ -81,6 +82,31 @@ export default function BuyerRFQDetailPage() {
 
   return (
     <main className="max-w-3xl space-y-8">
+      <Link
+        href="/"
+        className="
+    inline-flex items-center gap-2
+    px-5 py-2.5
+    rounded-full
+    text-sm font-medium
+
+    bg-[var(--color-bg-white)]
+    text-[var(--color-ocean-blue)]
+    border border-[var(--color-border)]
+
+    transition-all duration-200
+    hover:bg-[var(--color-ocean-blue)]
+    hover:text-white
+    hover:border-[var(--color-ocean-blue)]
+
+    focus:outline-none
+    focus:ring-2
+    focus:ring-[var(--color-ocean-blue)]/30
+  "
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Link>
       {/* ================= HEADER ================= */}
       <section>
         <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">

@@ -87,21 +87,6 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* ================= HOW IT WORKS ================= */}
-        <section className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-3xl p-10 space-y-6">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
-            How Sustainly Green Works
-          </h2>
-
-          <ul className="space-y-3 text-sm text-[var(--color-text-secondary)]">
-            <li>• Vendors list eco-friendly products or services for approval</li>
-            <li>• Our team reviews listings for quality and sustainability</li>
-            <li>• Buyers browse, compare, and request quotations</li>
-            <li>• Vendors respond with quotes and details</li>
-            <li>• Buyers choose the best sustainable option</li>
-          </ul>
-        </section>
-
         {/* ================= CTA ================= */}
         <section className="text-center space-y-5">
           <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">

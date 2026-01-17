@@ -85,6 +85,14 @@ export default function Footer() {
                   Contact
                 </Link>
               </li>
+               <li>
+                <Link
+                  href="/careers"
+                  className="hover:text-[#6BCF9B] transition"
+                >
+                  Careers
+                </Link>
+              </li>
               <li>
                 <Link
                   href="/privacy-policy"

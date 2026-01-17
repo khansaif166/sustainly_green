@@ -19,6 +19,7 @@ import {
   HiShieldCheck,
   HiOfficeBuilding,
 } from "react-icons/hi";
+import { ArrowLeft } from "lucide-react";
 
 export default function RegisterPage() {
   const [name, setName] = useState(""); // ✅ NEW
@@ -89,6 +90,23 @@ export default function RegisterPage() {
           className="absolute inset-0 bg-cover bg-center opacity-20"
           style={{ backgroundImage: "url('/images/register-bg.jpg')" }}
         />
+        <Link
+        href="/"
+        className="
+          inline-flex items-center gap-2 mb-8
+          px-5 py-2.5
+          rounded-full text-sm font-medium absolute top-6 left-6
+          bg-[var(--color-bg-white)]
+          text-[var(--color-ocean-blue)]
+          border border-[var(--color-border)]
+          hover:bg-[var(--color-ocean-blue)]
+          hover:text-white
+          transition
+        "
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Link>
 
         <div className="relative z-10 max-w-lg">
           <h1 className="text-3xl font-bold leading-tight">

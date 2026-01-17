@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { CheckCircle, XCircle, ExternalLink } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  ExternalLink,
+  Search,
+  Filter,
+} from "lucide-react";
+
+/* ================= TYPES ================= */
 
 type Vendor = {
   uid: string;
@@ -34,15 +42,28 @@ type Vendor = {
   approved: boolean;
 };
 
+/* ================= PAGE ================= */
+
 export default function AdminVendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<"ALL" | "APPROVED" | "PENDING">("ALL");
+
+  /* ================= LOAD ================= */
 
   async function fetchVendors() {
     const snap = await getDocs(collection(db, "vendors"));
     setVendors(snap.docs.map((d) => d.data() as Vendor));
     setLoading(false);
   }
+
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  /* ================= ACTIONS ================= */
 
   async function approveVendor(uid: string) {
     await updateDoc(doc(db, "vendors", uid), { approved: true });
@@ -55,160 +76,170 @@ export default function AdminVendorsPage() {
     fetchVendors();
   }
 
-  useEffect(() => {
-    fetchVendors();
-  }, []);
+  /* ================= FILTER ================= */
+
+  const filteredVendors = useMemo(() => {
+    return vendors.filter((v) => {
+      const matchSearch =
+        v.company?.toLowerCase().includes(search.toLowerCase()) ||
+        v.businessEmail?.toLowerCase().includes(search.toLowerCase());
+
+      const matchStatus =
+        status === "ALL" ||
+        (status === "APPROVED" && v.approved) ||
+        (status === "PENDING" && !v.approved);
+
+      return matchSearch && matchStatus;
+    });
+  }, [vendors, search, status]);
 
   if (loading) {
-    return <p className="p-6 text-sm text-gray-500">Loading vendors...</p>;
+    return (
+      <div className="p-6 text-sm text-[var(--color-text-secondary)]">
+        Loading vendors…
+      </div>
+    );
   }
 
   return (
-    <main className="max-w-7xl p-6">
-      {/* HEADER */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">
+    <main className="max-w-full mx-auto space-y-8">
+
+      {/* ================= HEADER ================= */}
+      <section>
+        <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
           Vendor Approvals
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
           Review and approve vendor registrations
         </p>
-      </div>
+      </section>
 
-      {vendors.length === 0 && (
-        <p className="text-sm text-gray-500">No vendor registrations found.</p>
+      {/* ================= FILTER BAR ================= */}
+      <section
+        className="
+          rounded-2xl
+          bg-[var(--color-bg-white)]
+          border border-[var(--color-border)]
+          p-4
+          flex flex-col md:flex-row gap-4
+        "
+      >
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-text-secondary)]" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search company or email"
+            className="
+              w-full rounded-xl
+              border border-[var(--color-border)]
+              pl-9 pr-3 py-2.5 text-sm
+              bg-[var(--color-bg-white)]
+              focus:outline-none
+              focus:ring-2
+              focus:ring-[var(--color-ocean-blue)]/30
+            "
+          />
+        </div>
+
+        {/* Status */}
+        <div className="relative w-full md:w-48">
+          <Filter className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-text-secondary)]" />
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as any)}
+            className="
+              w-full rounded-xl
+              border border-[var(--color-border)]
+              pl-9 pr-3 py-2.5 text-sm
+              bg-[var(--color-bg-white)]
+              focus:outline-none
+              focus:ring-2
+              focus:ring-[var(--color-ocean-blue)]/30
+            "
+          >
+            <option value="ALL">All Vendors</option>
+            <option value="PENDING">Pending</option>
+            <option value="APPROVED">Approved</option>
+          </select>
+        </div>
+      </section>
+
+      {/* ================= GRID ================= */}
+      {filteredVendors.length === 0 && (
+        <p className="text-sm text-[var(--color-text-secondary)]">
+          No vendor registrations found.
+        </p>
       )}
 
-      <div className="space-y-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
-        {vendors.map((v) => (
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredVendors.map((v) => (
           <div
             key={v.uid}
-            className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col "
+            className="
+              rounded-3xl
+              bg-[var(--color-bg-white)]
+              border border-[var(--color-border)]
+              shadow-[0_10px_30px_rgba(0,0,0,0.06)]
+              flex flex-col
+            "
           >
             {/* HEADER */}
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h2 className="text-base font-semibold text-gray-900">
-                  {v.company}
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {v.businessType} • {v.city}, {v.country}
-                </p>
-              </div>
+            <div
+              className="p-5 rounded-t-3xl"
+              style={{
+                background: v.approved
+                  ? "var(--gradient-brand-soft)"
+                  : "transparent",
+              }}
+            >
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <h2 className="font-semibold text-[var(--color-text-primary)]">
+                    {v.company}
+                  </h2>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                    {v.businessType} • {v.city}, {v.country}
+                  </p>
+                </div>
 
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-medium
-        ${
-          v.approved
-            ? "bg-green-100 text-green-700"
-            : "bg-yellow-100 text-yellow-700"
-        }`}
-              >
-                {v.approved ? "Approved" : "Pending"}
-              </span>
+                <StatusBadge approved={v.approved} />
+              </div>
             </div>
 
-            {/* BUSINESS INFO */}
-            <div className="text-sm text-gray-700 space-y-1 mb-3">
-              <p>
-                <b>Registration:</b> {v.registrationNumber || "—"}
-              </p>
-              <p>
-                <b>Category:</b> {v.primaryCategory || "—"}
-              </p>
-              <p>
-                <b>Established:</b> {v.yearEstablished || "—"}
-              </p>
+            {/* BODY */}
+            <div className="p-5 space-y-3 text-sm text-[var(--color-text-secondary)]">
+              <p><b>Category:</b> {v.primaryCategory || "—"}</p>
+              <p><b>Established:</b> {v.yearEstablished || "—"}</p>
 
               {v.website && (
                 <a
                   href={v.website}
                   target="_blank"
-                  className="inline-flex items-center gap-1 text-xs text-black hover:underline mt-1"
+                  className="inline-flex items-center gap-1 text-xs text-[var(--color-ocean-blue)] hover:underline"
                 >
                   Website <ExternalLink className="h-3 w-3" />
                 </a>
               )}
-            </div>
 
-            {/* CONTACT */}
-            <div className="text-sm text-gray-700 space-y-1 mb-3">
-              <p>
-                <b>Email:</b> {v.businessEmail || "—"}
-              </p>
-              <p>
-                <b>Phone:</b> {v.businessPhone || "—"}
-              </p>
-
-              {v.socialLinks && (
-                <div className="space-y-0.5">
-                  {Object.entries(v.socialLinks).map(
-                    ([key, link]) =>
-                      link && (
-                        <a
-                          key={key}
-                          href={link}
-                          target="_blank"
-                          className="block text-[11px] text-gray-600 hover:underline"
-                        >
-                          {key}: {link}
-                        </a>
-                      )
-                  )}
-                </div>
+              {v.description && (
+                <p className="line-clamp-3">{v.description}</p>
               )}
             </div>
 
-            {/* DESCRIPTION */}
-            {v.description && (
-              <p className="text-sm text-gray-600 line-clamp-3 mb-4">
-                {v.description}
-              </p>
-            )}
-
-            {/* CERTIFICATIONS */}
-            {v.hasCertifications && (
-              <div className="mb-4">
-                <p className="text-xs font-medium text-gray-900 mb-1">
-                  Certifications
-                </p>
-
-                {v.certificationNames?.length ? (
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {v.certificationNames.map((c, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-0.5 rounded-full border text-[10px] text-gray-600"
-                      >
-                        {c}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-500">No names provided</p>
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  {v.certificates?.map((url, i) => (
-                    <a
-                      key={i}
-                      href={url}
-                      target="_blank"
-                      className="px-3 py-1 rounded-full border text-[11px] hover:bg-gray-50"
-                    >
-                      View Certificate {i + 1}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* ACTIONS */}
-            <div className="flex gap-2 mt-auto">
+            <div className="mt-auto p-4 border-t border-[var(--color-border)] flex gap-2">
               {!v.approved && (
                 <button
                   onClick={() => approveVendor(v.uid)}
-                  className="inline-flex items-center gap-1 rounded-full bg-black text-white px-4 py-1.5 text-xs"
+                  className="
+                    flex-1 inline-flex items-center justify-center gap-2
+                    px-4 py-2 rounded-full text-xs font-medium
+                    text-white
+                    bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+                    hover:opacity-90
+                  "
                 >
                   <CheckCircle className="h-4 w-4" />
                   Approve
@@ -217,7 +248,13 @@ export default function AdminVendorsPage() {
 
               <button
                 onClick={() => rejectVendor(v.uid)}
-                className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-4 py-1.5 text-xs text-gray-700"
+                className="
+                  flex-1 inline-flex items-center justify-center gap-2
+                  px-4 py-2 rounded-full text-xs font-medium
+                  border border-[var(--color-border)]
+                  text-[var(--color-text-secondary)]
+                  hover:bg-[var(--color-bg-soft)]
+                "
               >
                 <XCircle className="h-4 w-4" />
                 Reject
@@ -225,7 +262,26 @@ export default function AdminVendorsPage() {
             </div>
           </div>
         ))}
-      </div>
+      </section>
     </main>
+  );
+}
+
+/* ================= UI ================= */
+
+function StatusBadge({ approved }: { approved: boolean }) {
+  return (
+    <span
+      className={`
+        px-3 py-1 rounded-full text-xs font-semibold
+        ${
+          approved
+            ? "bg-[var(--color-primary-green)]/10 text-[var(--color-primary-green)]"
+            : "bg-[var(--color-solar-yellow)]/25 text-[var(--color-solar-yellow)]"
+        }
+      `}
+    >
+      {approved ? "Approved" : "Pending"}
+    </span>
   );
 }

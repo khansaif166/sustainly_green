@@ -85,18 +85,29 @@ export default function BuyerProfilePage() {
       <Link
         href="/"
         className="
-      inline-flex items-center gap-2
-      px-4 py-2 rounded-full
-      text-sm font-medium
-      bg-white/10 backdrop-blur
-      border border-white/20
-      hover:bg-white/20
-      transition
-    "
+    inline-flex items-center gap-2
+    px-5 py-2.5
+    rounded-full
+    text-sm font-medium
+
+    bg-[var(--color-bg-white)]
+    text-[var(--color-ocean-blue)]
+    border border-[var(--color-border)]
+
+    transition-all duration-200
+    hover:bg-[var(--color-ocean-blue)]
+    hover:text-white
+    hover:border-[var(--color-ocean-blue)]
+
+    focus:outline-none
+    focus:ring-2
+    focus:ring-[var(--color-ocean-blue)]/30
+  "
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Home
       </Link>
+
       {/* ================= CARD ================= */}
       <section className="rounded-3xl p-6 bg-[var(--color-bg-white)] shadow-[0_10px_40px_rgba(0,0,0,0.08)] space-y-6 w-full">
         {/* ICON */}

@@ -18,27 +18,12 @@ import { signOut } from "firebase/auth";
 /* ================= NAV CONFIG ================= */
 
 const nav = [
-  {
-    name: "Dashboard",
-    href: "/buyer/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "My RFQs",
-    href: "/buyer/rfqs",
-    icon: FileText,
-  },
-  {
-    name: "Reports",
-    href: "/buyer/reports",
-    icon: BarChart3, // analytics / reports icon
-  },
-  {
-    name: "Profile",
-    href: "/buyer/profile",
-    icon: User,
-  },
+  { name: "Dashboard", href: "/buyer/dashboard", icon: LayoutDashboard },
+  { name: "My RFQs", href: "/buyer/rfqs", icon: FileText },
+  { name: "Reports", href: "/buyer/reports", icon: BarChart3 },
+  { name: "Profile", href: "/buyer/profile", icon: User },
 ];
+
 /* ================= LAYOUT ================= */
 
 export default function BuyerLayout({
@@ -51,35 +36,31 @@ export default function BuyerLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   async function logout() {
+  try {
     await signOut(auth);
-    router.push("/login");
+    window.location.href = "/login";
+  } catch (err) {
+    console.error("Logout failed", err);
   }
+}
+
 
   return (
     <div className="flex h-screen bg-[var(--color-bg-soft)] overflow-hidden">
-
       {/* ================= DESKTOP SIDEBAR ================= */}
-      <aside
-        className="
-          hidden md:flex w-64 flex-col
-          h-screen sticky top-0
-          bg-[var(--color-bg-white)]
-          shadow-[0_10px_40px_rgba(0,0,0,0.08)]
-          overflow-hidden
-        "
-      >
+      <aside className="hidden md:flex w-64 flex-col bg-[var(--color-bg-white)] border-r border-[var(--color-border)]">
         {/* BRAND */}
-        <div className="px-6 py-6 border-b border-[var(--color-border)]">
+        <div className="px-6 py-6">
           <h2 className="text-lg font-semibold text-[var(--color-primary-green)]">
             Sustainly Green
           </h2>
-          <p className="text-xs text-[var(--color-text-secondary)]">
+          <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
             Buyer Panel
           </p>
         </div>
 
-        {/* NAV (NO SCROLL) */}
-        <nav className="flex-1 px-4 py-6 space-y-1">
+        {/* NAV */}
+        <nav className="flex-1 px-3 space-y-1">
           {nav.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
@@ -89,7 +70,8 @@ export default function BuyerLayout({
                 key={item.href}
                 href={item.href}
                 className={`
-                  flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm
+                  group flex items-center gap-3
+                  px-4 py-2.5 rounded-xl text-sm font-medium
                   transition-all duration-200
                   ${
                     active
@@ -98,21 +80,29 @@ export default function BuyerLayout({
                   }
                 `}
               >
-                <Icon className="h-4 w-4" />
+                <Icon
+                  className={`h-4 w-4 ${
+                    active
+                      ? "opacity-100"
+                      : "opacity-70 group-hover:opacity-100"
+                  }`}
+                />
                 {item.name}
               </Link>
             );
           })}
         </nav>
 
-        {/* LOGOUT (STUCK AT BOTTOM) */}
+        {/* LOGOUT */}
         <div className="p-4 border-t border-[var(--color-border)]">
           <button
             onClick={logout}
             className="
-              w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm
+              w-full flex items-center gap-3
+              px-4 py-2.5 rounded-xl text-sm
               text-[var(--color-text-secondary)]
               hover:bg-[var(--color-bg-soft)]
+              transition
             "
           >
             <LogOut className="h-4 w-4" />
@@ -123,7 +113,9 @@ export default function BuyerLayout({
 
       {/* ================= MOBILE DRAWER ================= */}
       <div
-        className={`fixed inset-0 z-50 md:hidden ${mobileOpen ? "visible" : "invisible"}`}
+        className={`fixed inset-0 z-50 md:hidden ${
+          mobileOpen ? "visible" : "invisible"
+        }`}
       >
         {/* BACKDROP */}
         <div
@@ -135,13 +127,13 @@ export default function BuyerLayout({
 
         {/* DRAWER */}
         <aside
-          className={`absolute left-0 top-0 h-full w-72
-            bg-[var(--color-bg-white)]
+          className={`absolute left-0 top-0 h-full w-72 bg-[var(--color-bg-white)]
             shadow-2xl transition-transform duration-300
             ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
           `}
         >
-          <div className="px-6 py-6 border-b flex justify-between items-center">
+          {/* HEADER */}
+          <div className="px-6 py-5 flex justify-between items-center border-b">
             <div>
               <h2 className="font-semibold text-[var(--color-primary-green)]">
                 Sustainly
@@ -155,7 +147,8 @@ export default function BuyerLayout({
             </button>
           </div>
 
-          <nav className="px-4 py-6 space-y-1">
+          {/* NAV */}
+          <nav className="px-4 py-4 space-y-1">
             {nav.map((item) => {
               const active = pathname === item.href;
               const Icon = item.icon;
@@ -165,11 +158,16 @@ export default function BuyerLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm ${
-                    active
-                      ? "bg-[var(--color-primary-green)] text-white"
-                      : "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-soft)]"
-                  }`}
+                  className={`
+                    flex items-center gap-3
+                    px-4 py-2.5 rounded-xl text-sm font-medium
+                    transition
+                    ${
+                      active
+                        ? "bg-[var(--color-primary-green)] text-white"
+                        : "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-soft)]"
+                    }
+                  `}
                 >
                   <Icon className="h-4 w-4" />
                   {item.name}
@@ -178,10 +176,27 @@ export default function BuyerLayout({
             })}
           </nav>
 
+          {/* LOGOUT */}
           <div className="p-4 border-t">
             <button
               onClick={logout}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm text-red-600 hover:bg-red-50"
+              className="
+    w-full flex items-center gap-3
+    px-4 py-2.5 rounded-xl
+    text-sm font-medium
+
+    text-red-600
+    border border-red-100
+    bg-red-50/40
+
+    transition-all duration-200
+    hover:bg-red-50
+    hover:border-red-200
+
+    focus:outline-none
+    focus:ring-2
+    focus:ring-red-200
+  "
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -190,18 +205,10 @@ export default function BuyerLayout({
         </aside>
       </div>
 
-      {/* ================= MAIN CONTENT ================= */}
+      {/* ================= MAIN ================= */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
         {/* MOBILE TOP BAR */}
-        <header
-          className="
-            md:hidden sticky top-0 z-40
-            bg-[var(--color-bg-white)]
-            border-b border-[var(--color-border)]
-            px-4 py-3 flex items-center justify-between
-          "
-        >
+        <header className="md:hidden sticky top-0 z-40 bg-[var(--color-bg-white)] border-b px-4 py-3 flex items-center justify-between">
           <button onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
           </button>
@@ -211,10 +218,8 @@ export default function BuyerLayout({
           <span className="w-5" />
         </header>
 
-        {/* PAGE SCROLL ONLY HERE */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {children}
-        </main>
+        {/* CONTENT */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </div>
     </div>
   );
