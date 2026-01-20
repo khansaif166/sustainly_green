@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Briefcase,
+  Megaphone,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -33,7 +34,8 @@ const nav = [
   { name: "Sub Categories", href: "/admin/subcategories", icon: ListTree },
   { name: "Tags", href: "/admin/tags", icon: Tag },
   { name: "Careers", href: "/admin/careers", icon: Briefcase },
-  { name: "Contents", href: "/admin/contents", icon: FileText },
+  { name: "Job Applications", href: "/admin/job-applications", icon: FileText },
+  { name: "Ads", href: "/admin/ads", icon: Megaphone },
   { name: "Reports", href: "/admin/reports", icon: BarChart3 },
 ];
 
@@ -50,7 +52,7 @@ export default function AdminLayout({
 
   async function logout() {
     await signOut(auth);
-    router.push("/login");
+    router.push("/");
   }
 
   return (

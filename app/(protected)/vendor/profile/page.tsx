@@ -114,28 +114,28 @@ export default function VendorMyProfilePage() {
 
   if (loading || !form) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
+      <div className="min-h-screen flex items-center justify-center text-sm text-[var(--color-text-secondary)]">
         Loading your profile…
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-6">
+    <main className="min-h-screen bg-[var(--color-bg-soft)] py-6">
       <div className="max-w-full mx-auto space-y-6">
 
         {/* ================= HEADER ================= */}
-        <div className="bg-white rounded-3xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.08)] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="bg-[var(--color-bg-white)] rounded-3xl p-6 border border-[var(--color-border)] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-gray-100 flex items-center justify-center">
-              <Building2 className="h-7 w-7 text-gray-700" />
+            <div className="h-14 w-14 rounded-2xl bg-[var(--color-bg-soft)] flex items-center justify-center">
+              <Building2 className="h-7 w-7 text-[var(--color-primary-green)]" />
             </div>
 
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
+              <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
                 {form.companyName}
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-[var(--color-text-secondary)]">
                 {form.businessType} · {form.primaryCategory}
               </p>
             </div>
@@ -144,7 +144,12 @@ export default function VendorMyProfilePage() {
           {!editing ? (
             <button
               onClick={() => setEditing(true)}
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-gray-300 text-sm hover:bg-gray-50"
+              className="
+                inline-flex items-center gap-2 px-5 py-2 rounded-full
+                border border-[var(--color-border)]
+                text-sm font-medium
+                hover:bg-[var(--color-bg-soft)]
+              "
             >
               <Edit className="h-4 w-4" />
               Edit Profile
@@ -152,7 +157,11 @@ export default function VendorMyProfilePage() {
           ) : (
             <button
               onClick={() => setEditing(false)}
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-gray-300 text-sm"
+              className="
+                inline-flex items-center gap-2 px-5 py-2 rounded-full
+                border border-[var(--color-border)]
+                text-sm
+              "
             >
               <X className="h-4 w-4" />
               Cancel
@@ -222,8 +231,13 @@ export default function VendorMyProfilePage() {
             onChange={(e) =>
               setForm({ ...form, description: e.target.value })
             }
-            className="input resize-none"
             placeholder="Tell buyers about your company, certifications, strengths…"
+            className="
+              w-full rounded-xl border border-[var(--color-border)]
+              bg-white px-3 py-2 text-sm
+              focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-green)]/20
+              disabled:bg-[var(--color-bg-soft)]
+            "
           />
         </Section>
 
@@ -233,30 +247,24 @@ export default function VendorMyProfilePage() {
             <button
               onClick={saveProfile}
               disabled={saving}
-              className="inline-flex items-center gap-2 px-8 py-2.5 rounded-full bg-black text-white text-sm hover:bg-gray-900 disabled:opacity-60"
+              className="
+                inline-flex items-center gap-2 px-8 py-2.5 rounded-full
+                text-sm font-semibold text-white
+                bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+                shadow-[0_8px_24px_rgba(11,110,79,0.25)]
+                hover:opacity-90
+                disabled:opacity-60
+              "
             >
+              {saving && (
+                <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+              )}
               <Save className="h-4 w-4" />
               {saving ? "Saving…" : "Save Changes"}
             </button>
           </div>
         )}
       </div>
-
-      {/* ================= GLOBAL STYLES ================= */}
-      <style jsx global>{`
-        .input {
-          width: 100%;
-          border: 1px solid #e5e7eb;
-          border-radius: 0.75rem;
-          padding: 0.65rem 0.75rem;
-          font-size: 0.875rem;
-        }
-        .input:focus {
-          outline: none;
-          border-color: #000;
-          box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
-        }
-      `}</style>
     </main>
   );
 }
@@ -271,8 +279,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.06)]">
-      <h2 className="text-sm font-semibold text-gray-900 mb-4">
+    <div className="bg-[var(--color-bg-white)] rounded-3xl p-6 border border-[var(--color-border)]">
+      <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
         {title}
       </h2>
       {children}
@@ -295,10 +303,10 @@ function ReadOnlyField({
 }) {
   return (
     <div>
-      <label className="text-xs font-semibold text-gray-600 mb-1 block">
+      <label className="text-xs font-semibold text-[var(--color-text-secondary)] mb-1 block">
         {label}
       </label>
-      <div className="flex items-center gap-2 input bg-gray-100 cursor-not-allowed">
+      <div className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm bg-[var(--color-bg-soft)] border border-[var(--color-border)]">
         {icon}
         <span>{children}</span>
       </div>
@@ -321,7 +329,7 @@ function EditableField({
 }) {
   return (
     <div>
-      <label className="text-xs font-semibold text-gray-600 mb-1 block">
+      <label className="text-xs font-semibold text-[var(--color-text-secondary)] mb-1 block">
         {label}
       </label>
       <div className="flex items-center gap-2">
@@ -330,7 +338,12 @@ function EditableField({
           disabled={disabled}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="input"
+          className="
+            w-full rounded-xl border border-[var(--color-border)]
+            bg-white px-3 py-2 text-sm
+            focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-green)]/20
+            disabled:bg-[var(--color-bg-soft)]
+          "
         />
       </div>
     </div>

@@ -6,9 +6,12 @@ import {
   addDoc,
   getDocs,
   serverTimestamp,
+  updateDoc,
+  deleteDoc,
+  doc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Pencil, Trash2 } from "lucide-react";
 
 /* ================= PAGE ================= */
 
@@ -22,6 +25,7 @@ export default function AdminTagsPage() {
   const [name, setName] = useState("");
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   /* ---------------- LOAD ---------------- */
   async function load() {
@@ -29,24 +33,50 @@ export default function AdminTagsPage() {
     setTags(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
   }
 
-  /* ---------------- ADD ---------------- */
-  async function addTag() {
+  /* ---------------- ADD / UPDATE ---------------- */
+  async function saveTag() {
     if (!name.trim()) return;
 
     try {
       setLoading(true);
 
-      await addDoc(collection(db, "tags"), {
-        name,
-        active: true,
-        createdAt: serverTimestamp(),
-      });
+      if (editingId) {
+        await updateDoc(doc(db, "tags", editingId), {
+          name,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        await addDoc(collection(db, "tags"), {
+          name,
+          active: true,
+          createdAt: serverTimestamp(),
+        });
+      }
 
-      setName("");
+      resetForm();
       load();
     } finally {
       setLoading(false);
     }
+  }
+
+  /* ---------------- EDIT ---------------- */
+  function startEdit(tag: Tag) {
+    setName(tag.name);
+    setEditingId(tag.id);
+  }
+
+  /* ---------------- DELETE ---------------- */
+  async function deleteTag(id: string) {
+    if (!confirm("Delete this tag permanently?")) return;
+
+    await deleteDoc(doc(db, "tags", id));
+    setTags((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  function resetForm() {
+    setName("");
+    setEditingId(null);
   }
 
   useEffect(() => {
@@ -66,7 +96,7 @@ export default function AdminTagsPage() {
         </p>
       </section>
 
-      {/* ================= ADD TAG ================= */}
+      {/* ================= ADD / EDIT TAG ================= */}
       <section
         className="
           rounded-3xl
@@ -77,7 +107,7 @@ export default function AdminTagsPage() {
         "
       >
         <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-          Add Tag
+          {editingId ? "Edit Tag" : "Add Tag"}
         </h2>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -96,7 +126,7 @@ export default function AdminTagsPage() {
           />
 
           <button
-            onClick={addTag}
+            onClick={saveTag}
             disabled={loading}
             className="
               inline-flex items-center justify-center gap-2
@@ -109,8 +139,26 @@ export default function AdminTagsPage() {
             "
           >
             <PlusCircle className="h-4 w-4" />
-            {loading ? "Adding..." : "Add Tag"}
+            {loading
+              ? "Saving..."
+              : editingId
+              ? "Update Tag"
+              : "Add Tag"}
           </button>
+
+          {editingId && (
+            <button
+              onClick={resetForm}
+              className="
+                rounded-full
+                px-5 py-2.5
+                text-sm border
+                border-[var(--color-border)]
+              "
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </section>
 
@@ -133,22 +181,36 @@ export default function AdminTagsPage() {
             No tags created yet.
           </p>
         ) : (
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {tags.map((t) => (
-              <span
+              <div
                 key={t.id}
                 className="
-                  px-4 py-1.5 rounded-full
-                  text-xs font-medium
-                  bg-[var(--color-bg-soft)]
-                  border border-[var(--color-border)]
-                  text-[var(--color-text-primary)]
-                  hover:bg-[var(--color-bg-white)]
-                  transition
+                  flex items-center justify-between
+                  rounded-xl border border-[var(--color-border)]
+                  px-4 py-2
                 "
               >
-                #{t.name}
-              </span>
+                <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                  #{t.name}
+                </span>
+
+                <div className="flex gap-3 text-xs">
+                  <button
+                    onClick={() => startEdit(t)}
+                    className="text-[var(--color-ocean-blue)] hover:underline flex items-center gap-1"
+                  >
+                    <Pencil className="h-3 w-3" /> Edit
+                  </button>
+
+                  <button
+                    onClick={() => deleteTag(t.id)}
+                    className="text-red-600 hover:underline flex items-center gap-1"
+                  >
+                    <Trash2 className="h-3 w-3" /> Delete
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}

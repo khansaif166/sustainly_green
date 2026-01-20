@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { CheckCircle, Package, Globe, Tag } from "lucide-react";
+import { CheckCircle, Package, Globe, Tag, ArrowLeft } from "lucide-react";
 import BuyerRFQModal from "../../components/ContactVendorModal";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
+import { doc, getDoc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
+import Link from "next/link";
 
 /* ================= TYPES ================= */
 
@@ -40,19 +41,31 @@ export default function ProductDetailPage() {
 
   /* ---------- FETCH PRODUCT ---------- */
   useEffect(() => {
-    async function fetchProduct() {
-      if (!productId) return;
+  async function fetchProduct() {
+    if (!productId) return;
 
-      const snap = await getDoc(doc(db, "products", productId as string));
-      if (snap.exists()) {
-        const data = snap.data() as Omit<Product, "id">;
-        setProduct({ id: snap.id, ...data });
-        setActiveImage(data.images?.[0] || null);
-      }
-      setLoading(false);
+    const ref = doc(db, "products", productId as string);
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      const data = snap.data() as Omit<Product, "id">;
+
+      setProduct({ id: snap.id, ...data });
+      setActiveImage(data.images?.[0] || null);
+
+      // ✅ INCREMENT VIEWS (SAFE + ATOMIC)
+      await updateDoc(ref, {
+        views: increment(1),
+        lastViewedAt: serverTimestamp(),
+      });
     }
-    fetchProduct();
-  }, [productId]);
+
+    setLoading(false);
+  }
+
+  fetchProduct();
+}, [productId]);
+
 
   /* ---------- LOADING ---------- */
   if (loading) {
@@ -82,6 +95,7 @@ export default function ProductDetailPage() {
 }) {
   return (
     <div className="flex items-start gap-3 rounded-xl border border-(--color-border) bg-white p-4">
+      
       {/* Icon */}
       <div className="mt-0.5 rounded-lg bg-(--color-bg-soft) p-2">
         <Icon className="h-4 w-4 text-(--color-ocean-blue)" />
@@ -107,8 +121,27 @@ export default function ProductDetailPage() {
   return (
     <>
      <Header/>
-    <main className="min-h-screen bg-(--color-bg-soft) px-4 py-10">
+    <main className="min-h-screen bg-(--color-bg-soft) px-4 py-5">
+      <Link
+        href="/"
+        className="
+          inline-flex items-center gap-2
+          px-5 py-2.5
+          rounded-full text-sm font-medium
+          bg-[var(--color-bg-white)]
+          text-[var(--color-ocean-blue)]
+          border border-[var(--color-border)]
+          hover:bg-[var(--color-ocean-blue)]
+          hover:text-white
+          transition left-4 mb-6 
+        "
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Link>
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12">
+
+        
 
         {/* ================= IMAGE GALLERY ================= */}
         <div className="space-y-4">

@@ -2,15 +2,26 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
-import { Search, User, Filter, X } from "lucide-react";
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import {
+  Search,
+  User,
+  Filter,
+  X,
+  Ban,
+  CheckCircle,
+  Edit2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 /* ================= TYPES ================= */
 
 type UserType = {
   id: string;
   email: string;
-  role: string;
+  role: "ADMIN" | "VENDOR" | "BUYER";
+  blocked?: boolean;
 };
 
 /* ================= PAGE ================= */
@@ -21,6 +32,10 @@ export default function AdminUsers() {
 
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<"ALL" | "ADMIN" | "VENDOR" | "BUYER">("ALL");
+
+  /* PAGINATION */
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
 
   /* ================= LOAD USERS ================= */
 
@@ -47,72 +62,81 @@ export default function AdminUsers() {
     });
   }, [users, search, role]);
 
+  /* ================= PAGINATED ================= */
+
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
+
+  const paginatedUsers = filteredUsers.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
+
+  /* ================= ACTIONS ================= */
+
+  async function toggleBlock(user: UserType) {
+    await updateDoc(doc(db, "users", user.id), {
+      blocked: !user.blocked,
+    });
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, blocked: !u.blocked } : u)),
+    );
+  }
+
+  async function changeRole(user: UserType, newRole: UserType["role"]) {
+    await updateDoc(doc(db, "users", user.id), {
+      role: newRole,
+    });
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, role: newRole } : u)),
+    );
+  }
+
   /* ================= CLEAR ================= */
 
   function clearFilters() {
     setSearch("");
     setRole("ALL");
+    setPage(1);
   }
 
   return (
     <div className="max-w-full mx-auto space-y-8">
-
       {/* ================= HEADER ================= */}
-      <section className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
-            Users
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-            Manage all registered buyers, vendors and admins
-          </p>
-        </div>
+      <section>
+        <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
+          Users
+        </h1>
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+          Manage all registered buyers, vendors and admins
+        </p>
       </section>
 
       {/* ================= FILTER BAR ================= */}
-      <section
-        className="
-          rounded-2xl
-          bg-[var(--color-bg-white)]
-          border border-[var(--color-border)]
-          p-4
-          flex flex-col md:flex-row gap-4
-        "
-      >
-        {/* Search */}
+      <section className="rounded-2xl bg-white border border-[var(--color-border)] p-4 flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-text-secondary)]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             placeholder="Search by email or role"
-            className="
-              w-full rounded-xl
-              border border-[var(--color-border)]
-              pl-9 pr-3 py-2.5 text-sm
-              bg-[var(--color-bg-white)]
-              focus:outline-none
-              focus:ring-2
-              focus:ring-[var(--color-ocean-blue)]/30
-            "
+            className="w-full rounded-xl border border-[var(--color-border)] pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-ocean-blue)]/30"
           />
         </div>
 
-        {/* Role Filter */}
-        <div className="w-full md:w-48 relative">
-          <Filter className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-text-secondary)]" />
+        <div className="w-full md:w-full relative">
+          <Filter className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value as any)}
-            className="
-              w-full rounded-xl
-              border border-[var(--color-border)]
-              pl-9 pr-3 py-2.5 text-sm
-              bg-[var(--color-bg-white)]
-              focus:outline-none
-              focus:ring-2
-              focus:ring-[var(--color-ocean-blue)]/30
-            "
+            onChange={(e) => {
+              setRole(e.target.value as any);
+              setPage(1);
+            }}
+            className="w-full rounded-xl border border-[var(--color-border)] pl-9 pr-3 py-2.5 text-sm"
           >
             <option value="ALL">All Roles</option>
             <option value="ADMIN">Admin</option>
@@ -121,102 +145,172 @@ export default function AdminUsers() {
           </select>
         </div>
 
-        {/* Clear */}
         {(search || role !== "ALL") && (
           <button
             onClick={clearFilters}
-            className="
-              inline-flex items-center gap-2
-              px-4 py-2.5 rounded-xl
-              text-sm font-medium
-              border border-[var(--color-border)]
-              bg-[var(--color-bg-soft)]
-              text-[var(--color-text-secondary)]
-              hover:bg-[var(--color-bg-white)]
-              transition
-            "
+            className="px-4 py-2.5 rounded-xl border text-sm"
           >
-            <X className="h-4 w-4" />
-            Clear
+            <X className="h-4 w-4 inline" /> Clear
           </button>
         )}
       </section>
 
-      {/* ================= TABLE ================= */}
-      <section
-        className="
-          rounded-2xl
-          bg-[var(--color-bg-white)]
-          border border-[var(--color-border)]
-          overflow-hidden
-        "
-      >
-        <table className="w-full text-sm">
-          <thead className="bg-[var(--color-bg-soft)] border-b border-[var(--color-border)]">
+      {/* ================= MOBILE VIEW ================= */}
+      <div className="space-y-4 md:hidden">
+        {!loading &&
+          paginatedUsers.map((u) => (
+            <div
+              key={u.id}
+              className="rounded-xl border border-[var(--color-border)] bg-white p-4 space-y-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
+                  <User className="h-4 w-4 text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium truncate">{u.email}</p>
+                  <RoleBadge role={u.role} />
+                </div>
+              </div>
+
+              <div className="flex justify-between text-xs">
+                <span className={u.blocked ? "text-red-600" : "text-green-600"}>
+                  {u.blocked ? "Blocked" : "Active"}
+                </span>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() =>
+                    changeRole(u, u.role === "BUYER" ? "VENDOR" : "BUYER")
+                  }
+                  className="flex-1 border rounded-lg py-2 text-xs text-blue-600"
+                >
+                  Change Role
+                </button>
+
+                <button
+                  onClick={() => toggleBlock(u)}
+                  className={`flex-1 border rounded-lg py-2 text-xs ${
+                    u.blocked ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {u.blocked ? "Unblock" : "Block"}
+                </button>
+              </div>
+            </div>
+          ))}
+      </div>
+
+      <section className="hidden md:block rounded-2xl bg-white border border-[var(--color-border)] overflow-x-auto">
+        <table className="min-w-[700px] w-full text-sm">
+          <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="px-6 py-3 text-left font-medium text-[var(--color-text-secondary)]">
-                User
-              </th>
-              <th className="px-6 py-3 text-left font-medium text-[var(--color-text-secondary)]">
-                Role
-              </th>
+              <th className="px-3 md:px-6 py-3 text-left">User</th>
+              <th className="px-3 md:px-6 py-3 text-left">Role</th>
+              <th className="px-3 md:px-6 py-3 text-left">Status</th>
+              <th className="px-3 md:px-6 py-3 text-right">Actions</th>
             </tr>
           </thead>
 
           <tbody>
-            {/* Loading */}
-            {loading &&
-              [...Array(6)].map((_, i) => (
-                <tr key={i} className="border-b">
-                  <td className="px-6 py-4">
-                    <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
-                  </td>
-                </tr>
-              ))}
-
-            {/* Empty */}
-            {!loading && filteredUsers.length === 0 && (
-              <tr>
-                <td
-                  colSpan={2}
-                  className="px-6 py-14 text-center text-[var(--color-text-secondary)]"
-                >
-                  No users match the selected filters
-                </td>
-              </tr>
-            )}
-
-            {/* Rows */}
             {!loading &&
-              filteredUsers.map((u) => (
+              paginatedUsers.map((u) => (
                 <tr
                   key={u.id}
-                  className="
-                    border-b last:border-none
-                    hover:bg-[var(--color-bg-soft)]
-                    transition
-                  "
+                  className="border-b border-[var(--color-border)] hover:bg-gray-50"
                 >
-                  <td className="px-6 py-4 flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-[var(--color-bg-soft)] flex items-center justify-center">
-                      <User className="h-4 w-4 text-[var(--color-text-secondary)]" />
+                  {/* USER */}
+                  <td className="px-3 md:px-6 py-4 flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                      <User className="h-4 w-4 text-gray-500" />
                     </div>
-                    <span className="text-[var(--color-text-primary)]">
+                    <span className="truncate max-w-[160px] md:max-w-none">
                       {u.email}
                     </span>
                   </td>
 
-                  <td className="px-6 py-4">
+                  {/* ROLE */}
+                  <td className="px-3 md:px-6 py-4">
                     <RoleBadge role={u.role} />
+                  </td>
+
+                  {/* STATUS */}
+                  <td className="px-3 md:px-6 py-4">
+                    {u.blocked ? (
+                      <span className="text-red-600 text-xs font-medium">
+                        Blocked
+                      </span>
+                    ) : (
+                      <span className="text-green-600 text-xs font-medium">
+                        Active
+                      </span>
+                    )}
+                  </td>
+
+                  {/* ACTIONS */}
+                  <td className="px-3 md:px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                    {/* CHANGE ROLE */}
+                    <button
+                      onClick={() =>
+                        changeRole(u, u.role === "BUYER" ? "VENDOR" : "BUYER")
+                      }
+                      className="text-blue-600 hover:underline inline-flex items-center gap-1 text-xs"
+                    >
+                      <Edit2 className="h-3 w-3" />
+                      <span className="hidden md:inline">Change Role</span>
+                    </button>
+
+                    {/* BLOCK / UNBLOCK */}
+                    <button
+                      onClick={() => toggleBlock(u)}
+                      className={`inline-flex items-center gap-1 text-xs ${
+                        u.blocked ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {u.blocked ? (
+                        <>
+                          <CheckCircle className="h-3 w-3" />
+                          <span className="hidden md:inline">Unblock</span>
+                        </>
+                      ) : (
+                        <>
+                          <Ban className="h-3 w-3" />
+                          <span className="hidden md:inline">Block</span>
+                        </>
+                      )}
+                    </button>
                   </td>
                 </tr>
               ))}
           </tbody>
         </table>
       </section>
+
+      {/* ================= PAGINATION ================= */}
+      {totalPages > 1 && (
+        <div className="flex justify-center md:justify-end items-center gap-3 text-sm flex-wrap mt-4">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="p-2 border rounded disabled:opacity-40"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <span className="text-xs md:text-sm">
+            Page {page} of {totalPages}
+          </span>
+
+          <button
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="p-2 border rounded disabled:opacity-40"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -225,21 +319,14 @@ export default function AdminUsers() {
 
 function RoleBadge({ role }: { role: string }) {
   const map: Record<string, string> = {
-    ADMIN:
-      "bg-purple-100 text-purple-700",
-    VENDOR:
-      "bg-[var(--color-ocean-blue)]/10 text-[var(--color-ocean-blue)]",
-    BUYER:
-      "bg-[var(--color-primary-green)]/10 text-[var(--color-primary-green)]",
+    ADMIN: "bg-purple-100 text-purple-700",
+    VENDOR: "bg-blue-100 text-blue-700",
+    BUYER: "bg-green-100 text-green-700",
   };
 
   return (
     <span
-      className={`
-        inline-flex px-3 py-1 rounded-full
-        text-xs font-semibold
-        ${map[role] || "bg-gray-100 text-gray-700"}
-      `}
+      className={`px-3 py-1 rounded-full text-xs font-semibold ${map[role]}`}
     >
       {role}
     </span>

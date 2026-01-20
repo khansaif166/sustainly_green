@@ -117,41 +117,50 @@ export default function AddProductPage() {
     try {
       const imageUrls: string[] = [];
       const orderedImages = [
-  images[coverIndex],
-  ...images.filter((_, i) => i !== coverIndex),
-];
+        images[coverIndex],
+        ...images.filter((_, i) => i !== coverIndex),
+      ];
 
-for (const file of orderedImages) {
-  const path = `products/${user.uid}/${Date.now()}_${file.name}`;
-  const url = await uploadFileWithProgress(file, path);
-  imageUrls.push(url);
-}
-
+      for (const file of orderedImages) {
+        const path = `products/${user.uid}/${Date.now()}_${file.name}`;
+        const url = await uploadFileWithProgress(file, path);
+        imageUrls.push(url);
+      }
 
       await addDoc(collection(db, "products"), {
         vendorId: user.uid,
-        listingType,
+
         title,
         description,
+
+        listingType,
+        availableFor,
+
         categoryId,
         subCategoryId,
+
         images: imageUrls,
 
-        availableFor,
         priceType,
         price: price ? Number(price) : null,
         currency,
         moq: moq ? Number(moq) : null,
         discount,
 
-        sustainabilityTags: selectedTags,
-        sustainabilityClaim,
-
         shipRegions,
         inStock,
+        featured: false,
+        isAd: false,
 
+        sustainabilityTags: selectedTags,
+        sustainabilityClaim,
         approved: false,
+        status: "PENDING",
+        views: 0,
+        lastViewedAt: null,
+
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
       router.push("/vendor/dashboard");
@@ -170,7 +179,7 @@ for (const file of orderedImages) {
   /* ---------- UI ---------- */
   return (
     <main className="min-h-screen bg-gray-50 pb-10">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-full mx-auto space-y-8">
         {/* HEADER */}
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
@@ -274,24 +283,23 @@ for (const file of orderedImages) {
 
               <label className="upload-box">
                 <input
-  type="file"
-  multiple
-  accept="image/*"
-  className="hidden"
-  onChange={(e) => {
-    if (!e.target.files) return;
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (!e.target.files) return;
 
-    const selected = Array.from(e.target.files);
+                    const selected = Array.from(e.target.files);
 
-    setImages((prev) => {
-      const combined = [...prev, ...selected].slice(0, 5);
-      return combined;
-    });
+                    setImages((prev) => {
+                      const combined = [...prev, ...selected].slice(0, 5);
+                      return combined;
+                    });
 
-    e.target.value = "";
-  }}
-/>
-
+                    e.target.value = "";
+                  }}
+                />
 
                 <span className="truncate max-w-full text-center">
                   {uploadLabel}
@@ -305,64 +313,59 @@ for (const file of orderedImages) {
           </section>
 
           {images.length > 0 && (
-  <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-4">
-    {images.map((file, index) => {
-      const url = URL.createObjectURL(file);
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-4">
+              {images.map((file, index) => {
+                const url = URL.createObjectURL(file);
 
-      return (
-        <div
-          key={index}
-          className={`relative rounded-xl overflow-hidden border-2
-            ${
-              coverIndex === index
-                ? "border-black"
-                : "border-gray-200"
-            }
+                return (
+                  <div
+                    key={index}
+                    className={`relative rounded-xl overflow-hidden border-2
+            ${coverIndex === index ? "border-black" : "border-gray-200"}
           `}
-        >
-          {/* IMAGE */}
-          <img
-            src={url}
-            alt={`preview-${index}`}
-            className="h-24 w-full object-cover"
-          />
+                  >
+                    {/* IMAGE */}
+                    <img
+                      src={url}
+                      alt={`preview-${index}`}
+                      className="h-24 w-full object-cover"
+                    />
 
-          {/* COVER BADGE */}
-          {coverIndex === index && (
-            <span className="absolute top-1 left-1 text-[10px] bg-black text-white px-2 py-0.5 rounded-full">
-              Cover
-            </span>
-          )}
+                    {/* COVER BADGE */}
+                    {coverIndex === index && (
+                      <span className="absolute top-1 left-1 text-[10px] bg-black text-white px-2 py-0.5 rounded-full">
+                        Cover
+                      </span>
+                    )}
 
-          {/* ACTIONS */}
-          <div className="absolute inset-x-0 bottom-0 flex justify-between bg-black/60 px-1 py-1">
-            <button
-              type="button"
-              onClick={() => setCoverIndex(index)}
-              className="text-[10px] text-white"
-            >
-              Set Cover
-            </button>
+                    {/* ACTIONS */}
+                    <div className="absolute inset-x-0 bottom-0 flex justify-between bg-black/60 px-1 py-1">
+                      <button
+                        type="button"
+                        onClick={() => setCoverIndex(index)}
+                        className="text-[10px] text-white"
+                      >
+                        Set Cover
+                      </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setImages((prev) =>
-                  prev.filter((_, i) => i !== index)
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImages((prev) =>
+                            prev.filter((_, i) => i !== index)
+                          );
+                          if (coverIndex === index) setCoverIndex(0);
+                        }}
+                        className="text-[10px] text-red-300"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
                 );
-                if (coverIndex === index) setCoverIndex(0);
-              }}
-              className="text-[10px] text-red-300"
-            >
-              Remove
-            </button>
-          </div>
-        </div>
-      );
-    })}
-  </div>
-)}
-
+              })}
+            </div>
+          )}
 
           {/* COMMERCIAL */}
           <section className="bg-white rounded-2xl p-6 space-y-5">
@@ -497,10 +500,22 @@ for (const file of orderedImages) {
           {/* SUBMIT */}
           <div className="flex justify-end">
             <button
+              type="submit"
               disabled={loading}
-              className="rounded-full bg-black text-white px-6 py-2 text-sm hover:bg-gray-900 disabled:opacity-60"
+              className={`relative inline-flex items-center justify-center gap-2
+      px-10 py-2.5 rounded-full text-sm font-semibold text-white
+      transition-all duration-200
+      ${loading ? "opacity-60 cursor-not-allowed" : "hover:-translate-y-[1px]"}
+      bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+      shadow-[0_8px_20px_rgba(11,110,79,0.25)]
+      hover:shadow-[0_12px_28px_rgba(10,76,138,0.35)]
+    `}
             >
-              {loading ? "Saving..." : "Create Listing"}
+              {loading && (
+                <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+              )}
+
+              <span>{loading ? "Saving..." : "Create Listing"}</span>
             </button>
           </div>
         </form>

@@ -10,7 +10,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Pencil } from "lucide-react";
 
 /* ================= TYPES ================= */
 
@@ -29,6 +29,7 @@ type Job = {
 export default function AdminCareersPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     title: "",
@@ -44,18 +45,27 @@ export default function AdminCareersPage() {
     setJobs(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
   }
 
-  /* ================= ADD ================= */
-  async function addJob() {
+  /* ================= ADD / UPDATE ================= */
+  async function submitJob() {
     if (!form.title || !form.description) return;
 
     try {
       setLoading(true);
 
-      await addDoc(collection(db, "careers"), {
-        ...form,
-        active: true,
-        createdAt: serverTimestamp(),
-      });
+      if (editingId) {
+        // UPDATE
+        await updateDoc(doc(db, "careers", editingId), {
+          ...form,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        // CREATE
+        await addDoc(collection(db, "careers"), {
+          ...form,
+          active: true,
+          createdAt: serverTimestamp(),
+        });
+      }
 
       setForm({
         title: "",
@@ -65,10 +75,24 @@ export default function AdminCareersPage() {
         description: "",
       });
 
+      setEditingId(null);
       loadJobs();
     } finally {
       setLoading(false);
     }
+  }
+
+  /* ================= EDIT ================= */
+  function editJob(job: Job) {
+    setForm({
+      title: job.title,
+      department: job.department,
+      location: job.location,
+      type: job.type,
+      description: job.description,
+    });
+    setEditingId(job.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   /* ================= TOGGLE ================= */
@@ -101,175 +125,143 @@ export default function AdminCareersPage() {
         </p>
       </section>
 
-      {/* ================= ADD JOB ================= */}
+      {/* ================= ADD / EDIT JOB ================= */}
       <section
-  className="
-    relative
-    rounded-3xl
-    bg-[var(--color-bg-white)]
-    border border-[var(--color-border)]
-    shadow-[0_12px_40px_rgba(0,0,0,0.08)]
-    p-6 md:p-8
-    space-y-6
-  "
->
-  {/* HEADER */}
-  <div className="flex items-center justify-between">
-    <div>
-      <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
-        Add Job Opening
-      </h2>
-      <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-        Create and publish a new career opportunity
-      </p>
-    </div>
-  </div>
-
-  {/* FORM GRID */}
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-    {/* Job Title */}
-    <div className="space-y-1.5">
-      <label className="text-xs font-medium text-[var(--color-text-secondary)]">
-        Job Title
-      </label>
-      <input
-        value={form.title}
-        onChange={(e) => setForm({ ...form, title: e.target.value })}
-        placeholder="Frontend Developer"
         className="
-          w-full rounded-xl
+          relative rounded-3xl bg-[var(--color-bg-white)]
           border border-[var(--color-border)]
-          px-4 py-2.5 text-sm
-          bg-[var(--color-bg-white)]
-          focus:outline-none
-          focus:ring-2 focus:ring-[var(--color-ocean-blue)]/30
-        "
-      />
-    </div>
-
-    {/* Department */}
-    <div className="space-y-1.5">
-      <label className="text-xs font-medium text-[var(--color-text-secondary)]">
-        Department
-      </label>
-      <input
-        value={form.department}
-        onChange={(e) =>
-          setForm({ ...form, department: e.target.value })
-        }
-        placeholder="Engineering, Sales, Operations"
-        className="
-          w-full rounded-xl
-          border border-[var(--color-border)]
-          px-4 py-2.5 text-sm
-          bg-[var(--color-bg-white)]
-          focus:outline-none
-          focus:ring-2 focus:ring-[var(--color-ocean-blue)]/30
-        "
-      />
-    </div>
-
-    {/* Location */}
-    <div className="space-y-1.5">
-      <label className="text-xs font-medium text-[var(--color-text-secondary)]">
-        Location
-      </label>
-      <input
-        value={form.location}
-        onChange={(e) =>
-          setForm({ ...form, location: e.target.value })
-        }
-        placeholder="Remote / Bengaluru / Mumbai"
-        className="
-          w-full rounded-xl
-          border border-[var(--color-border)]
-          px-4 py-2.5 text-sm
-          bg-[var(--color-bg-white)]
-          focus:outline-none
-          focus:ring-2 focus:ring-[var(--color-ocean-blue)]/30
-        "
-      />
-    </div>
-
-    {/* Job Type */}
-    <div className="space-y-1.5">
-      <label className="text-xs font-medium text-[var(--color-text-secondary)]">
-        Job Type
-      </label>
-      <select
-        value={form.type}
-        onChange={(e) => setForm({ ...form, type: e.target.value })}
-        className="
-          w-full rounded-xl
-          border border-[var(--color-border)]
-          px-4 py-2.5 text-sm
-          bg-[var(--color-bg-white)]
-          focus:outline-none
-          focus:ring-2 focus:ring-[var(--color-ocean-blue)]/30
+          shadow-[0_12px_40px_rgba(0,0,0,0.08)]
+          p-6 md:p-8 space-y-6
         "
       >
-        <option value="FULL_TIME">Full Time</option>
-        <option value="PART_TIME">Part Time</option>
-        <option value="INTERNSHIP">Internship</option>
-        <option value="REMOTE">Remote</option>
-      </select>
-    </div>
-  </div>
+        {/* HEADER */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
+              {editingId ? "Edit Job Opening" : "Add Job Opening"}
+            </h2>
+            <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+              {editingId
+                ? "Update existing career opportunity"
+                : "Create and publish a new career opportunity"}
+            </p>
+          </div>
+        </div>
 
-  {/* DESCRIPTION */}
-  <div className="space-y-1.5">
-    <label className="text-xs font-medium text-[var(--color-text-secondary)]">
-      Job Description
-    </label>
-    <textarea
-      value={form.description}
-      onChange={(e) =>
-        setForm({ ...form, description: e.target.value })
-      }
-      placeholder="Describe responsibilities, requirements, and benefits…"
-      rows={5}
-      className="
-        w-full rounded-xl
-        border border-[var(--color-border)]
-        px-4 py-3 text-sm
-        bg-[var(--color-bg-white)]
-        focus:outline-none
-        focus:ring-2 focus:ring-[var(--color-ocean-blue)]/30
-      "
-    />
-  </div>
+        {/* FORM GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Job Title */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[var(--color-text-secondary)]">
+              Job Title
+            </label>
+            <input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="Frontend Developer"
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm"
+            />
+          </div>
 
-  {/* ACTION */}
-  <div className="flex justify-end pt-2">
-    <button
-      onClick={addJob}
-      disabled={loading}
-      className="
-        inline-flex items-center gap-2
-        px-6 py-2.5 rounded-full
-        text-sm font-semibold text-white
-        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-        hover:opacity-90
-        disabled:opacity-50
-        transition
-      "
-    >
-      <PlusCircle className="h-4 w-4" />
-      {loading ? "Posting..." : "Post Job"}
-    </button>
-  </div>
-</section>
+          {/* Department */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[var(--color-text-secondary)]">
+              Department
+            </label>
+            <input
+              value={form.department}
+              onChange={(e) =>
+                setForm({ ...form, department: e.target.value })
+              }
+              placeholder="Engineering, Sales"
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm"
+            />
+          </div>
 
+          {/* Location */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[var(--color-text-secondary)]">
+              Location
+            </label>
+            <input
+              value={form.location}
+              onChange={(e) =>
+                setForm({ ...form, location: e.target.value })
+              }
+              placeholder="Remote / Bengaluru"
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm"
+            />
+          </div>
+
+          {/* Job Type */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[var(--color-text-secondary)]">
+              Job Type
+            </label>
+            <select
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value })}
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm"
+            >
+              <option value="FULL_TIME">Full Time</option>
+              <option value="PART_TIME">Part Time</option>
+              <option value="INTERNSHIP">Internship</option>
+              <option value="REMOTE">Remote</option>
+            </select>
+          </div>
+        </div>
+
+        {/* DESCRIPTION */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-[var(--color-text-secondary)]">
+            Job Description
+          </label>
+          <textarea
+            value={form.description}
+            onChange={(e) =>
+              setForm({ ...form, description: e.target.value })
+            }
+            rows={5}
+            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
+          />
+        </div>
+
+        {/* ACTION */}
+        <div className="flex justify-end pt-2 gap-3">
+          {editingId && (
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setForm({
+                  title: "",
+                  department: "",
+                  location: "",
+                  type: "FULL_TIME",
+                  description: "",
+                });
+              }}
+              className="px-5 py-2 rounded-full border text-sm"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            onClick={submitJob}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold text-white bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]"
+          >
+            <PlusCircle className="h-4 w-4" />
+            {loading
+              ? "Saving..."
+              : editingId
+              ? "Update Job"
+              : "Post Job"}
+          </button>
+        </div>
+      </section>
 
       {/* ================= LIST ================= */}
-      <section
-        className="
-          rounded-3xl bg-[var(--color-bg-white)]
-          border border-[var(--color-border)]
-          shadow-[0_10px_30px_rgba(0,0,0,0.06)]
-          p-6
-        "
-      >
+      <section className="rounded-3xl bg-[var(--color-bg-white)] border border-[var(--color-border)] p-6">
         <h2 className="text-sm font-semibold mb-4">Posted Jobs</h2>
 
         {jobs.length === 0 ? (
@@ -281,10 +273,7 @@ export default function AdminCareersPage() {
             {jobs.map((j) => (
               <div
                 key={j.id}
-                className="
-                  rounded-2xl border border-[var(--color-border)]
-                  p-4 space-y-2
-                "
+                className="rounded-2xl border border-[var(--color-border)] p-4 space-y-2"
               >
                 <div className="flex justify-between items-start">
                   <div>
@@ -295,13 +284,11 @@ export default function AdminCareersPage() {
                   </div>
 
                   <span
-                    className={`text-xs px-3 py-1 rounded-full font-medium
-                      ${
-                        j.active
-                          ? "bg-[var(--color-primary-green)]/10 text-[var(--color-primary-green)]"
-                          : "bg-gray-100 text-gray-500"
-                      }
-                    `}
+                    className={`text-xs px-3 py-1 rounded-full font-medium ${
+                      j.active
+                        ? "bg-[var(--color-primary-green)]/10 text-[var(--color-primary-green)]"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
                   >
                     {j.active ? "Active" : "Inactive"}
                   </span>
@@ -311,12 +298,22 @@ export default function AdminCareersPage() {
                   {j.description}
                 </p>
 
-                <button
-                  onClick={() => toggleJob(j.id, j.active)}
-                  className="text-xs text-[var(--color-ocean-blue)] hover:underline"
-                >
-                  {j.active ? "Disable" : "Enable"}
-                </button>
+                <div className="flex justify-between items-center">
+                  <button
+                    onClick={() => toggleJob(j.id, j.active)}
+                    className="text-xs text-[var(--color-ocean-blue)] hover:underline"
+                  >
+                    {j.active ? "Disable" : "Enable"}
+                  </button>
+
+                  <button
+                    onClick={() => editJob(j)}
+                    className="text-xs text-gray-500 hover:text-black flex items-center gap-1"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    Edit
+                  </button>
+                </div>
               </div>
             ))}
           </div>

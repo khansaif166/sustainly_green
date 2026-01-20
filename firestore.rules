@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ===================== HELPERS ===================== */
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return signedIn()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid))
+        : null;
+    }
+
+    function isAdmin() {
+      return signedIn() && userDoc().data.role == "ADMIN";
+    }
+
+    function isVendor() {
+      return signedIn() && userDoc().data.role == "VENDOR";
+    }
+
+    function isBuyer() {
+      return signedIn() && userDoc().data.role == "BUYER";
+    }
+    
+    /* ===================== CAREERS ===================== */
+    match /careers/{jobId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    match /jobApplications/{id} {
+      allow create: if
+        request.resource.data.name is string &&
+        request.resource.data.email is string &&
+        request.resource.data.jobId is string;
+
+      allow read, update, delete: if isAdmin();
+    }
+    /* ===================== ADMIN GLOBAL ACCESS ===================== */
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    /* ===================== USERS ===================== */
+    match /users/{userId} {
+      allow read, write: if
+        isAdmin()
+        || (signedIn() && request.auth.uid == userId);
+    }
+
+    /* ===================== BUYERS ===================== */
+    match /buyers/{buyerId} {
+      allow read, write: if
+        isAdmin()
+        || (isBuyer() && request.auth.uid == buyerId);
+    }
+
+    /* ===================== VENDORS ===================== */
+    match /vendors/{vendorId} {
+
+      // Public browse
+      allow read: if true;
+
+      // Vendor self-manage
+      allow create, update: if
+        isVendor() && request.auth.uid == vendorId;
+
+      // Admin full control
+      allow delete: if isAdmin();
+    }
+
+    /* ===================== CATEGORIES ===================== */
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /subcategories/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /tags/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    /* ===================== PRODUCTS ===================== */
+    match /products/{productId} {
+
+  // 🌍 PUBLIC + BUYERS
+  // Only approved products are visible
+  allow read: if resource.data.approved == "true";
+
+  // 🏭 VENDOR
+  // Vendor can see & manage own products (even pending)
+  allow read, update: if
+    isVendor() && resource.data.vendorId == request.auth.uid;
+
+  allow create: if
+    isVendor() && request.resource.data.vendorId == request.auth.uid;
+
+  // 🛡 ADMIN
+  allow read, write, delete: if isAdmin();
+}
+
+
+
+    /* ===================== RFQs ===================== */
+    match /rfqs/{rfqId} {
+
+      // Public RFQ submit
+      allow create: if
+        request.resource.data.productId is string
+        && request.resource.data.vendorId is string
+        && request.resource.data.buyerEmail is string;
+
+      // Admin sees ALL RFQs
+      allow read, update: if isAdmin();
+
+      // Vendor involved
+      allow read, update: if
+        isVendor() && resource.data.vendorId == request.auth.uid;
+
+      // Buyer involved
+      allow read, update: if
+        isBuyer() && resource.data.buyerId == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    /* ===================== ENQUIRIES ===================== */
+    match /enquiries/{id} {
+
+      // Public enquiry
+      allow create: if
+        request.resource.data.email is string
+        && request.resource.data.message is string;
+
+      // Admin manages all enquiries
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

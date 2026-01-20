@@ -79,13 +79,13 @@ export default function VendorRFQsPage() {
   function badge(status: RFQStatusOnly) {
     switch (status) {
       case "RFQ_REQUESTED":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-[var(--color-solar-yellow)]/20 text-[var(--color-solar-yellow)]";
       case "QUOTED":
-        return "bg-blue-100 text-blue-700";
+        return "bg-[var(--color-ocean-blue)]/15 text-[var(--color-ocean-blue)]";
       case "ACCEPTED":
-        return "bg-green-100 text-green-700";
+        return "bg-[var(--color-primary-green)]/15 text-[var(--color-primary-green)]";
       case "REJECTED":
-        return "bg-red-100 text-red-700";
+        return "bg-red-100 text-red-600";
     }
   }
 
@@ -95,15 +95,15 @@ export default function VendorRFQsPage() {
       {/* ================= HEADER ================= */}
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
+          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
             Buyer RFQs
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
             Manage and respond to quotation requests
           </p>
         </div>
 
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-[var(--color-text-secondary)]">
           Total RFQs: {rfqs.length}
         </span>
       </div>
@@ -120,12 +120,14 @@ export default function VendorRFQsPage() {
           <button
             key={f.key}
             onClick={() => setStatusFilter(f.key as RFQStatusFilter)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition
+            className={`
+              px-4 py-2 rounded-full text-sm font-medium transition
               ${
                 statusFilter === f.key
-                  ? "bg-black text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+                  ? "bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))] text-white"
+                  : "bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-soft)]/70"
+              }
+            `}
           >
             {f.label}
           </button>
@@ -134,11 +136,13 @@ export default function VendorRFQsPage() {
 
       {/* ================= STATES ================= */}
       {loading && (
-        <p className="text-sm text-gray-500">Loading RFQs…</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">
+          Loading RFQs…
+        </p>
       )}
 
       {!loading && sorted.length === 0 && (
-        <div className="bg-white rounded-2xl p-6 text-sm text-gray-500 shadow-sm">
+        <div className="bg-[var(--color-bg-white)] rounded-2xl p-6 text-sm text-[var(--color-text-secondary)] shadow-sm">
           No RFQs found for this filter.
         </div>
       )}
@@ -148,16 +152,20 @@ export default function VendorRFQsPage() {
         {sorted.map((r) => (
           <div
             key={r.id}
-            className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition"
+            className="
+              bg-[var(--color-bg-white)]
+              rounded-2xl p-5
+              shadow-sm hover:shadow-md transition
+            "
           >
             {/* TOP */}
             <div className="flex justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 line-clamp-1">
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)] line-clamp-1">
                   {r.requirementTitle}
                 </h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  <span className="font-medium text-gray-900">
+                <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+                  <span className="font-medium text-[var(--color-text-primary)]">
                     {r.buyerName}
                   </span>{" "}
                   • {r.deliveryCountry}
@@ -175,35 +183,34 @@ export default function VendorRFQsPage() {
 
             {/* META */}
             <div className="grid grid-cols-3 gap-3 mt-5 text-xs">
-              <div>
-                <p className="text-gray-400">Type</p>
-                <p className="font-semibold text-gray-900">
-                  {r.requirementType}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-400">Quantity</p>
-                <p className="font-semibold text-gray-900">
-                  {r.estimatedQuantity}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-400">Timeline</p>
-                <p className="font-semibold text-gray-900">
-                  {r.requiredTimeline
+              {[
+                ["Type", r.requirementType],
+                ["Quantity", r.estimatedQuantity],
+                [
+                  "Timeline",
+                  r.requiredTimeline
                     ? r.requiredTimeline.replaceAll("_", " ")
-                    : "—"}
-                </p>
-              </div>
+                    : "—",
+                ],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-[var(--color-text-secondary)]">
+                    {label}
+                  </p>
+                  <p className="font-semibold text-[var(--color-text-primary)]">
+                    {value}
+                  </p>
+                </div>
+              ))}
             </div>
 
             {/* MESSAGE */}
             {r.additionalDetails && (
-              <div className="mt-4 bg-gray-50 rounded-xl p-4 text-sm">
-                <p className="font-medium text-gray-900 mb-1">
+              <div className="mt-4 bg-[var(--color-bg-soft)] rounded-xl p-4 text-sm">
+                <p className="font-medium text-[var(--color-text-primary)] mb-1">
                   Buyer Message
                 </p>
-                <p className="text-gray-700 line-clamp-3">
+                <p className="text-[var(--color-text-secondary)] line-clamp-3">
                   {r.additionalDetails}
                 </p>
               </div>
@@ -214,7 +221,13 @@ export default function VendorRFQsPage() {
               {r.status === "RFQ_REQUESTED" && (
                 <button
                   onClick={() => setActive(r)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-black text-white text-sm font-semibold hover:bg-gray-900 transition"
+                  className="
+                    inline-flex items-center gap-2
+                    px-5 py-2.5 rounded-full
+                    text-sm font-semibold text-white
+                    bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+                    hover:opacity-90 transition
+                  "
                 >
                   <FiSend />
                   Send Quote
@@ -225,7 +238,7 @@ export default function VendorRFQsPage() {
                 <StatusPill
                   icon={<FiMessageSquare />}
                   label="Quote Sent"
-                  className="bg-blue-50 text-blue-700"
+                  className="bg-[var(--color-ocean-blue)]/15 text-[var(--color-ocean-blue)]"
                 />
               )}
 
@@ -233,7 +246,7 @@ export default function VendorRFQsPage() {
                 <StatusPill
                   icon={<FiCheckCircle />}
                   label="Accepted"
-                  className="bg-green-50 text-green-700"
+                  className="bg-[var(--color-primary-green)]/15 text-[var(--color-primary-green)]"
                 />
               )}
 
@@ -241,7 +254,7 @@ export default function VendorRFQsPage() {
                 <StatusPill
                   icon={<FiXCircle />}
                   label="Rejected"
-                  className="bg-red-50 text-red-700"
+                  className="bg-red-100 text-red-600"
                 />
               )}
             </div>

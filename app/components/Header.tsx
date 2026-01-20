@@ -280,25 +280,23 @@ export default function Header() {
               {suggestions.map((s) => (
                 <button
                   key={`${s.type}-${s.id}`}
-                  onClick={() => {
-                    const params = new URLSearchParams();
-
-                    params.set("type", "Product");
+                  onMouseDown={() => {
+                    setShowDropdown(false);
 
                     if (s.type === "product") {
-                      params.set("q", s.title);
+                      router.push(`/products/${s.id}`);
+                      return;
                     }
 
                     if (s.type === "vendor") {
-                      params.set("vendor", s.id);
+                      router.push(`/vendor/${s.id}`);
+                      return;
                     }
 
                     if (s.type === "category") {
-                      params.set("category", s.id);
+                      router.push(`/browse?category=${s.id}`);
+                      return;
                     }
-
-                    router.push(`/browse?${params.toString()}`);
-                    setShowDropdown(false);
                   }}
                   className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
                 >
