@@ -11,6 +11,8 @@ import {
   FiXCircle,
   FiMessageSquare,
 } from "react-icons/fi";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 /* ================= TYPES ================= */
 
@@ -91,6 +93,24 @@ export default function VendorRFQsPage() {
 
   return (
     <main className="space-y-8 pb-12">
+       <Link
+        href="/"
+        className="
+          inline-flex items-center gap-2
+          px-5 py-2.5
+          rounded-full text-sm font-medium
+          bg-[var(--color-bg-white)]
+          text-[var(--color-ocean-blue)]
+          border border-[var(--color-border)]
+          hover:bg-[var(--color-ocean-blue)]
+          hover:text-white
+          transition
+        "
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Link>
+
 
       {/* ================= HEADER ================= */}
       <div className="flex flex-wrap justify-between items-center gap-4">

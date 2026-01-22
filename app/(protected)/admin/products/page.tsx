@@ -95,18 +95,42 @@ export default function AdminProductsPage() {
   /* ================= ACTIONS ================= */
 
   async function updateStatus(id: string, newStatus: Product["status"]) {
-    const approved = newStatus === "APPROVED";
+  let approved = false;
+  let visibleToBuyers = false;
 
-    await updateDoc(doc(db, "products", id), {
-      status: "APPROVED",
-      approved: true,
-      updatedAt: serverTimestamp(),
-    });
-
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p)),
-    );
+  if (newStatus === "APPROVED") {
+    approved = true;
+    visibleToBuyers = true;
   }
+
+  if (newStatus === "REJECTED") {
+    approved = false;
+    visibleToBuyers = false;
+  }
+
+  if (newStatus === "PENDING") {
+    approved = false;
+    visibleToBuyers = false;
+  }
+
+  // 🔥 UPDATE FIRESTORE CORRECTLY
+  await updateDoc(doc(db, "products", id), {
+    status: newStatus,              // ✅ correct status
+    approved: approved,             // ✅ true only if approved
+    visibleToBuyers: visibleToBuyers, // ✅ control buyer visibility
+    updatedAt: serverTimestamp(),
+  });
+
+  // 🔄 UPDATE LOCAL STATE
+  setProducts((prev) =>
+    prev.map((p) =>
+      p.id === id
+        ? { ...p, status: newStatus, approved, visibleToBuyers }
+        : p,
+    ),
+  );
+}
+
 
   async function deleteProduct(id: string) {
     if (!confirm("Are you sure you want to delete this product?")) return;

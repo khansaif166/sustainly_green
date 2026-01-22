@@ -10,7 +10,8 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { PlusCircle, Clock, CheckCircle } from "lucide-react";
+import { PlusCircle, Clock, CheckCircle, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 type Product = {
   id: string;
@@ -63,6 +64,24 @@ export default function VendorProductsPage() {
   return (
     <main className="space-y-6">
 
+       <Link
+        href="/"
+        className="
+          inline-flex items-center gap-2
+          px-5 py-2.5
+          rounded-full text-sm font-medium
+          bg-[var(--color-bg-white)]
+          text-[var(--color-ocean-blue)]
+          border border-[var(--color-border)]
+          hover:bg-[var(--color-ocean-blue)]
+          hover:text-white
+          transition
+        "
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Link>
+
       {/* ================= HEADER ================= */}
       <div className="flex items-center justify-between">
         <div>
@@ -113,7 +132,7 @@ export default function VendorProductsPage() {
       )}
 
       {/* ================= PRODUCTS GRID ================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {products.map((p) => (
           <div
             key={p.id}
@@ -131,7 +150,7 @@ export default function VendorProductsPage() {
               <img
                 src={p.images[0]}
                 alt={p.title}
-                className="h-44 w-full object-cover"
+                className="h-44 w-full object-cover bg-white"
               />
             ) : (
               <div className="

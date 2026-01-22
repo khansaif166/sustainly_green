@@ -28,13 +28,15 @@ type Product = {
 type Category = {
   id: string;
   name: string;
-  imageUrl?: string; 
+  imageUrl?: string;
 };
 
 export default function HomePage() {
   const router = useRouter();
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -46,7 +48,7 @@ export default function HomePage() {
         const q = query(
           collection(db, "categories"),
           where("active", "==", true),
-          limit(10)
+          limit(10),
         );
 
         const snap = await getDocs(q);
@@ -54,7 +56,7 @@ export default function HomePage() {
           snap.docs.map((d) => ({
             id: d.id,
             ...(d.data() as any),
-          }))
+          })),
         );
       } catch (err) {
         console.error("HOME_CATEGORIES_ERROR", err);
@@ -78,31 +80,61 @@ export default function HomePage() {
   };
 
   /* ---------------- LOAD PRODUCTS ---------------- */
+  /* ---------------- LOAD FEATURED PRODUCTS ---------------- */
   useEffect(() => {
-    async function fetchProducts() {
+    async function fetchFeatured() {
+      try {
+        const q = query(
+          collection(db, "products"),
+          where("approved", "==", true),
+          where("featured", "==", true),
+          orderBy("createdAt", "desc"),
+          limit(6),
+        );
+
+        const snap = await getDocs(q);
+
+        setFeaturedProducts(
+          snap.docs.map((doc) => ({
+            id: doc.id,
+            ...(doc.data() as any),
+          })),
+        );
+      } catch (err) {
+        console.error("HOME_FEATURED_ERROR", err);
+      }
+    }
+
+    fetchFeatured();
+  }, []);
+
+  /* ---------------- LOAD ALL PRODUCTS ---------------- */
+  useEffect(() => {
+    async function fetchAllProducts() {
       try {
         const q = query(
           collection(db, "products"),
           where("approved", "==", true),
           orderBy("createdAt", "desc"),
-          limit(6)
+          limit(8),
         );
 
         const snap = await getDocs(q);
-        setProducts(
+
+        setAllProducts(
           snap.docs.map((doc) => ({
             id: doc.id,
             ...(doc.data() as any),
-          }))
+          })),
         );
       } catch (err) {
-        console.error("HOME_PRODUCTS_ERROR", err);
+        console.error("HOME_ALL_PRODUCTS_ERROR", err);
       } finally {
         setLoadingProducts(false);
       }
     }
 
-    fetchProducts();
+    fetchAllProducts();
   }, []);
 
   return (
@@ -113,18 +145,17 @@ export default function HomePage() {
         <section className="relative overflow-hidden  rounded-4xl h-125">
           {/* Background Image */}
           <div className="absolute inset-0">
-  {/* Background Image */}
-  <div
-    className="absolute inset-0 bg-cover bg-top"
-    style={{
-      backgroundImage: "url('/bgg.jpg')",
-    }}
-  />
+            {/* Background Image */}
+            <div
+              className="absolute inset-0 bg-cover bg-top"
+              style={{
+                backgroundImage: "url('/bgg.jpg')",
+              }}
+            />
 
-  {/* Black Overlay */}
-  <div className="absolute inset-0 bg-black/40" />
-</div>
-
+            {/* Black Overlay */}
+            <div className="absolute inset-0 bg-black/40" />
+          </div>
 
           {/* Overlay */}
           <div className="absolute inset-0" />
@@ -247,51 +278,156 @@ export default function HomePage() {
       </section>
 
       {/* ================= FEATURED PRODUCTS ================= */}
-      <section className="max-w-full mx-auto px-6 py-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-sm font-semibold text-gray-900">
-            Featured Products
-          </h2>
+      <section className="max-w-full mx-auto px-10 py-14">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-yellow-600">
+              Handpicked
+            </p>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Featured Products
+            </h2>
+          </div>
 
           <Link
             href="/browse"
-            className="text-sm text-gray-600 hover:underline"
+            className="text-sm font-medium text-[var(--color-ocean-blue)] hover:underline"
           >
-            View all
+            View all →
           </Link>
         </div>
 
         {loadingProducts ? (
           <p className="text-sm text-gray-500">Loading products...</p>
-        ) : products.length === 0 ? (
-          <p className="text-sm text-gray-500">No approved products yet.</p>
+        ) : featuredProducts.length === 0 ? (
+          <p className="text-sm text-gray-500">No featured products yet.</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {products.map((p) => (
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-8">
+            {featuredProducts.map((p) => (
               <Link
                 key={p.id}
                 href={`/products/${p.id}`}
-                className="bg-white rounded-2xl border border-gray-100 p-4  transition"
+                className="
+            group bg-white rounded-3xl border border-gray-100 
+            p-4 transition-all duration-300
+            hover:shadow-xl hover:-translate-y-1 h-full
+          "
               >
-                <div className=" h-48 md:h-88 object-contain bg-gray-100 rounded-lg mb-3 overflow-hidden">
+                {/* Image */}
+                <div className="relative h-48 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
+                  {/* Featured badge */}
+                  <span className="absolute top-3 left-3 z-10 bg-yellow-400 text-black text-xs font-semibold px-3 py-1 rounded-full shadow">
+                    Featured
+                  </span>
+
                   {p.images?.[0] && (
                     <img
                       src={p.images[0]}
                       alt={p.title}
-                      className="h-full w-full object-cover"
+                      className="
+                  h-full w-full object-cover
+                  transition-transform duration-500
+                  group-hover:scale-105
+                "
                     />
                   )}
                 </div>
 
-                <h3 className="text-sm font-medium text-gray-900 line-clamp-1">
+                {/* Content */}
+                <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
                   {p.title}
                 </h3>
+
                 <p className="text-xs text-gray-600 mt-1 line-clamp-2">
                   {p.description}
                 </p>
               </Link>
             ))}
           </div>
+        )}
+      </section>
+
+      <section className="max-w-full mx-auto px-10 py-14 bg-gray-50">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
+              New Arrivals
+            </p>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Latest Products
+            </h2>
+          </div>
+
+          <Link
+            href="/browse"
+            className="text-sm font-medium text-[var(--color-ocean-blue)] hover:underline"
+          >
+            Browse all →
+          </Link>
+        </div>
+
+        {loadingProducts ? (
+          <p className="text-sm text-gray-500">Loading products...</p>
+        ) : allProducts.length === 0 ? (
+          <p className="text-sm text-gray-500">No products found.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-8">
+              {allProducts.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/products/${p.id}`}
+                  className="
+              group bg-white rounded-3xl border border-gray-100 
+              p-4 transition-all duration-300
+              hover:shadow-lg hover:-translate-y-1
+            "
+                >
+                  {/* Image */}
+                  <div className="relative h-48 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
+                    {p.images?.[0] && (
+                      <img
+                        src={p.images[0]}
+                        alt={p.title}
+                        className="
+                    h-full w-full object-cover
+                    transition-transform duration-500
+                    group-hover:scale-105
+                  "
+                      />
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
+                    {p.title}
+                  </h3>
+
+                  <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                    {p.description}
+                  </p>
+                </Link>
+              ))}
+            </div>
+
+            {/* Browse All Button */}
+            <div className="mt-10 flex justify-center">
+              <Link
+                href="/browse"
+                className="
+            rounded-full px-8 py-3
+            bg-[var(--color-primary-green)]
+            text-white text-sm font-semibold
+            shadow-lg hover:shadow-xl hover:brightness-95
+            transition
+          "
+              >
+                Browse All Products
+              </Link>
+            </div>
+          </>
         )}
       </section>
 

@@ -18,6 +18,7 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
 import {
   PieChart,
@@ -30,6 +31,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import Link from "next/link";
 
 /* ================= PAGE ================= */
 
@@ -124,6 +126,23 @@ export default function AdminDashboard() {
 
   return (
     <main className="max-w-full mx-auto space-y-10">
+       <Link
+        href="/"
+        className="
+          inline-flex items-center gap-2
+          px-5 py-2.5
+          rounded-full text-sm font-medium
+          bg-[var(--color-bg-white)]
+          text-[var(--color-ocean-blue)]
+          border border-[var(--color-border)]
+          hover:bg-[var(--color-ocean-blue)]
+          hover:text-white
+          transition
+        "
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Link>
 
       {/* ================= HEADER ================= */}
       <section>
@@ -153,7 +172,7 @@ export default function AdminDashboard() {
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Bar Chart */}
-        <div className="rounded-2xl border bg-white p-6 shadow">
+        <div className="rounded-2xl bg-white p-6 shadow">
           <h3 className="text-sm font-semibold mb-4">Platform Overview</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -168,7 +187,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Pie Chart */}
-        <div className="rounded-2xl border bg-white p-6 shadow">
+        <div className="rounded-2xl bg-white p-6 shadow">
           <h3 className="text-sm font-semibold mb-4">Products by Category</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -188,7 +207,7 @@ export default function AdminDashboard() {
 
       {/* ================= RECENT RFQS ================= */}
       <section className="rounded-2xl border bg-white shadow overflow-hidden">
-        <div className="p-5 border-b font-semibold">Recent RFQs</div>
+        <div className="p-5 border-b  font-semibold">Recent RFQs</div>
         <div className="divide-y text-sm">
           {recentRFQs.map((r) => (
             <div key={r.id} className="px-5 py-3 flex justify-between">
@@ -204,7 +223,7 @@ export default function AdminDashboard() {
 
       {/* ================= RECENT PRODUCTS ================= */}
       <section className="rounded-2xl border bg-white shadow overflow-hidden">
-        <div className="p-5 border-b font-semibold">Recent Products</div>
+        <div className="p-5 border-b border-grey-100 font-semibold">Recent Products</div>
         <div className="divide-y text-sm">
           {recentProducts.map((p) => (
             <div key={p.id} className="px-5 py-3 flex justify-between">
@@ -240,7 +259,7 @@ function StatCard({ title, value, icon }: any) {
 
 function MiniCard({ title, value, icon }: any) {
   return (
-    <div className="rounded-2xl bg-white border shadow p-5 flex items-center justify-between">
+    <div className="rounded-2xl bg-white  shadow p-5 flex items-center justify-between">
       <div>
         <p className="text-xs text-gray-500">{title}</p>
         <p className="text-xl font-bold mt-1">{value}</p>

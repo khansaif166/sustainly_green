@@ -3,24 +3,30 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+
 import {
   Package,
   BarChart3,
   Eye,
   MessageSquare,
   FileDown,
+  ArrowLeft,
 } from "lucide-react";
+
+import Link from "next/link";
+
+// 🔥 EXPORT LIBRARIES
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 /* ================= TYPES ================= */
 
 export type Product = {
-  id: string;       
+  id: string;
   title: string;
   vendorId: string;
   approved: boolean;
@@ -54,17 +60,17 @@ export default function VendorReportsPage() {
 
     const q = query(
       collection(db, "products"),
-      where("vendorId", "==", vendorId)
+      where("vendorId", "==", vendorId),
     );
 
     const unsub = onSnapshot(q, (snap) => {
-  setProducts(
-    snap.docs.map((d) => ({
-      ...(d.data() as Product),
-      id: d.id,
-    }))
-  );
-});
+      setProducts(
+        snap.docs.map((d) => ({
+          ...(d.data() as Product),
+          id: d.id,
+        })),
+      );
+    });
 
     return () => unsub();
   }, [vendorId]);
@@ -73,10 +79,7 @@ export default function VendorReportsPage() {
   useEffect(() => {
     if (!vendorId) return;
 
-    const q = query(
-      collection(db, "rfqs"),
-      where("vendorId", "==", vendorId)
-    );
+    const q = query(collection(db, "rfqs"), where("vendorId", "==", vendorId));
 
     const unsub = onSnapshot(q, (snap) => {
       setEnquiries(snap.docs.map((d) => d.data() as Enquiry));
@@ -93,7 +96,7 @@ export default function VendorReportsPage() {
 
   const totalEnquiries = enquiries.length;
   const responded = enquiries.filter(
-    (e) => e.status !== "RFQ_REQUESTED"
+    (e) => e.status !== "RFQ_REQUESTED",
   ).length;
   const pending = totalEnquiries - responded;
 
@@ -101,10 +104,93 @@ export default function VendorReportsPage() {
     .sort((a, b) => (b.views || 0) - (a.views || 0))
     .slice(0, 5);
 
+  /* ================= EXCEL EXPORT ================= */
+
+  const exportExcel = () => {
+    // ---- PRODUCTS SHEET ----
+    const productData = products.map((p, i) => ({
+      "S.No": i + 1,
+      "Product ID": p.id,
+      "Product Name": p.title,
+      Approved: p.approved ? "Yes" : "No",
+      Active: p.active ? "Yes" : "No",
+      Views: p.views || 0,
+    }));
+
+    // ---- ENQUIRIES SHEET ----
+    const enquiryData = enquiries.map((e, i) => ({
+      "S.No": i + 1,
+      Status: e.status,
+    }));
+
+    const wb = XLSX.utils.book_new();
+
+    const ws1 = XLSX.utils.json_to_sheet(productData);
+    const ws2 = XLSX.utils.json_to_sheet(enquiryData);
+
+    XLSX.utils.book_append_sheet(wb, ws1, "Products Report");
+    XLSX.utils.book_append_sheet(wb, ws2, "Enquiries Report");
+
+    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const fileData = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    saveAs(
+      fileData,
+      `Vendor_Report_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  };
+
+  /* ================= PDF EXPORT ================= */
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(18);
+    doc.text("Vendor Report", 14, 20);
+
+    doc.setFontSize(12);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 30);
+
+    // Table data
+    const tableData = mostViewed.map((p, i) => [i + 1, p.title, p.views || 0]);
+
+    // Create table
+    autoTable(doc, {
+      startY: 40,
+      head: [["#", "Product Name", "Views"]],
+      body: tableData,
+      theme: "grid",
+      headStyles: { fillColor: [16, 185, 129] }, // emerald
+    });
+
+    // Save
+    doc.save("vendor-report.pdf");
+  };
+
   /* ================= UI ================= */
 
   return (
-    <main className="min-h-screen bg-[var(--color-bg-soft)] p-6 space-y-8">
+    <main className="min-h-screen bg-[var(--color-bg-soft)] p-4 space-y-8">
+      <Link
+        href="/"
+        className="
+          inline-flex items-center gap-2
+          px-5 py-2.5
+          rounded-full text-sm font-medium
+          bg-[var(--color-bg-white)]
+          text-[var(--color-ocean-blue)]
+          border border-[var(--color-border)]
+          hover:bg-[var(--color-ocean-blue)]
+          hover:text-white
+          transition
+        "
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Link>
 
       {/* HEADER */}
       <div className="flex justify-between items-center">
@@ -118,35 +204,107 @@ export default function VendorReportsPage() {
         </div>
 
         <div className="flex gap-3">
-          <button className="export-btn secondary">
-            <FileDown className="h-4 w-4" />
-            Excel
+          {/* Excel */}
+          <button
+            onClick={exportExcel}
+            className="
+      flex items-center gap-2
+      px-5 py-2.5
+      rounded-full
+      bg-white
+      border border-gray-300
+      text-gray-700
+      font-medium
+      shadow-sm
+      hover:bg-gray-100
+      hover:shadow
+      transition
+    "
+          >
+            <FileDown className="h-4 w-4 text-green-600" />
+            Export Excel
           </button>
-          <button className="export-btn primary">
+
+          {/* PDF */}
+          <button
+            onClick={exportPDF}
+            className="
+      flex items-center gap-2
+      px-5 py-2.5
+      rounded-full
+      bg-emerald-700
+      text-white
+      font-medium
+      shadow
+      hover:bg-emerald-800
+      transition
+    "
+          >
             <FileDown className="h-4 w-4" />
-            PDF
+            Export PDF
           </button>
         </div>
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPI icon={<Package />} label="Total Products" value={totalProducts} />
-        <KPI icon={<BarChart3 />} label="Active Products" value={activeProducts} />
-        <KPI icon={<Eye />} label="Inactive Products" value={inactiveProducts} />
-        <KPI icon={<MessageSquare />} label="Total Enquiries" value={totalEnquiries} />
-      </div>
+     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+  <KPI
+    icon={Package}
+    label="Total Products"
+    value={totalProducts}
+  />
+
+  <KPI
+    icon={BarChart3}
+    label="Active Products"
+    value={activeProducts}
+    highlight   // 🔥 highlight this one if you want
+  />
+
+  <KPI
+    icon={Eye}
+    label="Inactive Products"
+    value={inactiveProducts}
+  />
+
+  <KPI
+    icon={MessageSquare}
+    label="Total Enquiries"
+    value={totalEnquiries}
+  />
+</div>
+
 
       {/* STATUS BARS */}
       <div className="grid lg:grid-cols-2 gap-6">
         <ReportCard title="Product Status">
-          <Progress label="Active" value={activeProducts} total={totalProducts} color="bg-[var(--color-primary-green)]" />
-          <Progress label="Inactive" value={inactiveProducts} total={totalProducts} color="bg-red-400" />
+          <Progress
+            label="Active"
+            value={activeProducts}
+            total={totalProducts}
+            color="bg-green-500"
+          />
+          <Progress
+            label="Inactive"
+            value={inactiveProducts}
+            total={totalProducts}
+            color="bg-red-400"
+          />
         </ReportCard>
 
         <ReportCard title="Enquiry Response">
-          <Progress label="Responded" value={responded} total={totalEnquiries} color="bg-[var(--color-ocean-blue)]" />
-          <Progress label="Pending" value={pending} total={totalEnquiries} color="bg-yellow-400" />
+          <Progress
+            label="Responded"
+            value={responded}
+            total={totalEnquiries}
+            color="bg-blue-500"
+          />
+          <Progress
+            label="Pending"
+            value={pending}
+            total={totalEnquiries}
+            color="bg-yellow-400"
+          />
         </ReportCard>
       </div>
 
@@ -154,14 +312,14 @@ export default function VendorReportsPage() {
       <ReportCard title="Most Viewed Products">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-[var(--color-text-secondary)]">
+            <tr className="text-left text-gray-500">
               <th className="py-2">Product</th>
               <th className="py-2 text-right">Views</th>
             </tr>
           </thead>
           <tbody>
             {mostViewed.map((p) => (
-              <tr key={p.id} className="border-t border-[var(--color-border)]">
+              <tr key={p.id} className="border-t border-gray-200">
                 <td className="py-3">{p.title}</td>
                 <td className="py-3 text-right font-semibold">
                   {p.views || 0}
@@ -171,32 +329,53 @@ export default function VendorReportsPage() {
           </tbody>
         </table>
       </ReportCard>
-
     </main>
   );
 }
 
 /* ================= COMPONENTS ================= */
-
-function KPI({ icon, label, value }: any) {
+function KPI({
+  icon: Icon,
+  label,
+  value,
+  highlight = false,
+}: {
+  icon: any;
+  label: string;
+  value: string | number;
+  highlight?: boolean;
+}) {
   return (
-    <div className="bg-[var(--color-bg-white)] rounded-2xl p-5 border border-[var(--color-border)]">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-[var(--color-bg-soft)] flex items-center justify-center text-[var(--color-primary-green)]">
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm text-[var(--color-text-secondary)]">{label}</p>
-          <p className="text-2xl font-semibold">{value}</p>
-        </div>
+    <div
+      className={`
+        rounded-2xl p-4
+        bg-white
+        shadow-[0_6px_24px_rgba(0,0,0,0.06)]
+        flex items-center justify-between
+        transition hover:shadow-lg
+        ${highlight ? "ring-2 ring-yellow-400" : ""}
+      `}
+    >
+      {/* LEFT TEXT */}
+      <div>
+        <p className="text-xs text-gray-500">{label}</p>
+        <p className="text-xl font-semibold text-gray-900 mt-1">
+          {value}
+        </p>
+      </div>
+
+      {/* RIGHT ICON */}
+      <div className="h-10 w-10 rounded-xl bg-gray-100 flex items-center justify-center">
+        <Icon className="h-5 w-5 text-emerald-600" />
       </div>
     </div>
   );
 }
 
+
 function ReportCard({ title, children }: any) {
   return (
-    <div className="bg-[var(--color-bg-white)] rounded-3xl p-6 border border-[var(--color-border)]">
+    <div className="bg-white rounded-3xl p-6 border border-gray-100">
       <h2 className="text-sm font-semibold mb-4">{title}</h2>
       {children}
     </div>
@@ -211,7 +390,7 @@ function Progress({ label, value, total, color }: any) {
         <span>{label}</span>
         <span>{value}</span>
       </div>
-      <div className="h-3 rounded-full bg-[var(--color-bg-soft)] overflow-hidden">
+      <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
         <div className={`h-full ${color}`} style={{ width: `${percent}%` }} />
       </div>
     </div>

@@ -5,29 +5,47 @@ import { db } from "@/lib/firebase";
 import {
   collection,
   getDocs,
-  Timestamp,
+  query,
+  orderBy,
+  limit,
+  startAfter,
+  DocumentData,
 } from "firebase/firestore";
 import {
   Users,
   UserCheck,
   Package,
   ClipboardList,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+
+/* ================= TYPES ================= */
+
+type Row = { id: string; [key: string]: any };
 
 /* ================= PAGE ================= */
 
 export default function AdminReportsPage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [vendors, setVendors] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [rfqs, setRfqs] = useState<any[]>([]);
+  const [users, setUsers] = useState<Row[]>([]);
+  const [vendors, setVendors] = useState<Row[]>([]);
+  const [products, setProducts] = useState<Row[]>([]);
+  const [rfqs, setRfqs] = useState<Row[]>([]);
+
   const [loading, setLoading] = useState(true);
 
+  // pagination states
+  const PAGE_SIZE = 8;
+  const [lastUserDoc, setLastUserDoc] = useState<DocumentData | null>(null);
+  const [page, setPage] = useState(1);
+
   useEffect(() => {
-    loadAllData();
+    loadAll();
   }, []);
 
-  async function loadAllData() {
+  async function loadAll() {
+    setLoading(true);
+
     const [uSnap, vSnap, pSnap, rSnap] = await Promise.all([
       getDocs(collection(db, "users")),
       getDocs(collection(db, "vendors")),
@@ -44,7 +62,9 @@ export default function AdminReportsPage() {
   }
 
   if (loading) {
-    return <p className="p-6 text-sm text-gray-500">Loading reports…</p>;
+    return (
+      <div className="p-8 text-sm text-gray-500">Loading admin reports…</div>
+    );
   }
 
   /* ================= STATS ================= */
@@ -56,128 +76,155 @@ export default function AdminReportsPage() {
   const pendingProducts = products.filter((p) => p.status === "PENDING").length;
 
   return (
-    <main className="space-y-12 max-w-full mx-auto">
+    <main className="min-h-screen bg-[var(--color-bg-soft)] p-6 space-y-10">
 
       {/* ================= HEADER ================= */}
       <section>
-        <h1 className="text-2xl font-semibold">Admin Reports</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          System-wide analytics and detailed reports
+        <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
+          Admin Reports
+        </h1>
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+          Real-time system analytics & operational insights
         </p>
       </section>
 
-      {/* ================= USER REPORTS ================= */}
-      <ReportSection title="User Management Reports" icon={<Users />}>
-        <GradientCard title="Total Users" value={users.length} />
-        <RecentTable
-          title="Recent Users"
+      {/* ================= KPI GRID ================= */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <KPI icon={Users} label="Total Users" value={users.length} />
+        <KPI icon={UserCheck} label="Approved Vendors" value={approvedVendors} highlight />
+        <KPI icon={Package} label="Approved Products" value={approvedProducts} />
+        <KPI icon={ClipboardList} label="Total RFQs" value={rfqs.length} />
+      </div>
+
+      {/* ================= REPORT SECTIONS ================= */}
+
+      <ReportBlock
+        title="Users"
+        subtitle="All registered users"
+        icon={<Users className="h-5 w-5" />}
+      >
+        <ScrollableTable
           headers={["Email", "Role"]}
-          rows={users.slice(0, 5).map((u) => [
-            u.email,
-            u.role,
-          ])}
+          rows={users.map((u) => [u.email, u.role])}
         />
-      </ReportSection>
+      </ReportBlock>
 
-      {/* ================= VENDOR REPORTS ================= */}
-      <ReportSection title="Vendor Management Reports" icon={<UserCheck />}>
-        <GradientCard title="Approved Vendors" value={approvedVendors} />
-        <GradientCard title="Pending Vendors" value={pendingVendors} />
-
-        <RecentTable
-          title="Recent Vendors"
+      <ReportBlock
+        title="Vendors"
+        subtitle="Vendor approval tracking"
+        icon={<UserCheck className="h-5 w-5" />}
+      >
+        <ScrollableTable
           headers={["Company", "Status"]}
-          rows={vendors.slice(0, 5).map((v) => [
-            v.company || "N/A",
+          rows={vendors.map((v) => [
+            v.company || "—",
             v.approved ? "Approved" : "Pending",
           ])}
         />
-      </ReportSection>
+      </ReportBlock>
 
-      {/* ================= PRODUCT REPORTS ================= */}
-      <ReportSection title="Product & Listing Reports" icon={<Package />}>
-        <GradientCard title="Total Products" value={products.length} />
-        <GradientCard title="Approved Products" value={approvedProducts} />
-        <GradientCard title="Pending Products" value={pendingProducts} />
-
-        <RecentTable
-          title="Recent Products"
+      <ReportBlock
+        title="Products"
+        subtitle="Listing & approval reports"
+        icon={<Package className="h-5 w-5" />}
+      >
+        <ScrollableTable
           headers={["Title", "Status"]}
-          rows={products.slice(0, 5).map((p) => [
-            p.title,
-            p.status,
-          ])}
+          rows={products.map((p) => [p.title, p.status])}
         />
-      </ReportSection>
+      </ReportBlock>
 
-      {/* ================= RFQ REPORTS ================= */}
-      <ReportSection title="RFQ & Enquiry Reports" icon={<ClipboardList />}>
-        <GradientCard title="Total RFQs" value={rfqs.length} />
-
-        <RecentTable
-          title="Recent RFQs"
+      <ReportBlock
+        title="RFQs"
+        subtitle="Buyer enquiries & pipeline"
+        icon={<ClipboardList className="h-5 w-5" />}
+      >
+        <ScrollableTable
           headers={["Buyer", "Category", "Status"]}
-          rows={rfqs.slice(0, 5).map((r) => [
-            r.buyerName || "N/A",
-            r.category || "N/A",
+          rows={rfqs.map((r) => [
+            r.buyerName || "—",
+            r.category || "—",
             r.status || "OPEN",
           ])}
         />
-      </ReportSection>
+      </ReportBlock>
     </main>
   );
 }
 
-/* ================= UI COMPONENTS ================= */
+/* ================= COMPONENTS ================= */
 
-function ReportSection({
-  title,
-  icon,
-  children,
+function KPI({
+  icon: Icon,
+  label,
+  value,
+  highlight = false,
 }: any) {
   return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-2 text-lg font-semibold text-gray-800">
-        {icon}
-        {title}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function GradientCard({ title, value }: any) {
-  return (
     <div
-      className="
-        rounded-2xl p-5
-        bg-gradient-to-br from-emerald-500 to-sky-500
-        text-white shadow
-        hover:scale-[1.02] transition
-      "
+      className={`
+        rounded-2xl p-4
+        bg-[var(--color-bg-white)]
+        shadow-[0_6px_24px_rgba(0,0,0,0.06)]
+        flex items-center justify-between
+        transition hover:shadow-lg
+        ${highlight ? "ring-2 ring-[var(--color-solar-yellow)]" : ""}
+      `}
     >
-      <p className="text-xs opacity-90">{title}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
+      <div>
+        <p className="text-xs text-[var(--color-text-secondary)]">{label}</p>
+        <p className="text-xl font-semibold text-[var(--color-text-primary)] mt-1">
+          {value}
+        </p>
+      </div>
+
+      <div className="h-10 w-10 rounded-xl bg-[var(--color-bg-soft)] flex items-center justify-center">
+        <Icon className="h-5 w-5 text-[var(--color-primary-green)]" />
+      </div>
     </div>
   );
 }
 
-function RecentTable({ title, headers, rows }: any) {
+function ReportBlock({ title, subtitle, icon, children }: any) {
   return (
-    <div className="lg:col-span-3 rounded-2xl border bg-white shadow overflow-hidden">
-      <div className="p-4 border-b text-sm font-semibold">{title}</div>
+    <section className="bg-[var(--color-bg-white)] rounded-3xl border border-[var(--color-border)] shadow p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-[var(--color-bg-soft)] flex items-center justify-center text-[var(--color-primary-green)]">
+            {icon}
+          </div>
+          <div>
+            <h2 className="text-base font-semibold">{title}</h2>
+            <p className="text-xs text-[var(--color-text-secondary)]">{subtitle}</p>
+          </div>
+        </div>
+      </div>
 
-      <div className="overflow-x-auto">
+      {children}
+    </section>
+  );
+}
+
+function ScrollableTable({ headers, rows }: any) {
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 6;
+
+  const totalPages = Math.ceil(rows.length / PAGE_SIZE);
+  const paginated = rows.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="relative max-h-72 overflow-auto rounded-xl border border-[var(--color-border)]">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
+          <thead className="sticky top-0 bg-[var(--color-bg-soft)] border-b">
             <tr>
               {headers.map((h: string, i: number) => (
                 <th
                   key={i}
-                  className="px-4 py-3 text-left font-medium text-gray-600"
+                  className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-secondary)]"
                 >
                   {h}
                 </th>
@@ -185,18 +232,24 @@ function RecentTable({ title, headers, rows }: any) {
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
+            {paginated.length === 0 && (
               <tr>
-                <td colSpan={headers.length} className="px-4 py-6 text-center text-gray-400">
+                <td
+                  colSpan={headers.length}
+                  className="px-4 py-6 text-center text-gray-400"
+                >
                   No records found
                 </td>
               </tr>
             )}
 
-            {rows.map((r: any[], i: number) => (
-              <tr key={i} className="border-b last:border-none hover:bg-gray-50">
+            {paginated.map((r: any[], i: number) => (
+              <tr
+                key={i}
+                className="border-b last:border-none hover:bg-[var(--color-bg-soft)]"
+              >
                 {r.map((cell, j) => (
-                  <td key={j} className="px-4 py-3">
+                  <td key={j} className="px-4 py-3 text-sm">
                     {cell}
                   </td>
                 ))}
@@ -205,6 +258,31 @@ function RecentTable({ title, headers, rows }: any) {
           </tbody>
         </table>
       </div>
+
+      {/* PAGINATION */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end gap-3">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="p-2 rounded-lg border disabled:opacity-40"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <span className="text-xs text-gray-500">
+            Page {page} of {totalPages}
+          </span>
+
+          <button
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="p-2 rounded-lg border disabled:opacity-40"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,7 +14,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
-import { Building2 } from "lucide-react";
+import { ArrowLeft, Building2 } from "lucide-react";
 
 /* ---------------- TYPES ---------------- */
 
@@ -142,6 +142,23 @@ export default function BrowsePage() {
       <Header />
 
       <main className="max-w-full mx-auto px-6 py-8 space-y-6">
+         <Link
+        href="/"
+        className="
+          inline-flex items-center gap-2
+          px-5 py-2.5
+          rounded-full text-sm font-medium
+          bg-[var(--color-bg-white)]
+          text-[var(--color-ocean-blue)]
+          border border-[var(--color-border)]
+          hover:bg-[var(--color-ocean-blue)]
+          hover:text-white
+          transition
+        "
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Link>
         {/* ================= HEADER ================= */}
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">

@@ -79,13 +79,35 @@ export default function LoginPage() {
           return;
         }
 
-        const vendorSnap = await getDoc(doc(db, "vendors", user.uid));
-        const vendorData = vendorSnap.data();
+        if (userData.role === "VENDOR") {
 
-        if (!vendorData?.approved) {
-          router.push("/vendor/pending");
-          return;
-        }
+  // 1️⃣ Profile not completed yet
+  if (!userData.vendorProfileComplete) {
+    router.push("/vendor/profile"); // force complete profile
+    return;
+  }
+
+  // 2️⃣ Fetch vendor approval status
+  const vendorSnap = await getDoc(doc(db, "vendors", user.uid));
+
+  if (!vendorSnap.exists()) {
+    // safety fallback
+    router.push("/vendor/profile");
+    return;
+  }
+
+  const vendorData = vendorSnap.data();
+
+  // 3️⃣ If NOT approved → BLOCK dashboard & products
+  if (!vendorData.approved) {
+    router.push("/vendor/pending");   // your pending approval page
+    return;
+  }
+
+  // 4️⃣ ONLY approved vendors can access dashboard
+  router.push("/vendor/dashboard");
+  return;
+}
 
         router.push("/vendor/dashboard");
         return;
