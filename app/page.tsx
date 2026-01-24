@@ -315,7 +315,7 @@ export default function HomePage() {
           "
               >
                 {/* Image */}
-                <div className="relative h-[300px] md:h-48 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
+                <div className="relative h-[300px] md:h-70 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
                   {/* Featured badge */}
                   <span className="absolute top-3 left-3 z-10 bg-yellow-400 text-black text-xs font-semibold px-3 py-1 rounded-full shadow">
                     Featured
@@ -386,7 +386,7 @@ export default function HomePage() {
             "
                 >
                   {/* Image */}
-                  <div className="relative h-[300px] md:h-48 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
+                  <div className="relative h-[300px] md:h-70 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
                     {p.images?.[0] && (
                       <img
                         src={p.images[0]}
