@@ -177,8 +177,8 @@ export default function BrowsePage() {
             onChange={(e) => updateFilter("type", e.target.value)}
             className="input"
           >
-            <option value="Product">Products</option>
-            <option value="Vendor">Vendors</option>
+            <option value="Product" className="w-[100px]">Products</option>
+            <option value="Vendor" className="w-[100px]">Vendors</option>
           </select>
 
           {/* CATEGORY (only products) */}
@@ -234,7 +234,7 @@ export default function BrowsePage() {
                     href={`/products/${p.id}`}
                     className="bg-[var(--color-bg-white)] rounded-2xl p-4 transition hover:shadow-lg"
                   >
-                    <div className="h-60 bg-[var(--color-bg-soft)] rounded-xl mb-3 overflow-hidden">
+                    <div className="h-80 bg-[var(--color-bg-soft)] rounded-xl mb-3 overflow-hidden">
                       {p.images?.[0] && (
                         <img
                           src={p.images[0]}

@@ -212,7 +212,7 @@ export default function HomePage() {
       </section>
 
       {/* ================= CATEGORIES ================= */}
-      <section className="max-w-full px-10 mx-auto">
+      <section className="max-w-full pl-4 md:px-10 mx-auto">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
@@ -278,7 +278,7 @@ export default function HomePage() {
       </section>
 
       {/* ================= FEATURED PRODUCTS ================= */}
-      <section className="max-w-full mx-auto px-10 py-14">
+      <section className="max-w-full mx-auto px-4 md:px-10 py-14">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -303,19 +303,19 @@ export default function HomePage() {
         ) : featuredProducts.length === 0 ? (
           <p className="text-sm text-gray-500">No featured products yet.</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 md:gap-8">
             {featuredProducts.map((p) => (
               <Link
                 key={p.id}
                 href={`/products/${p.id}`}
                 className="
             group bg-white rounded-3xl border border-gray-100 
-            p-4 transition-all duration-300
+            p-2 md:p-4 transition-all duration-300
             hover:shadow-xl hover:-translate-y-1 h-full
           "
               >
                 {/* Image */}
-                <div className="relative h-48 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
+                <div className="relative h-[300px] md:h-48 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
                   {/* Featured badge */}
                   <span className="absolute top-3 left-3 z-10 bg-yellow-400 text-black text-xs font-semibold px-3 py-1 rounded-full shadow">
                     Featured
@@ -326,7 +326,7 @@ export default function HomePage() {
                       src={p.images[0]}
                       alt={p.title}
                       className="
-                  h-full w-full object-cover
+                  h-full w-full object-cover md:object-cover
                   transition-transform duration-500
                   group-hover:scale-105
                 "
@@ -348,7 +348,7 @@ export default function HomePage() {
         )}
       </section>
 
-      <section className="max-w-full mx-auto px-10 py-14 bg-gray-50">
+      <section className="max-w-full mx-auto px-4 md:px-10 py-14 bg-gray-50">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -374,19 +374,19 @@ export default function HomePage() {
           <p className="text-sm text-gray-500">No products found.</p>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 md:gap-8">
               {allProducts.map((p) => (
                 <Link
                   key={p.id}
                   href={`/products/${p.id}`}
                   className="
               group bg-white rounded-3xl border border-gray-100 
-              p-4 transition-all duration-300
+              p-2 md:p-4 transition-all duration-300
               hover:shadow-lg hover:-translate-y-1
             "
                 >
                   {/* Image */}
-                  <div className="relative h-48 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
+                  <div className="relative h-[300px] md:h-48 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
                     {p.images?.[0] && (
                       <img
                         src={p.images[0]}

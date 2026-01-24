@@ -223,7 +223,7 @@ export default function Header() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/vendor">Sell</Link>
+            {/* <Link href="/vendor">Sell</Link> */}
             <Bell className="h-4 w-4" />
             <ShoppingCart className="h-4 w-4" />
           </div>
