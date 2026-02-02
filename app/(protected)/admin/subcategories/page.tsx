@@ -6,9 +6,12 @@ import {
   addDoc,
   getDocs,
   serverTimestamp,
+  updateDoc,
+  deleteDoc,
+  doc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, X } from "lucide-react";
 
 /* ================= TYPES ================= */
 
@@ -32,10 +35,15 @@ export default function AdminSubCategoriesPage() {
   const [subcats, setSubcats] = useState<SubCategory[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // edit state
+  const [editing, setEditing] = useState<SubCategory | null>(null);
+
   /* ---------------- LOAD DATA ---------------- */
   async function load() {
-    const cSnap = await getDocs(collection(db, "categories"));
-    const sSnap = await getDocs(collection(db, "subcategories"));
+    const [cSnap, sSnap] = await Promise.all([
+      getDocs(collection(db, "categories")),
+      getDocs(collection(db, "subcategories")),
+    ]);
 
     setCategories(
       cSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
@@ -60,12 +68,53 @@ export default function AdminSubCategoriesPage() {
         createdAt: serverTimestamp(),
       });
 
-      setName("");
-      setCategoryId("");
+      resetForm();
       load();
     } finally {
       setLoading(false);
     }
+  }
+
+  /* ---------------- UPDATE ---------------- */
+  async function updateSubCategory() {
+    if (!editing || !name.trim() || !categoryId) return;
+
+    try {
+      setLoading(true);
+
+      await updateDoc(doc(db, "subcategories", editing.id), {
+        name,
+        categoryId,
+        updatedAt: serverTimestamp(),
+      });
+
+      resetForm();
+      load();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ---------------- DELETE ---------------- */
+  async function removeSubCategory(id: string) {
+    const ok = confirm("Are you sure you want to delete this subcategory?");
+    if (!ok) return;
+
+    await deleteDoc(doc(db, "subcategories", id));
+    load();
+  }
+
+  /* ---------------- HELPERS ---------------- */
+  function startEdit(sc: SubCategory) {
+    setEditing(sc);
+    setName(sc.name);
+    setCategoryId(sc.categoryId);
+  }
+
+  function resetForm() {
+    setName("");
+    setCategoryId("");
+    setEditing(null);
   }
 
   useEffect(() => {
@@ -85,32 +134,17 @@ export default function AdminSubCategoriesPage() {
         </p>
       </section>
 
-      {/* ================= ADD CARD ================= */}
-      <section
-        className="
-          rounded-3xl
-          bg-[var(--color-bg-white)]
-          border border-[var(--color-border)]
-          shadow-[0_10px_30px_rgba(0,0,0,0.06)]
-          p-6
-        "
-      >
+      {/* ================= ADD / EDIT CARD ================= */}
+      <section className="rounded-3xl bg-[var(--color-bg-white)] border border-[var(--color-border)] shadow-[0_10px_30px_rgba(0,0,0,0.06)] p-6">
         <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-          Add Subcategory
+          {editing ? "Edit Subcategory" : "Add Subcategory"}
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="
-              rounded-xl
-              border border-[var(--color-border)]
-              px-3 py-2.5 text-sm
-              bg-[var(--color-bg-white)]
-              focus:outline-none
-              focus:ring-2 focus:ring-[var(--color-ocean-blue)]/30
-            "
+            className="rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm"
           >
             <option value="">Select category</option>
             {categories.map((c) => (
@@ -124,45 +158,33 @@ export default function AdminSubCategoriesPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Subcategory name"
-            className="
-              rounded-xl
-              border border-[var(--color-border)]
-              px-3 py-2.5 text-sm
-              bg-[var(--color-bg-white)]
-              focus:outline-none
-              focus:ring-2 focus:ring-[var(--color-ocean-blue)]/30
-            "
+            className="rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm"
           />
 
-          <button
-            onClick={addSubCategory}
-            disabled={loading}
-            className="
-              inline-flex items-center justify-center gap-2
-              rounded-full
-              px-5 py-2.5
-              text-sm font-medium text-white
-              bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-              hover:opacity-90
-              disabled:opacity-50
-            "
-          >
-            <PlusCircle className="h-4 w-4" />
-            {loading ? "Adding..." : "Add Subcategory"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={editing ? updateSubCategory : addSubCategory}
+              disabled={loading}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-white bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]"
+            >
+              <PlusCircle className="h-4 w-4" />
+              {editing ? "Update" : "Add"}
+            </button>
+
+            {editing && (
+              <button
+                onClick={resetForm}
+                className="rounded-full px-4 py-2.5 border text-sm"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
       {/* ================= LIST ================= */}
-      <section
-        className="
-          rounded-3xl
-          bg-[var(--color-bg-white)]
-          border border-[var(--color-border)]
-          shadow-[0_10px_30px_rgba(0,0,0,0.06)]
-          p-6
-        "
-      >
+      <section className="rounded-3xl bg-[var(--color-bg-white)] border border-[var(--color-border)] shadow-[0_10px_30px_rgba(0,0,0,0.06)] p-6">
         <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
           Existing Subcategories
         </h2>
@@ -176,27 +198,30 @@ export default function AdminSubCategoriesPage() {
             {subcats.map((sc) => (
               <div
                 key={sc.id}
-                className="
-                  flex items-center justify-between
-                  rounded-2xl
-                  border border-[var(--color-border)]
-                  px-4 py-3
-                  text-sm
-                  hover:bg-[var(--color-bg-soft)]
-                  transition
-                "
+                className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] px-4 py-3 text-sm"
               >
-                <span className="font-medium text-[var(--color-text-primary)]">
-                  {sc.name}
-                </span>
+                <div>
+                  <p className="font-medium">{sc.name}</p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    {categories.find(c => c.id === sc.categoryId)?.name}
+                  </p>
+                </div>
 
-                <span className="text-xs text-[var(--color-text-secondary)]">
-                  {
-                    categories.find(
-                      (c) => c.id === sc.categoryId
-                    )?.name
-                  }
-                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => startEdit(sc)}
+                    className="p-2 rounded-lg hover:bg-[var(--color-bg-soft)]"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    onClick={() => removeSubCategory(sc.id)}
+                    className="p-2 rounded-lg hover:bg-red-50 text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

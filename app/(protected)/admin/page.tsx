@@ -245,7 +245,7 @@ export default function AdminDashboard() {
 
 function StatCard({ title, value, icon }: any) {
   return (
-    <div className="rounded-2xl p-5 text-white shadow bg-gradient-to-br from-[var(--color-primary-green)] to-[var(--color-ocean-blue)]">
+    <div className="rounded-2xl p-5 text-white shadow bg-gradient-to-br from-[var(--color-primary-green)] to-[#a2c945]">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs opacity-90">{title}</p>
@@ -269,4 +269,4 @@ function MiniCard({ title, value, icon }: any) {
   );
 }
 
-const COLORS = ["#0b6e4f", "#0a4c8a", "#6bcf9b", "#f4c430", "#e6d8a3"];
+const COLORS = ["#0b6e4f", "#a2c945", "#6bcf9b", "#f4c430", "#e6d8a3"];
