@@ -80,7 +80,7 @@ export default function ContactPage() {
                   href="mailto:contact@sustainlygreen.com"
                   className="text-[var(--color-primary-green)] underline"
                 >
-                  contact@sustainlygreen.com
+                  grow@sustainlygreen.com
                 </a>
               </p>
 
