@@ -120,15 +120,17 @@ export default function Footer() {
             <ul className="space-y-3 text-[13px]">
               <li className="flex items-center gap-2">
                 <HiOutlineMail className="text-[#6BCF9B] text-base" />
-                support@sustainlygreen.com
+                grow@sustainlygreen.com
               </li>
-              <li className="flex items-center gap-2">
+              {/* <li className="flex items-center gap-2">
                 <HiOutlinePhone className="text-[#6BCF9B] text-base" />
                 +44 20 39961521
-              </li>
+              </li> */}
               <li className="flex items-center gap-2 w-[80%]">
-                <HiOutlineLocationMarker className="text-[#6BCF9B] text-base w-[35] h-[35]" />
-                Winchester House 259 - 269 Old Marylebone Road, London, NW1 5RA, United Kingdom.
+                <HiOutlineLocationMarker className="text-[#6BCF9B] text-base w-[25] h-[25]" />
+                Sustainly Green India Pvt Ltd 
+Chennai, Tamil Nadu,
+India
               </li>
             </ul>
           </div>

@@ -251,10 +251,10 @@ export default function HomePage() {
               <button
                 key={c.id}
                 onClick={() => router.push(`/browse?category=${c.id}`)}
-                className="flex-shrink-0 flex flex-col items-center group"
+                className="flex-shrink-0 flex flex-col items-center group mr-10"
               >
                 {/* Circle Image */}
-                <div className="w-32 h-32 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center transition-shadow group-hover:shadow-md">
+                <div className="w-32 h-32 rounded-[20px] object-contain bg-gray-100 overflow-hidden flex items-center justify-center transition-shadow group-hover:shadow-md ">
                   {c.imageUrl ? (
                     <img
                       src={c.imageUrl}
@@ -268,7 +268,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Category Name */}
-                <p className="mt-3 text-sm font-medium text-gray-900 text-center whitespace-nowrap">
+                <p className="mt-3 text-[10px] font-medium text-gray-900  text-center whitespace-nowrap">
                   {c.name}
                 </p>
               </button>

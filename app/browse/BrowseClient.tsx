@@ -179,6 +179,7 @@ export default function BrowsePage() {
           >
             <option value="Product" className="w-[100px]">Products</option>
             <option value="Vendor" className="w-[100px]">Vendors</option>
+            <option value="Service" className="w-[100px]">Service</option>
           </select>
 
           {/* CATEGORY (only products) */}
