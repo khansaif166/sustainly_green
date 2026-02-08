@@ -234,7 +234,7 @@ export default function Header() {
       <div className="px-4 py-4 flex items-center gap-4">
         {/* LOGO */}
         <Link href="/" className="shrink-0">
-          <img src="/logo.png" className="h-14" />
+          <img src="/log.webp" className="md:h-12 h-10" />
         </Link>
 
         {/* SEARCH (DESKTOP) */}

@@ -13,6 +13,11 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Sustainly Green - The Hub of Sustainability",
   description: "Global B2B sustainable marketplace",
+   icons: {
+    icon: "/favi.png",         
+    shortcut: "/favi.png",    
+    apple: "/favi.png",
+  },
 };
 
 export default function RootLayout({

@@ -149,7 +149,7 @@ export default function HomePage() {
             <div
               className="absolute inset-0 bg-cover bg-top"
               style={{
-                backgroundImage: "url('/bgg.jpg')",
+                backgroundImage: "url('/ban.webp')",
               }}
             />
 
