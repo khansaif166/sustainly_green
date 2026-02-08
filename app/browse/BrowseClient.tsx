@@ -344,26 +344,8 @@ export default function BrowsePage() {
               </div>
             )}
           </>
-        )}
+        )}   
 
-        {/* ================= INPUT STYLES ================= */}
-        <style jsx global>{`
-          .input {
-            width: 100%;
-            background: var(--color-bg-white);
-            border: 1px solid var(--color-border);
-            border-radius: 0.75rem;
-            padding: 0.6rem 0.75rem;
-            font-size: 0.875rem;
-            color: var(--color-text-primary);
-          }
-
-          .input:focus {
-            outline: none;
-            border-color: var(--color-primary-green);
-            box-shadow: 0 0 0 2px rgba(11, 110, 79, 0.15);
-          }
-        `}</style>
       </main>
 
       <Footer />
