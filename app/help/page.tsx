@@ -117,19 +117,19 @@ export default function HelpContactPage() {
               <ContactRow
                 icon={Mail}
                 label="Email"
-                value="support@sustainlygreen.com"
+                value="grow@sustainlygreen.com"
               />
 
-              <ContactRow
+              {/* <ContactRow
                 icon={Phone}
                 label="Phone"
                 value="+44 20 3996 1521"
-              />
+              /> */}
 
               <ContactRow
                 icon={MapPin}
                 label="Office"
-                value="Winchester House, 259–269 Old Marylebone Road, London NW1 5RA, United Kingdom"
+                value="Sustainly Green India Pvt Ltd Chennai, Tamil Nadu, India"
               />
             </div>
 

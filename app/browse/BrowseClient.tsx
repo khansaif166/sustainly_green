@@ -160,58 +160,104 @@ export default function BrowsePage() {
         Back to Home
       </Link>
         {/* ================= HEADER ================= */}
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
-            Browse Marketplace
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Discover products and vendors focused on sustainability
-          </p>
-        </div>
+      {/* ================= HEADER + FILTER BAR ================= */}
+<div className="space-y-3 flex flex-col md:flex-row justify-between">
 
-        {/* ================= FILTER BAR ================= */}
-        <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-2xl p-4 grid md:grid-cols-4 gap-4">
-          {/* TYPE */}
-          <select
-            value={type}
-            onChange={(e) => updateFilter("type", e.target.value)}
-            className="input"
-          >
-            <option value="Product" className="w-[100px]">Products</option>
-            <option value="Vendor" className="w-[100px]">Vendors</option>
-            <option value="Service" className="w-[100px]">Service</option>
-          </select>
+  {/* TITLE */}
+  <div>
+    <h1 className="text-xl md:text-2xl font-semibold text-[var(--color-text-primary)]">
+      Browse Marketplace
+    </h1>
+    <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">
+      Discover products and vendors focused on sustainability
+    </p>
+  </div>
 
-          {/* CATEGORY (only products) */}
-          {type === "Product" ? (
-            <select
-              value={category}
-              onChange={(e) => updateFilter("category", e.target.value)}
-              className="input"
-            >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <div />
-          )}
+  {/* FILTER BAR */}
+  <div
+    className="
+      bg-white border border-gray-200 rounded-xl
+      px-2 py-2
+      flex items-center gap-2
+      overflow-x-auto
+      scrollbar-hide
+      md:overflow-visible
+    "
+  >
+    {/* TYPE */}
+    <select
+      value={type}
+      onChange={(e) => updateFilter("type", e.target.value)}
+      className="
+        h-9 shrink-0
+        rounded-lg border border-gray-300
+        px-3 text-sm
+        focus:outline-none focus:ring-2 focus:ring-black/10
+        md:h-10 w-[100px] md:w-[150px]
+      "
+    >
+      <option value="Product">Products</option>
+      <option value="Vendor">Vendors</option>
+      <option value="Service">Services</option>
+    </select>
 
-          {/* SEARCH */}
-          <input
-            placeholder={
-              type === "Vendor"
-                ? "Search vendors by name or description"
-                : "Search products"
-            }
-            value={search}
-            onChange={(e) => updateFilter("q", e.target.value)}
-            className="input md:col-span-2"
-          />
-        </div>
+    {/* CATEGORY */}
+    {type === "Product" && (
+      <select
+        value={category}
+        onChange={(e) => updateFilter("category", e.target.value)}
+        className="
+          h-9 shrink-0
+          rounded-lg border border-gray-300
+          px-3 text-sm
+          focus:outline-none focus:ring-2 focus:ring-black/10
+          md:h-10 w-[100px] md:w-[180px]
+        "
+      >
+        <option value="">All Categories</option>
+        {categories.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+    )}
+
+    {/* SEARCH */}
+    <div className="relative min-w-[200px] flex-1 md:min-w-0">
+      <input
+        type="text"
+        placeholder={
+          type === "Vendor"
+            ? "Search vendors"
+            : "Search products"
+        }
+        value={search}
+        onChange={(e) => updateFilter("q", e.target.value)}
+        className="
+          h-9 w-full
+          rounded-lg border border-gray-300
+          pl-9 pr-3 text-sm
+          focus:outline-none focus:ring-2 focus:ring-black/10
+          md:h-10
+        "
+      />
+
+      <svg
+        className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M21 21l-4.35-4.35" />
+        <circle cx="11" cy="11" r="7" />
+      </svg>
+    </div>
+  </div>
+</div>
+
+
 
         {/* ================= LOADING ================= */}
         {loading && (

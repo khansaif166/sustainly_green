@@ -146,6 +146,17 @@ export default function LoginPage() {
           style={{ backgroundImage: "url('/images/login-bg.jpg')" }}
         />
 
+        <Link
+        href="/"
+        className="
+          inline-flex items-center gap-2 mb-8
+          px-3 py-1.5
+           text-sm font-medium absolute top-6 left-10
+        "
+      >
+         <img src="/logo.png" className="h-14 rounded-xl" />
+      </Link>
+
         <div className="relative z-10 max-w-lg">
           <h1 className="text-3xl font-bold leading-tight">
             Sign in to your <br /> global business workspace
@@ -184,23 +195,9 @@ export default function LoginPage() {
       {/* ================= RIGHT LOGIN FORM ================= */}
       <div className="flex items-center justify-center px-6 bg-gray-50">
         <div className="w-full max-w-md">
-        <Link
-        href="/"
-        className="
-          inline-flex items-center gap-2 mb-8
-          px-5 py-2.5
-          rounded-full text-sm font-medium absolute top-6 left-6
-          bg-[var(--color-bg-white)]
-          text-[var(--color-ocean-blue)]
-          border border-[var(--color-border)]
-          hover:bg-[var(--color-ocean-blue)]
-          hover:text-white
-          transition
-        "
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Home
-      </Link>
+        
+
+     
           {/* Header */}
           <div className="mb-10">
             <h2 className="text-2xl font-semibold text-gray-900">

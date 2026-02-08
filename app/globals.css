@@ -1,10 +1,34 @@
 @import "tailwindcss";
 
+/* ================= ROOT COLORS (ALWAYS AVAILABLE) ================= */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* ================= BRAND CORE ================= */
+  --color-primary-green: #0b6e4f;
+  --color-ocean-blue: #0a4c8a;
+
+  /* ================= SUPPORT COLORS ================= */
+  --color-leaf-green: #6bcf9b;
+  --color-earth-sand: #e6d8a3;
+  --color-solar-yellow: #f4c430;
+
+  /* ================= TEXT ================= */
+  --color-text-primary: #1f2933;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+
+  /* ================= BACKGROUNDS ================= */
+  --color-bg-white: #ffffff;
+  --color-bg-soft: #f9fafb;
+  --color-bg-footer: #111827;
+
+  /* ================= BORDERS ================= */
+  --color-border: #e5e7eb;
 }
 
+/* ================= THEME MAPPING ================= */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -12,41 +36,22 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* ================= DARK MODE (OPTIONAL) ================= */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #ffffff;
     --foreground: #000000;
-
-    /* ================= BRAND CORE ================= */
-    --color-primary-green: #0b6e4f;
-    --color-ocean-blue: #0a4c8a;
-
-    /* ================= SUPPORT COLORS ================= */
-    --color-leaf-green: #6bcf9b;
-    --color-earth-sand: #e6d8a3;
-    --color-solar-yellow: #f4c430;
-
-    /* ================= TEXT ================= */
-    --color-text-primary: #1f2933;
-    --color-text-secondary: #080808;
-    --color-text-muted: #d1d5db;
-
-    /* ================= BACKGROUNDS ================= */
-    --color-bg-white: #ffffff;
-    --color-bg-soft: #f9fafb;
-    --color-bg-footer: #111827;
-
-    /* ================= BORDERS ================= */
-    --color-border: #e5e7eb;
   }
 }
 
+/* ================= BASE ================= */
 body {
   background: var(--background);
-  color: black !important;
+  color: black;
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Hide scrollbar */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -55,9 +60,10 @@ body {
   scrollbar-width: none;
 }
 
+/* Base typography */
 @layer base {
   html {
-    font-size: 14px; /* instead of 16px */
+    font-size: 14px;
   }
 
   body {
@@ -67,6 +73,6 @@ body {
 
 html,
 body {
-  font-family: var(--font-poppins), system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-poppins), system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }

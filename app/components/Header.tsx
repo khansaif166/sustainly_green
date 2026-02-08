@@ -234,7 +234,7 @@ export default function Header() {
       <div className="px-4 py-4 flex items-center gap-4">
         {/* LOGO */}
         <Link href="/" className="shrink-0">
-          <img src="/logo.png" className="h-10" />
+          <img src="/logo.png" className="h-14" />
         </Link>
 
         {/* SEARCH (DESKTOP) */}
@@ -362,78 +362,122 @@ export default function Header() {
         </div>
 
         {/* MOBILE ICONS */}
-        <div className="flex items-center gap-2 ml-auto lg:hidden">
-          <button
-            onClick={() => setOpenMobile((p) => !p)}
-            className="p-2 rounded-full bg-gray-100"
+      {/* ================= MOBILE RIGHT SIDE ================= */}
+<div className="flex items-center gap-2 ml-auto lg:hidden">
+  {/* SIGN IN / USER */}
+  {!loadingUser && !authUser && (
+    <Link
+      href="/login"
+      className="text-sm font-medium border px-3 py-1.5 rounded-full"
+    >
+      Sign in
+    </Link>
+  )}
+
+  {!loadingUser && authUser && (
+    <button
+      onClick={() => router.push(dashboardLink)}
+      className="p-2 rounded-full bg-gray-100"
+    >
+      <User className="h-5 w-5" />
+    </button>
+  )}
+
+  {/* MENU BUTTON */}
+  <button
+    onClick={() => setOpenMobile((p) => !p)}
+    className="p-2 rounded-full bg-gray-100"
+  >
+    {openMobile ? <X /> : <Menu />}
+  </button>
+</div>
+</div>
+
+{/* ================= MOBILE SEARCH BAR ================= */}
+<div className="lg:hidden px-4 pb-3">
+  <div className="flex gap-2">
+    {/* SEARCH */}
+    <div className="relative flex-1">
+      <input
+        value={queryText}
+        onChange={(e) => setQueryText(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+        placeholder="Search products"
+        className="w-full h-10 pl-10 pr-3 rounded-full border border-gray-300 text-sm outline-none"
+      />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+    </div>
+
+    {/* CATEGORY BUTTON */}
+    <button
+      onClick={() => router.push("/browse")}
+      className="h-10 px-4 rounded-full border border-gray-300 text-sm font-medium whitespace-nowrap"
+    >
+      Category
+    </button>
+  </div>
+</div>
+
+{/* ================= MOBILE MENU ================= */}
+{openMobile && (
+  <div className="lg:hidden bg-white border-t">
+    <div className="px-6 py-5 space-y-4 text-sm flex flex-col">
+      {!loadingUser && !authUser && (
+        <div className="flex gap-3">
+          <Link
+            href="/login"
+            onClick={() => setOpenMobile(false)}
+            className="flex-1 text-center py-2 rounded-full border"
           >
-            {openMobile ? <X /> : <Menu />}
-          </button>
-        </div>
-      </div>
-
-      {/* ================= MOBILE MENU ================= */}
-      {openMobile && (
-        <div className="lg:hidden bg-white border-t">
-          <div className="px-6 py-5 space-y-4 text-sm flex flex-col">
-            {!loadingUser && !authUser && (
-              <div className="flex gap-3">
-                <Link
-                  href="/login"
-                  onClick={() => setOpenMobile(false)}
-                  className="flex-1 text-center py-2 rounded-full border"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setOpenMobile(false)}
-                  className="flex-1 text-center py-2 rounded-full bg-black text-white"
-                >
-                  Register
-                </Link>
-              </div>
-            )}
-
-            {!loadingUser && authUser && (
-              <>
-                <p className="font-semibold">Hi, {profile?.name || "User"}</p>
-                <button
-                  className="text-left"
-                  onClick={() => {
-                    setOpenMobile(false);
-                    router.push(dashboardLink);
-                  }}
-                >
-                  Go to Dashboard
-                </button>
-                <button
-                  onClick={async () => {
-                    await signOut(auth);
-                    setOpenMobile(false);
-                    router.push("/");
-                  }}
-                  className="text-red-600 text-left"
-                >
-                  Logout
-                </button>
-              </>
-            )}
-
-            <hr />
-
-            <Link href="/deals" onClick={() => setOpenMobile(false)}>
-              Daily Deals
-            </Link>
-            <Link href="/help" onClick={() => setOpenMobile(false)}>
-              Help & Contact
-            </Link>
-            <Link href="/vendor" onClick={() => setOpenMobile(false)}>
-              Sell
-            </Link>
-          </div>
+            Sign in
+          </Link>
+          <Link
+            href="/register"
+            onClick={() => setOpenMobile(false)}
+            className="flex-1 text-center py-2 rounded-full bg-black text-white"
+          >
+            Register
+          </Link>
         </div>
       )}
+
+      {!loadingUser && authUser && (
+        <>
+          <p className="font-semibold">Hi, {profile?.name || "User"}</p>
+          <button
+            className="text-left"
+            onClick={() => {
+              setOpenMobile(false);
+              router.push(dashboardLink);
+            }}
+          >
+            Go to Dashboard
+          </button>
+          <button
+            onClick={async () => {
+              await signOut(auth);
+              setOpenMobile(false);
+              router.push("/");
+            }}
+            className="text-red-600 text-left"
+          >
+            Logout
+          </button>
+        </>
+      )}
+
+      <hr />
+
+      <Link href="/deals" onClick={() => setOpenMobile(false)}>
+        Daily Deals
+      </Link>
+      <Link href="/help" onClick={() => setOpenMobile(false)}>
+        Help & Contact
+      </Link>
+    </div>
+  </div>
+)}
+
     </header>
   );
 }

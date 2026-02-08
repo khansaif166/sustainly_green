@@ -126,9 +126,9 @@ export default function CareersPage() {
                 </div>
 
                 {/* DESCRIPTION */}
-                <p className="text-sm text-[var(--color-text-primary)] opacity-80 line-clamp-4">
+                {/* <p className="text-sm text-[var(--color-text-primary)] opacity-80 line-clamp-4">
                   {job.description}
-                </p>
+                </p> */}
                 <Link
                   href={`/careers/${job.id}`}
                   className="

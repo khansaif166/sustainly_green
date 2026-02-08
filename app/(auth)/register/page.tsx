@@ -91,22 +91,15 @@ export default function RegisterPage() {
           style={{ backgroundImage: "url('/images/register-bg.jpg')" }}
         />
         <Link
-        href="/"
-        className="
+          href="/"
+          className="
           inline-flex items-center gap-2 mb-8
-          px-5 py-2.5
-          rounded-full text-sm font-medium absolute top-6 left-6
-          bg-[var(--color-bg-white)]
-          text-[var(--color-ocean-blue)]
-          border border-[var(--color-border)]
-          hover:bg-[var(--color-ocean-blue)]
-          hover:text-white
-          transition
+          px-3 py-1.5
+           text-sm font-medium absolute top-6 left-10
         "
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Home
-      </Link>
+        >
+          <img src="/logo.png" className="h-14 rounded-xl" />
+        </Link>
 
         <div className="relative z-10 max-w-lg">
           <h1 className="text-3xl font-bold leading-tight">

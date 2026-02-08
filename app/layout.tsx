@@ -11,7 +11,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Sustainly Green",
+  title: "Sustainly Green - The Hub of Sustainability",
   description: "Global B2B sustainable marketplace",
 };
 
