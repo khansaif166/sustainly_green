@@ -98,7 +98,7 @@ export default function RegisterPage() {
            text-sm font-medium absolute top-6 left-10
         "
         >
-          <img src="/logo.png" className="h-14 rounded-xl" />
+          <img src="/log.webp" className="h-14 rounded-xl p-2 bg-white" />
         </Link>
 
         <div className="relative z-10 max-w-lg">
