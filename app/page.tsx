@@ -39,6 +39,8 @@ export default function HomePage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [services, setServices] = useState<Product[]>([]);
+
   const [loadingCategories, setLoadingCategories] = useState(true);
 
   /* ---------------- LOAD CATEGORIES ---------------- */
@@ -87,9 +89,9 @@ export default function HomePage() {
         const q = query(
           collection(db, "products"),
           where("approved", "==", true),
-          where("featured", "==", true),
+          where("listingType", "==", "Product"),
           orderBy("createdAt", "desc"),
-          limit(6),
+          limit(8),
         );
 
         const snap = await getDocs(q);
@@ -113,11 +115,12 @@ export default function HomePage() {
     async function fetchAllProducts() {
       try {
         const q = query(
-          collection(db, "products"),
-          where("approved", "==", true),
-          orderBy("createdAt", "desc"),
-          limit(8),
-        );
+  collection(db, "products"),
+  where("approved", "==", true),
+  where("listingType", "==", "Product"),
+  orderBy("createdAt", "desc"),
+  limit(8),
+);
 
         const snap = await getDocs(q);
 
@@ -135,6 +138,34 @@ export default function HomePage() {
     }
 
     fetchAllProducts();
+  }, []);
+
+  /* ---------------- LOAD SERVICES ---------------- */
+  useEffect(() => {
+    async function fetchServices() {
+      try {
+        const q = query(
+          collection(db, "products"),
+          where("approved", "==", true),
+          where("listingType", "==", "Service"),
+          orderBy("createdAt", "desc"),
+          limit(8),
+        );
+
+        const snap = await getDocs(q);
+
+        setServices(
+          snap.docs.map((doc) => ({
+            id: doc.id,
+            ...(doc.data() as any),
+          })),
+        );
+      } catch (err) {
+        console.error("HOME_SERVICES_ERROR", err);
+      }
+    }
+
+    fetchServices();
   }, []);
 
   return (
@@ -428,6 +459,71 @@ export default function HomePage() {
               </Link>
             </div>
           </>
+        )}
+      </section>
+
+      {/* ================= LATEST SERVICES ================= */}
+      <section className="max-w-full mx-auto px-4 md:px-10 py-14 bg-white">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
+              New Services
+            </p>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Latest Services
+            </h2>
+          </div>
+
+          <Link
+            href="/browse?type=Service"
+            className="text-sm font-medium text-[var(--color-ocean-blue)] hover:underline"
+          >
+            Browse services →
+          </Link>
+        </div>
+
+        {services.length === 0 ? (
+          <p className="text-sm text-gray-500">No services found.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 md:gap-8">
+            {services.map((s) => (
+              <Link
+                key={s.id}
+                href={`/products/${s.id}`}
+                className="
+            group bg-white rounded-3xl border border-gray-100
+            p-2 md:p-4 transition-all duration-300
+            hover:shadow-lg hover:-translate-y-1
+          "
+              >
+                {/* Service icon block */}
+                <div className="h-[180px] bg-[var(--color-bg-soft)] rounded-2xl mb-4 flex items-center justify-center">
+                  <div className="h-[180px] bg-[var(--color-bg-soft)] rounded-2xl mb-4 overflow-hidden">
+                    {s.images?.[0] ? (
+                      <img
+                        src={s.images[0]}
+                        alt={s.title}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-xs text-gray-500">
+                        Service
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
+                  {s.title}
+                </h3>
+
+                <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                  {s.description}
+                </p>
+              </Link>
+            ))}
+          </div>
         )}
       </section>
 

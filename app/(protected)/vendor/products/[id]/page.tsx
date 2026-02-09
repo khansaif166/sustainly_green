@@ -33,7 +33,7 @@ export default function EditProductPage() {
   const [tags, setTags] = useState<any[]>([]);
 
   /* ---------- FORM STATE ---------- */
-  const [listingType, setListingType] = useState<string[]>([]);
+  const [listingType, setListingType] = useState<string>("");
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subCategoryId, setSubCategoryId] = useState("");
@@ -68,7 +68,10 @@ export default function EditProductPage() {
       const p = snap.data();
       if (p.vendorId !== u.uid) return router.push("/vendor/products");
 
-      setListingType(p.listingType || []);
+      setListingType(
+        Array.isArray(p.listingType) ? p.listingType[0] : p.listingType || "",
+      );
+
       setTitle(p.title || "");
       setCategoryId(p.categoryId || "");
       setSubCategoryId(p.subCategoryId || "");
@@ -99,19 +102,8 @@ export default function EditProductPage() {
     return () => unsub();
   }, [id, router]);
 
-  /* ---------- HELPERS ---------- */
-  function toggle(list: string[], value: string, setter: any, max?: number) {
-    setter((prev: string[]) =>
-      prev.includes(value)
-        ? prev.filter((v) => v !== value)
-        : max && prev.length >= max
-        ? prev
-        : [...prev, value]
-    );
-  }
-
   const filteredSubCats = subCategories.filter(
-    (s) => s.categoryId === categoryId
+    (s) => s.categoryId === categoryId,
   );
 
   /* ---------- SAVE ---------- */
@@ -198,6 +190,22 @@ export default function EditProductPage() {
               </div>
             </div> */}
 
+            <div>
+              <label className="label">Listing Type</label>
+              <div className="flex gap-2">
+                {LISTING_TYPES.map((t) => (
+                  <button
+                    type="button"
+                    key={t}
+                    onClick={() => setListingType(t)}
+                    className={`chip ${listingType === t ? "active" : ""}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <input
               className="input"
               value={title}
@@ -223,7 +231,7 @@ export default function EditProductPage() {
               accept="image/*"
               onChange={(e) =>
                 setNewImages((prev) =>
-                  [...prev, ...Array.from(e.target.files || [])].slice(0, 5)
+                  [...prev, ...Array.from(e.target.files || [])].slice(0, 5),
                 )
               }
             />
@@ -236,10 +244,7 @@ export default function EditProductPage() {
                     coverIndex === i ? "border-black" : "border-gray-200"
                   }`}
                 >
-                  <img
-                    src={img}
-                    className="h-28 w-full object-cover"
-                  />
+                  <img src={img} className="h-28 w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => setCoverIndex(i)}

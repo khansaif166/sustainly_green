@@ -113,7 +113,7 @@ export default function VendorDashboardPage() {
   }
 
   return (
-    <main className="space-y-10">
+    <main className="space-y-10 pb-30">
 
        <Link
         href="/"
@@ -134,7 +134,7 @@ export default function VendorDashboardPage() {
       </Link>
 
       {/* ================= HEADER ================= */}
-      <section className="flex justify-between items-center">
+      <section className="flex justify-between items-center ">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
             Vendor Dashboard

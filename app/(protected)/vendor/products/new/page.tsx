@@ -31,7 +31,7 @@ export default function AddProductPage() {
   const [tags, setTags] = useState<any[]>([]);
 
   /* ---------- FORM STATE ---------- */
-  const [listingType, setListingType] = useState<string[]>([]);
+  const [listingType, setListingType] = useState<string>("");
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subCategoryId, setSubCategoryId] = useState("");
@@ -93,13 +93,13 @@ export default function AddProductPage() {
       prev.includes(value)
         ? prev.filter((v) => v !== value)
         : max && prev.length >= max
-        ? prev
-        : [...prev, value]
+          ? prev
+          : [...prev, value],
     );
   }
 
   const filteredSubCats = subCategories.filter(
-    (s) => s.categoryId === categoryId
+    (s) => s.categoryId === categoryId,
   );
 
   /* ---------- SUBMIT ---------- */
@@ -203,8 +203,8 @@ export default function AddProductPage() {
                   <button
                     key={t}
                     type="button"
-                    onClick={() => toggle(listingType, t, setListingType)}
-                    className={`chip ${listingType.includes(t) && "active"}`}
+                    onClick={() => setListingType(t)}
+                    className={`chip ${listingType === t ? "active" : ""}`}
                   >
                     {t}
                   </button>
@@ -352,7 +352,7 @@ export default function AddProductPage() {
                         type="button"
                         onClick={() => {
                           setImages((prev) =>
-                            prev.filter((_, i) => i !== index)
+                            prev.filter((_, i) => i !== index),
                           );
                           if (coverIndex === index) setCoverIndex(0);
                         }}

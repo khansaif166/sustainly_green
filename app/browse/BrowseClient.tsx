@@ -22,7 +22,7 @@ type Product = {
   id: string;
   title?: string;
   images?: string[];
-  listingType?: string[];
+  listingType?: string;
   categoryId?: string;
   priceType?: string;
 };
@@ -61,7 +61,7 @@ export default function BrowsePage() {
     async function loadCategories() {
       const snap = await getDocs(collection(db, "categories"));
       setCategories(
-        snap.docs.map((d) => ({ id: d.id, ...d.data() } as Category))
+        snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Category),
       );
     }
     loadCategories();
@@ -73,13 +73,14 @@ export default function BrowsePage() {
       setLoading(true);
 
       /* ================= PRODUCTS ================= */
-      if (type === "Product") {
+      /* ================= PRODUCTS & SERVICES ================= */
+      if (type === "Product" || type === "Service") {
         let qRef = query(
           collection(db, "products"),
           where("approved", "==", true),
-          where("listingType", "array-contains", "Product"),
+          where("listingType", "==", type),
           orderBy("title"),
-          limit(50)
+          limit(50),
         );
 
         if (category) {
@@ -87,15 +88,11 @@ export default function BrowsePage() {
         }
 
         const snap = await getDocs(qRef);
-        let list = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() } as Product)
-        );
+        let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Product);
 
         if (search) {
           const s = search.toLowerCase();
-          list = list.filter((p) =>
-            (p.title || "").toLowerCase().includes(s)
-          );
+          list = list.filter((p) => (p.title || "").toLowerCase().includes(s));
         }
 
         setProducts(list);
@@ -105,16 +102,14 @@ export default function BrowsePage() {
       /* ================= VENDORS ================= */
       if (type === "Vendor") {
         const snap = await getDocs(collection(db, "vendors"));
-        let list = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() } as Vendor)
-        );
+        let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Vendor);
 
         if (search) {
           const s = search.toLowerCase();
           list = list.filter(
             (v) =>
               (v.companyName || "").toLowerCase().includes(s) ||
-              (v.description || "").toLowerCase().includes(s)
+              (v.description || "").toLowerCase().includes(s),
           );
         }
 
@@ -142,9 +137,9 @@ export default function BrowsePage() {
       <Header />
 
       <main className="max-w-full mx-auto px-6 py-8 space-y-6">
-         <Link
-        href="/"
-        className="
+        <Link
+          href="/"
+          className="
           inline-flex items-center gap-2
           px-5 py-2.5
           rounded-full text-sm font-medium
@@ -155,27 +150,26 @@ export default function BrowsePage() {
           hover:text-white
           transition
         "
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Home
-      </Link>
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
         {/* ================= HEADER ================= */}
-      {/* ================= HEADER + FILTER BAR ================= */}
-<div className="space-y-3 flex flex-col md:flex-row justify-between">
+        {/* ================= HEADER + FILTER BAR ================= */}
+        <div className="space-y-3 flex flex-col md:flex-row justify-between">
+          {/* TITLE */}
+          <div>
+            <h1 className="text-xl md:text-2xl font-semibold text-[var(--color-text-primary)]">
+              Browse Marketplace
+            </h1>
+            <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">
+              Discover products and vendors focused on sustainability
+            </p>
+          </div>
 
-  {/* TITLE */}
-  <div>
-    <h1 className="text-xl md:text-2xl font-semibold text-[var(--color-text-primary)]">
-      Browse Marketplace
-    </h1>
-    <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">
-      Discover products and vendors focused on sustainability
-    </p>
-  </div>
-
-  {/* FILTER BAR */}
-  <div
-    className="
+          {/* FILTER BAR */}
+          <div
+            className="
       bg-white border border-gray-200 rounded-xl
       px-2 py-2
       flex items-center gap-2
@@ -183,81 +177,77 @@ export default function BrowsePage() {
       scrollbar-hide
       md:overflow-visible
     "
-  >
-    {/* TYPE */}
-    <select
-      value={type}
-      onChange={(e) => updateFilter("type", e.target.value)}
-      className="
+          >
+            {/* TYPE */}
+            <select
+              value={type}
+              onChange={(e) => updateFilter("type", e.target.value)}
+              className="
         h-9 shrink-0
         rounded-lg border border-gray-300
         px-3 text-sm
         focus:outline-none focus:ring-2 focus:ring-black/10
         md:h-10 w-[100px] md:w-[150px]
       "
-    >
-      <option value="Product">Products</option>
-      <option value="Vendor">Vendors</option>
-      <option value="Service">Services</option>
-    </select>
+            >
+              <option value="Product">Products</option>
+              <option value="Vendor">Vendors</option>
+              <option value="Service">Services</option>
+            </select>
 
-    {/* CATEGORY */}
-    {type === "Product" && (
-      <select
-        value={category}
-        onChange={(e) => updateFilter("category", e.target.value)}
-        className="
+            {/* CATEGORY */}
+            {(type === "Product" || type === "Service") && (
+              <select
+                value={category}
+                onChange={(e) => updateFilter("category", e.target.value)}
+                className="
           h-9 shrink-0
           rounded-lg border border-gray-300
           px-3 text-sm
           focus:outline-none focus:ring-2 focus:ring-black/10
           md:h-10 w-[100px] md:w-[180px]
         "
-      >
-        <option value="">All Categories</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-    )}
+              >
+                <option value="">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
-    {/* SEARCH */}
-    <div className="relative min-w-[200px] flex-1 md:min-w-0">
-      <input
-        type="text"
-        placeholder={
-          type === "Vendor"
-            ? "Search vendors"
-            : "Search products"
-        }
-        value={search}
-        onChange={(e) => updateFilter("q", e.target.value)}
-        className="
+            {/* SEARCH */}
+            <div className="relative min-w-[200px] flex-1 md:min-w-0">
+              <input
+                type="text"
+                placeholder={
+                  type === "Vendor" ? "Search vendors" : "Search products"
+                }
+                value={search}
+                onChange={(e) => updateFilter("q", e.target.value)}
+                className="
           h-9 w-full
           rounded-lg border border-gray-300
           pl-9 pr-3 text-sm
           focus:outline-none focus:ring-2 focus:ring-black/10
           md:h-10
         "
-      />
+              />
 
-      <svg
-        className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        viewBox="0 0 24 24"
-      >
-        <path d="M21 21l-4.35-4.35" />
-        <circle cx="11" cy="11" r="7" />
-      </svg>
-    </div>
-  </div>
-</div>
-
-
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path d="M21 21l-4.35-4.35" />
+                <circle cx="11" cy="11" r="7" />
+              </svg>
+            </div>
+          </div>
+        </div>
 
         {/* ================= LOADING ================= */}
         {loading && (
@@ -267,7 +257,7 @@ export default function BrowsePage() {
         )}
 
         {/* ================= PRODUCTS ================= */}
-        {!loading && type === "Product" && (
+        {!loading && (type === "Product" || type === "Service") && (
           <>
             {products.length === 0 ? (
               <p className="text-sm text-center text-[var(--color-text-muted)]">
@@ -296,7 +286,7 @@ export default function BrowsePage() {
                     </h3>
 
                     <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-                      {p.listingType?.join(", ")}
+                      {p.listingType}
                     </p>
 
                     <p className="text-xs mt-2 text-[var(--color-text-primary)]">
@@ -344,8 +334,7 @@ export default function BrowsePage() {
               </div>
             )}
           </>
-        )}   
-
+        )}
       </main>
 
       <Footer />
