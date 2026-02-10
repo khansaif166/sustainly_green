@@ -67,8 +67,16 @@ export default function AdminDashboard() {
       getDocs(collection(db, "products")),
       getDocs(collection(db, "rfqs")),
       getDocs(collection(db, "categories")),
-      getDocs(query(collection(db, "rfqs"), orderBy("createdAt", "desc"), limit(5))),
-      getDocs(query(collection(db, "products"), orderBy("createdAt", "desc"), limit(5))),
+      getDocs(
+        query(collection(db, "rfqs"), orderBy("createdAt", "desc"), limit(5)),
+      ),
+      getDocs(
+        query(
+          collection(db, "products"),
+          orderBy("createdAt", "desc"),
+          limit(5),
+        ),
+      ),
     ]);
 
     setUsers(userSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -78,11 +86,11 @@ export default function AdminDashboard() {
 
     setRecentRFQs(recentRFQsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
     setRecentProducts(
-      recentProductsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      recentProductsSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
     );
 
     setCategories(
-      Object.fromEntries(categorySnap.docs.map((d) => [d.id, d.data().name]))
+      Object.fromEntries(categorySnap.docs.map((d) => [d.id, d.data().name])),
     );
 
     setLoading(false);
@@ -94,7 +102,9 @@ export default function AdminDashboard() {
   const approvedVendors = vendors.filter((v) => v.approved).length;
 
   const pendingProducts = products.filter((p) => p.status === "PENDING").length;
-  const approvedProducts = products.filter((p) => p.status === "APPROVED").length;
+  const approvedProducts = products.filter(
+    (p) => p.status === "APPROVED",
+  ).length;
 
   /* ================= PRODUCT BY CATEGORY ================= */
 
@@ -126,7 +136,7 @@ export default function AdminDashboard() {
 
   return (
     <main className="max-w-full mx-auto space-y-10">
-       <Link
+      <Link
         href="/"
         className="
           inline-flex items-center gap-2
@@ -162,15 +172,30 @@ export default function AdminDashboard() {
 
       {/* ================= STATUS ================= */}
       <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <MiniCard title="Pending Vendors" value={pendingVendors} icon={<AlertCircle />} />
-        <MiniCard title="Approved Vendors" value={approvedVendors} icon={<CheckCircle />} />
-        <MiniCard title="Pending Products" value={pendingProducts} icon={<Clock />} />
-        <MiniCard title="Approved Products" value={approvedProducts} icon={<CheckCircle />} />
+        <MiniCard
+          title="Pending Vendors"
+          value={pendingVendors}
+          icon={<AlertCircle />}
+        />
+        <MiniCard
+          title="Approved Vendors"
+          value={approvedVendors}
+          icon={<CheckCircle />}
+        />
+        <MiniCard
+          title="Pending Products"
+          value={pendingProducts}
+          icon={<Clock />}
+        />
+        <MiniCard
+          title="Approved Products"
+          value={approvedProducts}
+          icon={<CheckCircle />}
+        />
       </section>
 
       {/* ================= CHARTS ================= */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
         {/* Bar Chart */}
         <div className="rounded-2xl bg-white p-6 shadow">
           <h3 className="text-sm font-semibold mb-4">Platform Overview</h3>
@@ -192,7 +217,12 @@ export default function AdminDashboard() {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={productsByCategory} dataKey="value" nameKey="name" outerRadius={100}>
+                <Pie
+                  data={productsByCategory}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={100}
+                >
                   {productsByCategory.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
@@ -202,41 +232,132 @@ export default function AdminDashboard() {
             </ResponsiveContainer>
           </div>
         </div>
-
       </section>
 
       {/* ================= RECENT RFQS ================= */}
-      <section className="rounded-2xl border bg-white shadow overflow-hidden">
-        <div className="p-5 border-b  font-semibold">Recent RFQs</div>
-        <div className="divide-y text-sm">
+      <section className="rounded-2xl border bg-white shadow border-gray-200 overflow-hidden">
+        <div className="p-5 border-b  border-gray-200 border-b-2 font-semibold">
+          Recent RFQs
+        </div>
+        <div className="divide-y divide-gray-200 text-sm">
           {recentRFQs.map((r) => (
-            <div key={r.id} className="px-5 py-3 flex justify-between">
-              <span>{r.title || "RFQ"}</span>
-              <span className="text-gray-500">{r.status || "Open"}</span>
+            <div key={r.id} className="px-5 py-4 space-y-2">
+              {/* Top row */}
+              <div className="flex justify-between items-center">
+                <p className="font-small">
+                  <span>Requirement:</span> {r.requirementTitle || "RFQ"}
+                </p>
+                <span
+                  className={`
+          text-xs px-2 py-1 rounded-full font-medium
+          ${
+            r.status === "ACCEPTED"
+              ? "bg-green-100 text-green-700"
+              : r.status === "REJECTED"
+                ? "bg-red-100 text-red-700"
+                : "bg-yellow-100 text-yellow-700"
+          }
+        `}
+                >
+                  {r.status || "OPEN"}
+                </span>
+              </div>
+
+              {/* Buyer info */}
+              <p className="text-xs text-gray-600">
+                <span className="text-black">Buyer:</span> {r.buyerName} •{" "}
+                {r.buyerEmail}
+              </p>
+
+              {/* Requirement details */}
+              <div className="text-xs text-gray-500 flex flex-wrap gap-4">
+                <span>
+                  <span className="text-black">Qty: </span>{" "}
+                  {r.estimatedQuantity || "-"}
+                </span>
+                <span>
+                  <span className="text-black">Country:</span>{" "}
+                  {r.deliveryCountry || "-"}
+                </span>
+                <span>
+                  <span className="text-black">Timeline:</span>{" "}
+                  {r.requiredTimeline || "-"}
+                </span>
+              </div>
+
+              {/* Vendor response */}
+              {r.vendorResponse?.price && (
+                <div className="text-xs text-gray-700 mt-1">
+                  Vendor Quote: {r.vendorResponse.currency}{" "}
+                  {r.vendorResponse.price}
+                </div>
+              )}
             </div>
           ))}
-          {recentRFQs.length === 0 && (
-            <div className="p-5 text-gray-500">No RFQs found</div>
-          )}
         </div>
       </section>
 
       {/* ================= RECENT PRODUCTS ================= */}
-      <section className="rounded-2xl border bg-white shadow overflow-hidden">
-        <div className="p-5 border-b border-grey-100 font-semibold">Recent Products</div>
-        <div className="divide-y text-sm">
+      <section className="rounded-2xl border  border-gray-200 bg-white shadow overflow-hidden">
+        <div className="p-5 border-b border-gray-100 font-semibold">
+          Recent Products
+        </div>
+        <div className="divide-y divide-gray-200 text-sm">
           {recentProducts.map((p) => (
-            <div key={p.id} className="px-5 py-3 flex justify-between">
-              <span>{p.title}</span>
-              <span className="text-gray-500">{p.status}</span>
+            <div
+              key={p.id}
+              className="px-5 py-3 flex items-center justify-between gap-4"
+            >
+              {/* LEFT */}
+              <div className="flex flex-col">
+                <span className="font-medium text-gray-900">{p.title}</span>
+
+                <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                  <span>₹{p.price || 0}</span>
+                  <span>{p.listingType}</span>
+
+                  {p.isAd && (
+                    <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                      Ad
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* RIGHT STATUS */}
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium
+            ${
+              p.status === "APPROVED"
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 text-gray-600"
+            }`}
+                >
+                  {p.status}
+                </span>
+
+                {p.isAd && (
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium
+              ${
+                p.adActive
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-600"
+              }`}
+                  >
+                    {p.adActive ? "Running" : "Paused"}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
+
           {recentProducts.length === 0 && (
             <div className="p-5 text-gray-500">No products found</div>
           )}
         </div>
       </section>
-
     </main>
   );
 }

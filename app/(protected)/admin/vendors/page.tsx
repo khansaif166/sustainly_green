@@ -15,22 +15,24 @@ import {
 
 type Vendor = {
   uid: string;
-  company: string;
-  registrationNumber?: string;
+
+  companyName: string;
+  registrationNo?: string;
   businessType: string;
   primaryCategory?: string;
+
   country: string;
   city: string;
 
   businessEmail?: string;
-  businessPhone?: string;
+  phone?: string;
 
   hasCertifications?: boolean;
-  certificationNames?: string[];
-  certificates?: string[];
+  certifications?: string[];
+  certificateFiles?: string[];
 
   description?: string;
-  yearEstablished?: number;
+  yearEstablished?: string;
   website?: string;
 
   socialLinks?: {
@@ -81,7 +83,7 @@ export default function AdminVendorsPage() {
   const filteredVendors = useMemo(() => {
     return vendors.filter((v) => {
       const matchSearch =
-        v.company?.toLowerCase().includes(search.toLowerCase()) ||
+        v.companyName?.toLowerCase().includes(search.toLowerCase()) ||
         v.businessEmail?.toLowerCase().includes(search.toLowerCase());
 
       const matchStatus =
@@ -103,7 +105,6 @@ export default function AdminVendorsPage() {
 
   return (
     <main className="max-w-full mx-auto space-y-8">
-
       {/* ================= HEADER ================= */}
       <section>
         <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
@@ -197,7 +198,7 @@ export default function AdminVendorsPage() {
               <div className="flex justify-between items-start gap-4">
                 <div>
                   <h2 className="font-semibold text-[var(--color-text-primary)]">
-                    {v.company}
+                    {v.companyName}
                   </h2>
                   <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
                     {v.businessType} • {v.city}, {v.country}
@@ -210,8 +211,51 @@ export default function AdminVendorsPage() {
 
             {/* BODY */}
             <div className="p-5 space-y-3 text-sm text-[var(--color-text-secondary)]">
-              <p><b>Category:</b> {v.primaryCategory || "—"}</p>
-              <p><b>Established:</b> {v.yearEstablished || "—"}</p>
+              <p>
+                <b>Category:</b> {v.primaryCategory || "—"}
+              </p>
+              <p>
+                <b>Established:</b> {v.yearEstablished || "—"}
+              </p>
+              <p>
+                <b>Reg. No:</b> {v.registrationNo || "—"}
+              </p>
+              <p>
+                <b>Phone:</b> {v.phone || "—"}
+              </p>
+
+              {/* Certifications */}
+              {v.hasCertifications && v.certifications?.length ? (
+                <div>
+                  <p className="font-medium text-xs mb-1">Certifications</p>
+                  <div className="flex flex-wrap gap-2">
+                    {v.certifications?.map((c, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700"
+                      >
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Certificate files */}
+              {v.certificateFiles?.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {v.certificateFiles.map((file, i) => (
+                    <a
+                      key={i}
+                      href={file}
+                      target="_blank"
+                      className="text-xs text-[var(--color-ocean-blue)] underline"
+                    >
+                      View Certificate {i + 1}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
 
               {v.website && (
                 <a
@@ -223,9 +267,7 @@ export default function AdminVendorsPage() {
                 </a>
               )}
 
-              {v.description && (
-                <p className="line-clamp-3">{v.description}</p>
-              )}
+              {v.description && <p className="line-clamp-3">{v.description}</p>}
             </div>
 
             {/* ACTIONS */}

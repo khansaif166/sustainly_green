@@ -42,6 +42,9 @@ export default function HomePage() {
   const [services, setServices] = useState<Product[]>([]);
 
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [heroAd, setHeroAd] = useState<any>(null);
+
+  const heroImage = heroAd?.bannerImage || heroAd?.images?.[0] || "/ban.webp";
 
   /* ---------------- LOAD CATEGORIES ---------------- */
   useEffect(() => {
@@ -50,7 +53,6 @@ export default function HomePage() {
         const q = query(
           collection(db, "categories"),
           where("active", "==", true),
-          limit(10),
         );
 
         const snap = await getDocs(q);
@@ -115,12 +117,12 @@ export default function HomePage() {
     async function fetchAllProducts() {
       try {
         const q = query(
-  collection(db, "products"),
-  where("approved", "==", true),
-  where("listingType", "==", "Product"),
-  orderBy("createdAt", "desc"),
-  limit(8),
-);
+          collection(db, "products"),
+          where("approved", "==", true),
+          where("listingType", "==", "Product"),
+          orderBy("createdAt", "desc"),
+          limit(8),
+        );
 
         const snap = await getDocs(q);
 
@@ -168,33 +170,65 @@ export default function HomePage() {
     fetchServices();
   }, []);
 
+  //  Ads
+  /* ---------------- LOAD HERO AD ---------------- */
+  useEffect(() => {
+    async function fetchHeroAd() {
+      try {
+        const q = query(
+          collection(db, "products"),
+          where("isAd", "==", true),
+          where("adStatus", "==", "APPROVED"),
+          where("adActive", "==", true),
+          where("adPlacement", "==", "HOME_HERO"),
+          limit(1),
+        );
+
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+          const doc = snap.docs[0];
+          setHeroAd({
+            id: doc.id,
+            ...(doc.data() as any),
+          });
+        }
+      } catch (err) {
+        console.error("HOME_HERO_AD_ERROR", err);
+      }
+    }
+
+    fetchHeroAd();
+  }, []);
+
   return (
     <main className="bg-gray-50 min-h-screen w-full">
       <Header />
       {/* ================= HERO ================= */}
-      <section className="max-w-full mx-auto rounded-2xl pt-5 pb-12  px-4">
-        <section className="relative overflow-hidden  rounded-4xl h-125">
-          {/* Background Image */}
+      <section className="max-w-full mx-auto rounded-2xl pt-5 pb-12 px-4">
+        <section className="relative overflow-hidden rounded-4xl h-125">
+          {/* Clickable hero layer */}
+          {heroAd?.id && (
+            <Link
+              href={`/products/${heroAd.id}`}
+              className="absolute inset-0 z-0"
+            />
+          )}
+
+          {/* Background */}
           <div className="absolute inset-0">
-            {/* Background Image */}
             <div
               className="absolute inset-0 bg-cover bg-top"
               style={{
-                backgroundImage: "url('/ban.webp')",
+                backgroundImage: `url(${heroImage})`,
               }}
             />
-
-            {/* Black Overlay */}
             <div className="absolute inset-0 bg-black/40" />
           </div>
 
-          {/* Overlay */}
-          <div className="absolute inset-0" />
-
           {/* Content */}
-          <div className="relative  mx-auto px-6 pt-16 pb-12">
+          <div className="relative z-10 mx-auto px-6 pt-16 pb-12">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-              {/* LEFT CONTENT */}
               <div>
                 <span className="inline-block mb-3 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-medium">
                   Sustainable B2B Marketplace
@@ -202,7 +236,7 @@ export default function HomePage() {
 
                 <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
                   Discover Verified <br />
-                  <span className="text-white">Sustainable Products</span>{" "}
+                  <span className="text-white">Sustainable Products</span>
                   <br />
                   From Trusted Vendors
                 </h1>
@@ -228,15 +262,6 @@ export default function HomePage() {
                   </Link>
                 </div>
               </div>
-
-              {/* RIGHT PREVIEW CARD */}
-              {/* <div className="hidden md:block">
-                <div className="bg-white/90 rounded-2xl border border-gray-100 shadow-sm p-6 backdrop-blur">
-                  <div className="h-40 bg-gray-100 rounded-lg mb-3" />
-                  <div className="h-3 bg-gray-200 rounded w-3/4 mb-2" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
-                </div>
-              </div> */}
             </div>
           </div>
         </section>

@@ -99,20 +99,22 @@ export default function AdminAdsPage() {
   /* ================= ACTIONS ================= */
 
   async function updateStatus(id: string, newStatus: Ad["adStatus"]) {
-    const adActive = newStatus === "APPROVED";
+  const adActive = newStatus === "APPROVED";
 
-    await updateDoc(doc(db, "products", id), {
-      adStatus: newStatus,
-      adActive,
-      updatedAt: serverTimestamp(),
-    });
+  await updateDoc(doc(db, "products", id), {
+    adStatus: newStatus,
+    adActive,
+    adPlacement: "HOME_HERO",
+    updatedAt: serverTimestamp(),
+  });
 
-    setAds((prev) =>
-      prev.map((a) =>
-        a.id === id ? { ...a, adStatus: newStatus, adActive } : a,
-      ),
-    );
-  }
+  setAds((prev) =>
+    prev.map((a) =>
+      a.id === id ? { ...a, adStatus: newStatus, adActive } : a
+    )
+  );
+}
+
 
   async function toggleActive(id: string, current: boolean) {
     await updateDoc(doc(db, "products", id), {

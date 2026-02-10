@@ -31,6 +31,20 @@ export default function AdminReportsPage() {
   const [vendors, setVendors] = useState<Row[]>([]);
   const [products, setProducts] = useState<Row[]>([]);
   const [rfqs, setRfqs] = useState<Row[]>([]);
+const [lastRfqDoc, setLastRfqDoc] = useState<DocumentData | null>(null);
+const [firstRfqDoc, setFirstRfqDoc] = useState<DocumentData | null>(null);
+const [rfqPage, setRfqPage] = useState(1);
+
+const [selectedRfq, setSelectedRfq] = useState<Row | null>(null);
+
+/* Filters */
+const [statusFilter, setStatusFilter] = useState("ALL");
+const [countryFilter, setCountryFilter] = useState("");
+const [fromDate, setFromDate] = useState("");
+const [toDate, setToDate] = useState("");
+
+const RFQ_PAGE_SIZE = 6;
+
 
   const [loading, setLoading] = useState(true);
 
@@ -41,24 +55,52 @@ export default function AdminReportsPage() {
 
   useEffect(() => {
     loadAll();
+    loadRFQs();
   }, []);
 
   async function loadAll() {
     setLoading(true);
 
-    const [uSnap, vSnap, pSnap, rSnap] = await Promise.all([
+    const [uSnap, vSnap, pSnap] = await Promise.all([
       getDocs(collection(db, "users")),
       getDocs(collection(db, "vendors")),
       getDocs(collection(db, "products")),
-      getDocs(collection(db, "rfqs")),
     ]);
 
     setUsers(uSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
     setVendors(vSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
     setProducts(pSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    setRfqs(rSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
     setLoading(false);
+  }
+
+  async function loadRFQs(next = false) {
+    let q;
+
+    if (next && lastRfqDoc) {
+      q = query(
+        collection(db, "rfqs"),
+        orderBy("createdAt", "desc"),
+        startAfter(lastRfqDoc),
+        limit(RFQ_PAGE_SIZE),
+      );
+    } else {
+      q = query(
+        collection(db, "rfqs"),
+        orderBy("createdAt", "desc"),
+        limit(RFQ_PAGE_SIZE),
+      );
+    }
+
+    const snap = await getDocs(q);
+
+    const list = snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    setRfqs(list);
+    setLastRfqDoc(snap.docs[snap.docs.length - 1] || null);
   }
 
   if (loading) {
@@ -72,12 +114,13 @@ export default function AdminReportsPage() {
   const approvedVendors = vendors.filter((v) => v.approved).length;
   const pendingVendors = vendors.filter((v) => !v.approved).length;
 
-  const approvedProducts = products.filter((p) => p.status === "APPROVED").length;
+  const approvedProducts = products.filter(
+    (p) => p.status === "APPROVED",
+  ).length;
   const pendingProducts = products.filter((p) => p.status === "PENDING").length;
 
   return (
     <main className="min-h-screen bg-[var(--color-bg-soft)] p-6 space-y-10">
-
       {/* ================= HEADER ================= */}
       <section>
         <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
@@ -91,8 +134,17 @@ export default function AdminReportsPage() {
       {/* ================= KPI GRID ================= */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPI icon={Users} label="Total Users" value={users.length} />
-        <KPI icon={UserCheck} label="Approved Vendors" value={approvedVendors} highlight />
-        <KPI icon={Package} label="Approved Products" value={approvedProducts} />
+        <KPI
+          icon={UserCheck}
+          label="Approved Vendors"
+          value={approvedVendors}
+          highlight
+        />
+        <KPI
+          icon={Package}
+          label="Approved Products"
+          value={approvedProducts}
+        />
         <KPI icon={ClipboardList} label="Total RFQs" value={rfqs.length} />
       </div>
 
@@ -139,14 +191,75 @@ export default function AdminReportsPage() {
         subtitle="Buyer enquiries & pipeline"
         icon={<ClipboardList className="h-5 w-5" />}
       >
-        <ScrollableTable
-          headers={["Buyer", "Category", "Status"]}
-          rows={rfqs.map((r) => [
-            r.buyerName || "—",
-            r.category || "—",
-            r.status || "OPEN",
-          ])}
-        />
+        <div className="space-y-4">
+          <div className="relative max-h-72 overflow-auto rounded-xl border border-[var(--color-border)]">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-[var(--color-bg-soft)] border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold">
+                    Requirement
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold">
+                    Buyer
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold">
+                    Qty
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold">
+                    Country
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold">
+                    Quote
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {rfqs.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 py-6 text-center text-gray-400"
+                    >
+                      No RFQs found
+                    </td>
+                  </tr>
+                )}
+
+                {rfqs.map((r) => (
+                  <tr key={r.id} className="border-b border-gray-200 last:border-none">
+                    <td className="px-4 py-3">{r.requirementTitle || "—"}</td>
+                    <td className="px-4 py-3">{r.buyerName || "—"}</td>
+                    <td className="px-4 py-3">{r.estimatedQuantity || "—"}</td>
+                    <td className="px-4 py-3">{r.deliveryCountry || "—"}</td>
+                    <td className="px-4 py-3">
+                      {r.vendorResponse?.price
+                        ? `${r.vendorResponse.currency} ${r.vendorResponse.price}`
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3">{r.status || "OPEN"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination controls */}
+          <div className="flex justify-end">
+            <button
+              onClick={async () => {
+                await loadRFQs(true);
+                setRfqPage((p) => p + 1);
+              }}
+              className="px-4 py-2 text-xs rounded-lg border"
+            >
+              Next Page →
+            </button>
+          </div>
+        </div>
       </ReportBlock>
     </main>
   );
@@ -154,12 +267,7 @@ export default function AdminReportsPage() {
 
 /* ================= COMPONENTS ================= */
 
-function KPI({
-  icon: Icon,
-  label,
-  value,
-  highlight = false,
-}: any) {
+function KPI({ icon: Icon, label, value, highlight = false }: any) {
   return (
     <div
       className={`
@@ -195,7 +303,9 @@ function ReportBlock({ title, subtitle, icon, children }: any) {
           </div>
           <div>
             <h2 className="text-base font-semibold">{title}</h2>
-            <p className="text-xs text-[var(--color-text-secondary)]">{subtitle}</p>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              {subtitle}
+            </p>
           </div>
         </div>
       </div>
@@ -210,10 +320,7 @@ function ScrollableTable({ headers, rows }: any) {
   const PAGE_SIZE = 6;
 
   const totalPages = Math.ceil(rows.length / PAGE_SIZE);
-  const paginated = rows.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE,
-  );
+  const paginated = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="space-y-4">

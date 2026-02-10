@@ -23,14 +23,15 @@ import {
 /* ================= TYPES ================= */
 
 type Product = {
+  vendorName: string;
   id: string;
   title: string;
   description: string;
   images?: string[];
   categoryId: string;
   subCategoryId: string;
-  tags?: string[];
   vendorId: string;
+  price?: number;
   status: "PENDING" | "APPROVED" | "REJECTED";
   featured?: boolean;
   isAd?: boolean;
@@ -65,17 +66,25 @@ export default function AdminProductsPage() {
       ]);
 
       setProducts(
-        pSnap.docs.map((d) => ({
-          id: d.id,
-          status: d.data().status || "PENDING",
-          featured: d.data().featured || false,
-          isAd: d.data().isAd || false,
-          ...(d.data() as any),
-        })),
+        pSnap.docs.map((d) => {
+          const data = d.data() as any;
+
+          return {
+            id: d.id,
+            ...data,
+            status:
+              data.status || (data.approved ? "APPROVED" : "PENDING"),
+            featured: !!data.featured,
+            isAd: !!data.isAd,
+          };
+        }),
       );
 
+      // FIXED: use companyName instead of company
       setVendors(
-        Object.fromEntries(vSnap.docs.map((d) => [d.id, d.data().company])),
+        Object.fromEntries(
+          vSnap.docs.map((d) => [d.id, d.data().companyName]),
+        ),
       );
 
       setCategories(
@@ -95,42 +104,39 @@ export default function AdminProductsPage() {
   /* ================= ACTIONS ================= */
 
   async function updateStatus(id: string, newStatus: Product["status"]) {
-  let approved = false;
-  let visibleToBuyers = false;
+    let approved = false;
+    let visibleToBuyers = false;
 
-  if (newStatus === "APPROVED") {
-    approved = true;
-    visibleToBuyers = true;
+    if (newStatus === "APPROVED") {
+      approved = true;
+      visibleToBuyers = true;
+    }
+
+    if (newStatus === "REJECTED") {
+      approved = false;
+      visibleToBuyers = false;
+    }
+
+    if (newStatus === "PENDING") {
+      approved = false;
+      visibleToBuyers = false;
+    }
+
+    await updateDoc(doc(db, "products", id), {
+      status: newStatus,
+      approved,
+      visibleToBuyers,
+      updatedAt: serverTimestamp(),
+    });
+
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, status: newStatus }
+          : p,
+      ),
+    );
   }
-
-  if (newStatus === "REJECTED") {
-    approved = false;
-    visibleToBuyers = false;
-  }
-
-  if (newStatus === "PENDING") {
-    approved = false;
-    visibleToBuyers = false;
-  }
-
-  // 🔥 UPDATE FIRESTORE CORRECTLY
-  await updateDoc(doc(db, "products", id), {
-    status: newStatus,              // ✅ correct status
-    approved: approved,             // ✅ true only if approved
-    visibleToBuyers: visibleToBuyers, // ✅ control buyer visibility
-    updatedAt: serverTimestamp(),
-  });
-
-  // 🔄 UPDATE LOCAL STATE
-  setProducts((prev) =>
-    prev.map((p) =>
-      p.id === id
-        ? { ...p, status: newStatus, approved, visibleToBuyers }
-        : p,
-    ),
-  );
-}
-
 
   async function deleteProduct(id: string) {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -138,21 +144,6 @@ export default function AdminProductsPage() {
     await deleteDoc(doc(db, "products", id));
     setProducts((prev) => prev.filter((p) => p.id !== id));
   }
-
-  /* ================= FILTER ================= */
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchSearch =
-        p.title.toLowerCase().includes(search.toLowerCase()) ||
-        vendors[p.vendorId]?.toLowerCase().includes(search.toLowerCase());
-
-      const matchStatus = status === "ALL" || p.status === status;
-      const matchCategory = category === "ALL" || p.categoryId === category;
-
-      return matchSearch && matchStatus && matchCategory;
-    });
-  }, [products, search, status, category, vendors]);
 
   async function toggleFeatured(id: string, current: boolean) {
     await updateDoc(doc(db, "products", id), {
@@ -176,6 +167,21 @@ export default function AdminProductsPage() {
     );
   }
 
+  /* ================= FILTER ================= */
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchSearch =
+        p.title.toLowerCase().includes(search.toLowerCase()) ||
+        vendors[p.vendorId]?.toLowerCase().includes(search.toLowerCase());
+
+      const matchStatus = status === "ALL" || p.status === status;
+      const matchCategory = category === "ALL" || p.categoryId === category;
+
+      return matchSearch && matchStatus && matchCategory;
+    });
+  }, [products, search, status, category, vendors]);
+
   if (loading) {
     return (
       <p className="p-6 text-sm text-[var(--color-text-secondary)]">
@@ -186,7 +192,7 @@ export default function AdminProductsPage() {
 
   return (
     <main className="max-w-full mx-auto space-y-8">
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <section>
         <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
           Product Review
@@ -196,7 +202,7 @@ export default function AdminProductsPage() {
         </p>
       </section>
 
-      {/* ================= FILTER BAR ================= */}
+      {/* FILTER BAR */}
       <section className="rounded-2xl bg-[var(--color-bg-white)] border border-[var(--color-border)] p-4 flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-text-secondary)]" />
@@ -238,7 +244,7 @@ export default function AdminProductsPage() {
         </div>
       </section>
 
-      {/* ================= GRID ================= */}
+      {/* PRODUCT GRID */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredProducts.map((p) => (
           <div
@@ -247,7 +253,10 @@ export default function AdminProductsPage() {
           >
             <div className="relative h-84">
               {p.images?.[0] ? (
-                <img src={p.images[0]} className="h-full w-full object-cover" />
+                <img
+                  src={p.images[0]}
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <div className="h-full bg-[var(--color-bg-soft)] flex items-center justify-center text-xs">
                   No Image
@@ -259,78 +268,72 @@ export default function AdminProductsPage() {
             </div>
 
             <div className="p-5 flex flex-col gap-2 flex-1">
-              <h2 className="text-sm font-semibold line-clamp-2">{p.title}</h2>
-              {/* <p className="text-xs text-[var(--color-text-secondary)]">
-                by {vendors[p.vendorId]}
-              </p> */}
+              <h2 className="text-sm font-semibold line-clamp-2">
+                {p.title}
+              </h2>
+
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                by {p.vendorName || "Unknown vendor"}
+              </p>
+
               <p className="text-sm font-medium truncate opacity-80">
                 {p.description}
               </p>
+
+              {p.price && (
+                <p className="text-sm font-semibold text-[var(--color-primary-green)]">
+                  ₹{p.price}
+                </p>
+              )}
             </div>
 
-            <div className="p-4 border-t flex flex-wrap gap-2 relative">
-              {/* FEATURE TOGGLE */}
+            <div className="p-4 border-t flex flex-wrap gap-2">
               <button
                 onClick={() => toggleFeatured(p.id, !!p.featured)}
-                className={`
-      flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border
-      ${
-        p.featured
-          ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-          : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
-      }
-    `}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
+                  p.featured
+                    ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                    : "bg-white text-gray-600 border-gray-300"
+                }`}
               >
-                <Star
-                  className={`h-4 w-4 ${p.featured ? "text-yellow-500" : ""}`}
-                />
+                <Star className="h-4 w-4 inline mr-1" />
                 {p.featured ? "Featured" : "Feature"}
               </button>
 
-              {/* ADS TOGGLE */}
               <button
                 onClick={() => toggleAd(p.id, !!p.isAd)}
-                className={`
-      flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border
-      ${
-        p.isAd
-          ? "bg-purple-100 text-purple-700 border-purple-300"
-          : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
-      }
-    `}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
+                  p.isAd
+                    ? "bg-purple-100 text-purple-700 border-purple-300"
+                    : "bg-white text-gray-600 border-gray-300"
+                }`}
               >
-                <Megaphone className="h-4 w-4" />
+                <Megaphone className="h-4 w-4 inline mr-1" />
                 {p.isAd ? "Ad Running" : "Run Ad"}
               </button>
 
-              {/* APPROVE */}
               {p.status !== "APPROVED" && (
                 <button
                   onClick={() => updateStatus(p.id, "APPROVED")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700"
+                  className="px-3 py-1.5 rounded-full text-xs bg-green-600 text-white"
                 >
-                  <CheckCircle className="h-4 w-4" />
                   Approve
                 </button>
               )}
 
-              {/* REJECT */}
               {p.status !== "REJECTED" && (
                 <button
                   onClick={() => updateStatus(p.id, "REJECTED")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200 hover:bg-red-200"
+                  className="px-3 py-1.5 rounded-full text-xs bg-red-100 text-red-700"
                 >
-                  <XCircle className="h-4 w-4" />
                   Reject
                 </button>
               )}
 
-              {/* DELETE */}
               <button
                 onClick={() => deleteProduct(p.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
+                className="px-3 py-1.5 rounded-full text-xs bg-gray-100 text-gray-700"
               >
-                <Trash2 className="h-4 w-4" />
                 Delete
               </button>
             </div>
@@ -358,27 +361,5 @@ function StatusBadge({ status }: { status: Product["status"] }) {
     >
       {status}
     </span>
-  );
-}
-
-function ActionBtn({ label, icon, onClick }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-white bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]"
-    >
-      {icon} {label}
-    </button>
-  );
-}
-
-function SecondaryBtn({ label, icon, onClick }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-xs border border-[var(--color-border)]"
-    >
-      {icon} {label}
-    </button>
   );
 }

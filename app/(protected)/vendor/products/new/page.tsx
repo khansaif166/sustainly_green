@@ -127,41 +127,53 @@ export default function AddProductPage() {
         imageUrls.push(url);
       }
 
-      await addDoc(collection(db, "products"), {
-        vendorId: user.uid,
+      // get vendor data
+const vendorRef = doc(db, "vendors", user.uid);
+const vendorSnap = await getDoc(vendorRef);
 
-        title,
-        description,
+let vendorName = "Unknown Vendor";
 
-        listingType,
-        availableFor,
+if (vendorSnap.exists()) {
+  vendorName = vendorSnap.data().companyName || "Unknown Vendor";
+}
 
-        categoryId,
-        subCategoryId,
+await addDoc(collection(db, "products"), {
+  vendorId: user.uid,
+  vendorName, // ✅ store vendor name
 
-        images: imageUrls,
+  title,
+  description,
 
-        priceType,
-        price: price ? Number(price) : null,
-        currency,
-        moq: moq ? Number(moq) : null,
-        discount,
+  listingType,
+  availableFor,
 
-        shipRegions,
-        inStock,
-        featured: false,
-        isAd: false,
+  categoryId,
+  subCategoryId,
 
-        sustainabilityTags: selectedTags,
-        sustainabilityClaim,
-        approved: false,
-        status: "PENDING",
-        views: 0,
-        lastViewedAt: null,
+  images: imageUrls,
 
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+  priceType,
+  price: price ? Number(price) : null,
+  currency,
+  moq: moq ? Number(moq) : null,
+  discount,
+
+  shipRegions,
+  inStock,
+  featured: false,
+  isAd: false,
+
+  sustainabilityTags: selectedTags,
+  sustainabilityClaim,
+  approved: false,
+  status: "PENDING",
+  views: 0,
+  lastViewedAt: null,
+
+  createdAt: serverTimestamp(),
+  updatedAt: serverTimestamp(),
+});
+
 
       router.push("/vendor/dashboard");
     } catch (err) {
