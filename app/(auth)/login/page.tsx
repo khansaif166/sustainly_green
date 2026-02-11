@@ -7,7 +7,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { sendEmailVerification } from "firebase/auth";
-
+import { sendPasswordResetEmail } from "firebase/auth";
 // React Icons
 import {
   HiShieldCheck,
@@ -25,7 +25,29 @@ export default function LoginPage() {
   const router = useRouter();
   const [showResend, setShowResend] = useState(false);
   const [resent, setResent] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  async function handlePasswordReset() {
+    if (!email) {
+      setError("Please enter your email first.");
+      return;
+    }
 
+    try {
+      setResetLoading(true);
+      await sendPasswordResetEmail(auth, email);
+      setResetSent(true);
+      setError(null);
+    } catch (err: any) {
+      if (err.code === "auth/user-not-found") {
+        setError("No account found with this email.");
+      } else {
+        setError("Failed to send reset email.");
+      }
+    } finally {
+      setResetLoading(false);
+    }
+  }
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -80,34 +102,33 @@ export default function LoginPage() {
         }
 
         if (userData.role === "VENDOR") {
+          // 1️⃣ Profile not completed yet
+          if (!userData.vendorProfileComplete) {
+            router.push("/vendor/profile"); // force complete profile
+            return;
+          }
 
-  // 1️⃣ Profile not completed yet
-  if (!userData.vendorProfileComplete) {
-    router.push("/vendor/profile"); // force complete profile
-    return;
-  }
+          // 2️⃣ Fetch vendor approval status
+          const vendorSnap = await getDoc(doc(db, "vendors", user.uid));
 
-  // 2️⃣ Fetch vendor approval status
-  const vendorSnap = await getDoc(doc(db, "vendors", user.uid));
+          if (!vendorSnap.exists()) {
+            // safety fallback
+            router.push("/vendor/profile");
+            return;
+          }
 
-  if (!vendorSnap.exists()) {
-    // safety fallback
-    router.push("/vendor/profile");
-    return;
-  }
+          const vendorData = vendorSnap.data();
 
-  const vendorData = vendorSnap.data();
+          // 3️⃣ If NOT approved → BLOCK dashboard & products
+          if (!vendorData.approved) {
+            router.push("/vendor/pending"); // your pending approval page
+            return;
+          }
 
-  // 3️⃣ If NOT approved → BLOCK dashboard & products
-  if (!vendorData.approved) {
-    router.push("/vendor/pending");   // your pending approval page
-    return;
-  }
-
-  // 4️⃣ ONLY approved vendors can access dashboard
-  router.push("/vendor/dashboard");
-  return;
-}
+          // 4️⃣ ONLY approved vendors can access dashboard
+          router.push("/vendor/dashboard");
+          return;
+        }
 
         router.push("/vendor/dashboard");
         return;
@@ -135,8 +156,6 @@ export default function LoginPage() {
     setResent(true);
   }
 
-  
-
   return (
     <main className="min-h-screen grid grid-cols-1 md:grid-cols-2">
       {/* ================= LEFT BRAND PANEL ================= */}
@@ -147,15 +166,15 @@ export default function LoginPage() {
         />
 
         <Link
-        href="/"
-        className="
+          href="/"
+          className="
           inline-flex items-center gap-2 mb-8
           px-3 py-1.5
            text-sm font-medium absolute top-6 left-10
         "
-      >
-         <img src="/log.webp" className="h-14 rounded-xl p-2 bg-white" />
-      </Link>
+        >
+          <img src="/log.webp" className="h-14 rounded-xl p-2 bg-white" />
+        </Link>
 
         <div className="relative z-10 max-w-lg">
           <h1 className="text-3xl font-bold leading-tight">
@@ -195,9 +214,6 @@ export default function LoginPage() {
       {/* ================= RIGHT LOGIN FORM ================= */}
       <div className="flex items-center justify-center px-6 bg-gray-50">
         <div className="w-full max-w-md">
-        
-
-     
           {/* Header */}
           <div className="mb-10">
             <h2 className="text-2xl font-semibold text-gray-900">
@@ -229,15 +245,32 @@ export default function LoginPage() {
               <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-2">
                 Password
               </label>
+
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full bg-transparent border-b-2 border-gray-300
-                           py-2 text-lg font-medium text-gray-900
-                           focus:outline-none focus:border-black"
+               py-2 text-lg font-medium text-gray-900
+               focus:outline-none focus:border-black"
               />
+
+              <div className="flex justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  className="text-xs font-medium text-gray-600 hover:text-black transition"
+                >
+                  {resetLoading ? "Sending..." : "Forgot password?"}
+                </button>
+              </div>
+
+              {resetSent && (
+                <p className="text-xs text-green-600 mt-2">
+                  Password reset email sent. Check your inbox.
+                </p>
+              )}
             </div>
 
             {/* Error */}

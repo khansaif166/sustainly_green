@@ -11,6 +11,8 @@ import {
   query,
   where,
   limit,
+  getDoc,
+  doc,
 } from "firebase/firestore";
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -44,8 +46,23 @@ export default function HomePage() {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [heroAd, setHeroAd] = useState<any>(null);
 
-  const heroImage = heroAd?.bannerImage || heroAd?.images?.[0] || "/ban.webp";
+  const heroImage = heroAd?.imageUrl || "/ban.webp";
+  const [currentBanner, setCurrentBanner] = useState<any>(null);
+  const [loadingBanner, setLoadingBanner] = useState(true);
 
+  useEffect(() => {
+    async function loadBanner() {
+      const snap = await getDoc(doc(db, "settings", "homepageBanner"));
+
+      if (snap.exists()) {
+        setCurrentBanner(snap.data());
+      }
+
+      setLoadingBanner(false);
+    }
+
+    loadBanner();
+  }, []);
   /* ---------------- LOAD CATEGORIES ---------------- */
   useEffect(() => {
     async function fetchCategories() {
@@ -171,77 +188,57 @@ export default function HomePage() {
   }, []);
 
   //  Ads
-  /* ---------------- LOAD HERO AD ---------------- */
+  /* ---------------- LOAD HERO BANNER ---------------- */
   useEffect(() => {
-    async function fetchHeroAd() {
+    async function fetchBanner() {
       try {
-        const q = query(
-          collection(db, "products"),
-          where("isAd", "==", true),
-          where("adStatus", "==", "APPROVED"),
-          where("adActive", "==", true),
-          where("adPlacement", "==", "HOME_HERO"),
-          limit(1),
-        );
+        const snap = await getDoc(doc(db, "settings", "homepageBanner"));
 
-        const snap = await getDocs(q);
-
-        if (!snap.empty) {
-          const doc = snap.docs[0];
-          setHeroAd({
-            id: doc.id,
-            ...(doc.data() as any),
-          });
+        if (snap.exists()) {
+          setHeroAd(snap.data());
         }
       } catch (err) {
-        console.error("HOME_HERO_AD_ERROR", err);
+        console.error("HOME_BANNER_ERROR", err);
       }
     }
 
-    fetchHeroAd();
+    fetchBanner();
   }, []);
 
   return (
     <main className="bg-gray-50 min-h-screen w-full">
       <Header />
       {/* ================= HERO ================= */}
-      <section className="max-w-full mx-auto rounded-2xl pt-5 pb-12 px-4">
-        <section className="relative overflow-hidden rounded-4xl h-125">
+      <section className="max-w-full mx-auto rounded-2xl mb-5">
+        <section className="relative overflow-hidden h-[auto] md:h-[auto]">
           {/* Clickable hero layer */}
-          {heroAd?.id && (
-            <Link
-              href={`/products/${heroAd.id}`}
-              className="absolute inset-0 z-0"
-            />
+          {heroAd?.linkUrl && (
+            <Link href={heroAd.linkUrl} className="absolute inset-0 z-10" />
           )}
 
-          {/* Background */}
-          <div className="absolute inset-0">
-            <div
-              className="absolute inset-0 bg-cover bg-top"
-              style={{
-                backgroundImage: `url(${heroImage})`,
-              }}
-            />
-            <div className="absolute inset-0 bg-black/40" />
-          </div>
+          {/* Image */}
+          <img
+            src={heroImage}
+            alt="Hero Banner"
+            className="w-full h-auto object-contain bg-black"
+          />
 
           {/* Content */}
-          <div className="relative z-10 mx-auto px-6 pt-16 pb-12">
+          {/* <div className="relative z-10 mx-auto px-6 pt-16 pb-12">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
               <div>
                 <span className="inline-block mb-3 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-medium">
                   Sustainable B2B Marketplace
                 </span>
 
-                <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+                <h1 className="text-3xl md:text-4xl font-bold text-black leading-tight">
                   Discover Verified <br />
-                  <span className="text-white">Sustainable Products</span>
+                  <span className="text-black">Sustainable Products</span>
                   <br />
                   From Trusted Vendors
                 </h1>
 
-                <p className="mt-4 text-white text-sm max-w-xl">
+                <p className="mt-4 text-black text-sm max-w-xl">
                   Sustainly connects buyers with verified eco-friendly vendors
                   worldwide.
                 </p>
@@ -263,7 +260,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </section>
       </section>
 
@@ -307,7 +304,7 @@ export default function HomePage() {
               <button
                 key={c.id}
                 onClick={() => router.push(`/browse?category=${c.id}`)}
-                className="flex-shrink-0 flex flex-col items-center group mr-10"
+                className="flex-shrink-0 flex flex-col items-center group mr-2 md:mr-10"
               >
                 {/* Circle Image */}
                 <div className="w-32 h-32 rounded-[20px] object-contain bg-gray-100 overflow-hidden flex items-center justify-center transition-shadow group-hover:shadow-md ">
@@ -371,7 +368,7 @@ export default function HomePage() {
           "
               >
                 {/* Image */}
-                <div className="relative h-[300px] md:h-70 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
+                <div className="relative md:h-70 bg-gray-100 rounded-2xl mb-4 overflow-hidden">
                   {/* Featured badge */}
                   <span className="absolute top-3 left-3 z-10 bg-yellow-400 text-black text-xs font-semibold px-3 py-1 rounded-full shadow">
                     Featured
@@ -442,7 +439,7 @@ export default function HomePage() {
             "
                 >
                   {/* Image */}
-                  <div className="relative h-[300px] md:h-70 bg-gray-100 rounded-2xl mb-4 overflow-hidden h-[300px]">
+                  <div className="relative md:h-70 bg-gray-100 rounded-2xl mb-4 overflow-hidden ">
                     {p.images?.[0] && (
                       <img
                         src={p.images[0]}

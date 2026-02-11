@@ -9,6 +9,7 @@ import {
   updateDoc,
   deleteDoc,
   serverTimestamp,
+  getDoc,
 } from "firebase/firestore";
 import {
   Megaphone,
@@ -23,6 +24,9 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { setDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 /* ================= TYPES ================= */
 
@@ -50,15 +54,80 @@ export default function AdminAdsPage() {
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
+  const [status, setStatus] = useState<
+    "ALL" | "PENDING" | "APPROVED" | "REJECTED"
+  >("ALL");
 
   // pagination
   const PAGE_SIZE = 6;
   const [page, setPage] = useState(1);
+  // Banner states
+  const [currentBanner, setCurrentBanner] = useState<any>(null);
+  const [loadingBanner, setLoadingBanner] = useState(true);
+  const [bannerImage, setBannerImage] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string>("");
 
   useEffect(() => {
     loadAds();
   }, []);
+
+  useEffect(() => {
+    async function loadBanner() {
+      const snap = await getDoc(doc(db, "settings", "homepageBanner"));
+
+      if (snap.exists()) {
+        setCurrentBanner(snap.data());
+      }
+
+      setLoadingBanner(false);
+    }
+
+    loadBanner();
+  }, []);
+
+  async function uploadBanner() {
+    if (!bannerImage) return alert("Select image");
+
+    const storageRef = ref(storage, `banners/home-hero-${Date.now()}`);
+    await uploadBytes(storageRef, bannerImage);
+
+    const imageUrl = await getDownloadURL(storageRef);
+
+    await setDoc(doc(db, "settings", "homepageBanner"), {
+      imageUrl,
+      linkUrl: currentBanner?.linkUrl || "/browse",
+      active: true,
+      updatedAt: serverTimestamp(),
+    });
+
+    setCurrentBanner({
+      imageUrl,
+      linkUrl: "/browse",
+      active: true,
+    });
+
+    alert("Banner updated successfully");
+  }
+
+  async function toggleBanner() {
+    if (!currentBanner) return;
+
+    await updateDoc(doc(db, "settings", "homepageBanner"), {
+      active: !currentBanner.active,
+    });
+
+    setCurrentBanner((prev: any) => ({
+      ...prev,
+      active: !prev.active,
+    }));
+  }
+
+  async function deleteBanner() {
+    if (!confirm("Delete banner permanently?")) return;
+
+    await deleteDoc(doc(db, "settings", "homepageBanner"));
+    setCurrentBanner(null);
+  }
 
   async function loadAds() {
     setLoading(true);
@@ -77,11 +146,16 @@ export default function AdminAdsPage() {
   /* ================= STATS ================= */
 
   const totalAds = ads.length;
-  const activeAds = ads.filter((a) => a.adActive && a.adStatus === "APPROVED").length;
+  const activeAds = ads.filter(
+    (a) => a.adActive && a.adStatus === "APPROVED",
+  ).length;
   const pendingAds = ads.filter((a) => a.adStatus === "PENDING").length;
 
   const totalClicks = ads.reduce((sum, a) => sum + (a.clicks || 0), 0);
-  const totalImpressions = ads.reduce((sum, a) => sum + (a.impressions || 0), 0);
+  const totalImpressions = ads.reduce(
+    (sum, a) => sum + (a.impressions || 0),
+    0,
+  );
 
   /* ================= FILTER ================= */
 
@@ -99,22 +173,21 @@ export default function AdminAdsPage() {
   /* ================= ACTIONS ================= */
 
   async function updateStatus(id: string, newStatus: Ad["adStatus"]) {
-  const adActive = newStatus === "APPROVED";
+    const adActive = newStatus === "APPROVED";
 
-  await updateDoc(doc(db, "products", id), {
-    adStatus: newStatus,
-    adActive,
-    adPlacement: "HOME_HERO",
-    updatedAt: serverTimestamp(),
-  });
+    await updateDoc(doc(db, "products", id), {
+      adStatus: newStatus,
+      adActive,
+      adPlacement: "HOME_HERO",
+      updatedAt: serverTimestamp(),
+    });
 
-  setAds((prev) =>
-    prev.map((a) =>
-      a.id === id ? { ...a, adStatus: newStatus, adActive } : a
-    )
-  );
-}
-
+    setAds((prev) =>
+      prev.map((a) =>
+        a.id === id ? { ...a, adStatus: newStatus, adActive } : a,
+      ),
+    );
+  }
 
   async function toggleActive(id: string, current: boolean) {
     await updateDoc(doc(db, "products", id), {
@@ -145,7 +218,6 @@ export default function AdminAdsPage() {
 
   return (
     <main className="min-h-screen bg-[var(--color-bg-soft)] p-6 space-y-10">
-
       {/* ================= HEADER ================= */}
       <section>
         <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
@@ -159,7 +231,12 @@ export default function AdminAdsPage() {
       {/* ================= KPI ================= */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPI icon={Megaphone} label="Total Ads" value={totalAds} />
-        <KPI icon={CheckCircle} label="Active Ads" value={activeAds} highlight />
+        <KPI
+          icon={CheckCircle}
+          label="Active Ads"
+          value={activeAds}
+          highlight
+        />
         <KPI icon={Eye} label="Impressions" value={totalImpressions} />
         <KPI icon={MousePointerClick} label="Clicks" value={totalClicks} />
       </div>
@@ -223,7 +300,6 @@ export default function AdminAdsPage() {
             </div>
 
             <div className="p-4 border-t flex flex-wrap gap-2">
-
               {/* TOGGLE ACTIVE */}
               {a.adStatus === "APPROVED" && (
                 <button
@@ -300,6 +376,109 @@ export default function AdminAdsPage() {
           </button>
         </div>
       )}
+
+      <section className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)] space-y-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
+            Homepage Hero Banner
+          </h2>
+
+          {currentBanner && (
+            <span
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
+                currentBanner.active
+                  ? "bg-emerald-500/15 text-emerald-600"
+                  : "bg-gray-200 text-gray-500"
+              }`}
+            >
+              {currentBanner.active ? "Active" : "Stopped"}
+            </span>
+          )}
+        </div>
+
+        {loadingBanner ? (
+          <p className="text-sm text-gray-400">Loading banner...</p>
+        ) : currentBanner ? (
+          <>
+            {/* Current Banner */}
+            <div className="relative group overflow-hidden rounded-2xl">
+              <img
+                src={currentBanner.imageUrl}
+                className="h-56 w-full object-cover transition duration-500 group-hover:scale-105"
+              />
+
+              {/* Overlay effect */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition" />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4 flex-wrap">
+              <button
+                onClick={toggleBanner}
+                className="px-5 py-2.5 rounded-full text-sm font-medium bg-gray-900 text-white hover:opacity-90 transition"
+              >
+                {currentBanner.active ? "Pause Banner" : "Activate Banner"}
+              </button>
+
+              <button
+                onClick={deleteBanner}
+                className="px-5 py-2.5 rounded-full text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="h-40 flex items-center justify-center rounded-2xl bg-gray-100 text-gray-400 text-sm">
+            No banner uploaded yet
+          </div>
+        )}
+
+        {/* Upload Section */}
+        <div className="space-y-4">
+          <label className="block">
+            <span className="text-sm font-medium text-gray-600">
+              Upload / Replace Banner
+            </span>
+
+            <div className="mt-2 flex items-center justify-center h-36 rounded-2xl bg-gray-50 hover:bg-gray-100 transition cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setBannerImage(file);
+                  setBannerPreview(URL.createObjectURL(file));
+                }}
+                className="hidden"
+                id="bannerUpload"
+              />
+
+              <label
+                htmlFor="bannerUpload"
+                className="text-sm text-gray-500 cursor-pointer"
+              >
+                Click to choose image
+              </label>
+            </div>
+          </label>
+
+          {bannerPreview && (
+            <img
+              src={bannerPreview}
+              className="h-44 w-full object-cover rounded-2xl shadow-sm"
+            />
+          )}
+
+          <button
+            onClick={uploadBanner}
+            className="px-6 py-3 rounded-full text-sm font-semibold bg-[var(--color-primary-green)] text-white shadow-lg hover:shadow-xl hover:brightness-95 transition"
+          >
+            {currentBanner ? "Replace Banner" : "Upload Banner"}
+          </button>
+        </div>
+      </section>
     </main>
   );
 }
