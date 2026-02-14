@@ -377,108 +377,144 @@ export default function AdminAdsPage() {
         </div>
       )}
 
-      <section className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)] space-y-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
-            Homepage Hero Banner
-          </h2>
+      <section className="rounded-3xl bg-white/70 backdrop-blur-xl p-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)] space-y-10">
 
-          {currentBanner && (
-            <span
-              className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
-                currentBanner.active
-                  ? "bg-emerald-500/15 text-emerald-600"
-                  : "bg-gray-200 text-gray-500"
-              }`}
-            >
-              {currentBanner.active ? "Active" : "Stopped"}
-            </span>
-          )}
-        </div>
+  {/* ================= HEADER ================= */}
+  <div>
+    <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
+      Homepage Hero Banner
+    </h2>
+    <p className="text-sm text-gray-500 mt-1">
+      Manage your main marketing banner displayed on homepage.
+    </p>
+  </div>
 
-        {loadingBanner ? (
-          <p className="text-sm text-gray-400">Loading banner...</p>
-        ) : currentBanner ? (
-          <>
-            {/* Current Banner */}
-            <div className="relative group overflow-hidden rounded-2xl">
-              <img
-                src={currentBanner.imageUrl}
-                className="h-56 w-full object-cover transition duration-500 group-hover:scale-105"
-              />
+  {/* ================= CURRENT STATUS ================= */}
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-xs uppercase tracking-wide text-gray-400">
+        Banner Status
+      </p>
+      {currentBanner && (
+        <span
+          className={`inline-block mt-2 px-4 py-1.5 rounded-full text-xs font-medium ${
+            currentBanner.active
+              ? "bg-emerald-500/15 text-emerald-600"
+              : "bg-gray-200 text-gray-500"
+          }`}
+        >
+          {currentBanner.active ? "Active" : "Stopped"}
+        </span>
+      )}
+    </div>
 
-              {/* Overlay effect */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition" />
-            </div>
+    {currentBanner && (
+      <div className="flex gap-4">
+        <button
+          onClick={toggleBanner}
+          className="px-5 py-2.5 rounded-full text-sm font-medium bg-gray-900 text-white hover:opacity-90 transition"
+        >
+          {currentBanner.active ? "Pause Banner" : "Activate Banner"}
+        </button>
 
-            {/* Action Buttons */}
-            <div className="flex gap-4 flex-wrap">
-              <button
-                onClick={toggleBanner}
-                className="px-5 py-2.5 rounded-full text-sm font-medium bg-gray-900 text-white hover:opacity-90 transition"
-              >
-                {currentBanner.active ? "Pause Banner" : "Activate Banner"}
-              </button>
+        <button
+          onClick={deleteBanner}
+          className="px-5 py-2.5 rounded-full text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition"
+        >
+          Delete Banner
+        </button>
+      </div>
+    )}
+  </div>
 
-              <button
-                onClick={deleteBanner}
-                className="px-5 py-2.5 rounded-full text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition"
-              >
-                Delete
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="h-40 flex items-center justify-center rounded-2xl bg-gray-100 text-gray-400 text-sm">
-            No banner uploaded yet
-          </div>
-        )}
+  {/* ================= CURRENT PREVIEW ================= */}
+  <div>
+    <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">
+      Current Banner Preview
+    </p>
 
-        {/* Upload Section */}
-        <div className="space-y-4">
-          <label className="block">
-            <span className="text-sm font-medium text-gray-600">
-              Upload / Replace Banner
-            </span>
+    {loadingBanner ? (
+      <p className="text-sm text-gray-400">Loading banner...</p>
+    ) : currentBanner ? (
+      <div className="relative group overflow-hidden rounded-2xl">
+        <img
+          src={currentBanner.imageUrl}
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition" />
+      </div>
+    ) : (
+      <div className="h-40 flex items-center justify-center rounded-2xl bg-gray-100 text-gray-400 text-sm">
+        No banner uploaded yet
+      </div>
+    )}
+  </div>
 
-            <div className="mt-2 flex items-center justify-center h-36 rounded-2xl bg-gray-50 hover:bg-gray-100 transition cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setBannerImage(file);
-                  setBannerPreview(URL.createObjectURL(file));
-                }}
-                className="hidden"
-                id="bannerUpload"
-              />
+  {/* ================= UPLOAD SECTION ================= */}
+  <div className="space-y-6">
 
-              <label
-                htmlFor="bannerUpload"
-                className="text-sm text-gray-500 cursor-pointer"
-              >
-                Click to choose image
-              </label>
-            </div>
-          </label>
+    <div>
+      <p className="text-xs uppercase tracking-wide text-gray-400">
+        Upload New Banner
+      </p>
+      <p className="text-sm text-gray-500 mt-1">
+        Recommended size: 1920 × 850px (Max 500KB, WebP preferred)
+      </p>
+    </div>
 
-          {bannerPreview && (
-            <img
-              src={bannerPreview}
-              className="h-44 w-full object-cover rounded-2xl shadow-sm"
-            />
-          )}
+    {/* File Upload */}
+    <label className="block">
+      <div className="mt-2 flex items-center justify-center h-40 rounded-2xl bg-gray-50 hover:bg-gray-100 transition cursor-pointer border-2 border-dashed border-gray-200">
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setBannerImage(file);
+            setBannerPreview(URL.createObjectURL(file));
+          }}
+          className="hidden"
+          id="bannerUpload"
+        />
 
-          <button
-            onClick={uploadBanner}
-            className="px-6 py-3 rounded-full text-sm font-semibold bg-[var(--color-primary-green)] text-white shadow-lg hover:shadow-xl hover:brightness-95 transition"
-          >
-            {currentBanner ? "Replace Banner" : "Upload Banner"}
-          </button>
-        </div>
-      </section>
+        <label
+          htmlFor="bannerUpload"
+          className="text-sm text-gray-500 cursor-pointer text-center"
+        >
+          Click to choose image <br />
+          <span className="text-xs text-gray-400">
+            PNG, JPG, WebP supported
+          </span>
+        </label>
+      </div>
+    </label>
+
+    {/* Preview Before Upload */}
+    {bannerPreview && (
+      <div>
+        <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">
+          New Banner Preview
+        </p>
+        <img
+          src={bannerPreview}
+          className="h-52 w-full object-cover rounded-2xl shadow-sm"
+        />
+      </div>
+    )}
+
+    {/* Save Button */}
+    <button
+      onClick={uploadBanner}
+      className="px-8 py-3 rounded-full text-sm font-semibold bg-[var(--color-primary-green)] text-white shadow-lg hover:shadow-xl hover:brightness-95 transition"
+    >
+      {currentBanner ? "Update Banner" : "Upload Banner"}
+    </button>
+
+  </div>
+
+</section>
+
     </main>
   );
 }

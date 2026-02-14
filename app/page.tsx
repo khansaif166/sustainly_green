@@ -18,6 +18,7 @@ import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Header from "./components/Header";
 import Footer from "./components/layouts/Footer";
+import { addDoc, serverTimestamp } from "firebase/firestore";
 
 /* ---------------- TYPES ---------------- */
 type Product = {
@@ -49,6 +50,15 @@ export default function HomePage() {
   const heroImage = heroAd?.imageUrl || "/ban.webp";
   const [currentBanner, setCurrentBanner] = useState<any>(null);
   const [loadingBanner, setLoadingBanner] = useState(true);
+  const [openGlobalRFQ, setOpenGlobalRFQ] = useState(false);
+
+  const [rfqName, setRfqName] = useState("");
+  const [rfqEmail, setRfqEmail] = useState("");
+  const [rfqCategory, setRfqCategory] = useState("");
+  const [rfqSubCategory, setRfqSubCategory] = useState("");
+  const [rfqQuantity, setRfqQuantity] = useState("");
+  const [rfqMessage, setRfqMessage] = useState("");
+  const [rfqLoading, setRfqLoading] = useState(false);
 
   useEffect(() => {
     async function loadBanner() {
@@ -204,6 +214,46 @@ export default function HomePage() {
 
     fetchBanner();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setOpenGlobalRFQ(true);
+    }, 4000); // show after 4 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  async function submitGlobalRFQ() {
+    if (!rfqName || !rfqEmail || !rfqCategory) {
+      alert("Please fill required fields");
+      return;
+    }
+
+    setRfqLoading(true);
+
+    await addDoc(collection(db, "rfqs"), {
+      type: "GLOBAL",
+      name: rfqName,
+      email: rfqEmail,
+      category: rfqCategory,
+      subcategory: rfqSubCategory,
+      quantity: rfqQuantity,
+      message: rfqMessage,
+      status: "OPEN",
+      createdAt: serverTimestamp(),
+    });
+
+    setRfqLoading(false);
+    setOpenGlobalRFQ(false);
+
+    // reset
+    setRfqName("");
+    setRfqEmail("");
+    setRfqCategory("");
+    setRfqSubCategory("");
+    setRfqQuantity("");
+    setRfqMessage("");
+  }
 
   return (
     <main className="bg-gray-50 min-h-screen w-full">
@@ -617,6 +667,76 @@ export default function HomePage() {
       </section>
 
       <Footer />
+
+      {openGlobalRFQ && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white w-full max-w-lg rounded-3xl p-8 space-y-5 relative">
+            <button
+              onClick={() => setOpenGlobalRFQ(false)}
+              className="absolute top-4 right-4 text-gray-400"
+            >
+              ✕
+            </button>
+
+            <h2 className="text-xl font-semibold">Tell Us What You Need</h2>
+
+            <input
+              placeholder="Full Name *"
+              value={rfqName}
+              onChange={(e) => setRfqName(e.target.value)}
+              className="w-full border rounded-xl p-3"
+            />
+
+            <input
+              placeholder="Email *"
+              value={rfqEmail}
+              onChange={(e) => setRfqEmail(e.target.value)}
+              className="w-full border rounded-xl p-3"
+            />
+
+            <select
+              value={rfqCategory}
+              onChange={(e) => setRfqCategory(e.target.value)}
+              className="w-full border rounded-xl p-3"
+            >
+              <option value="">Select Category *</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+
+            <input
+              placeholder="Subcategory"
+              value={rfqSubCategory}
+              onChange={(e) => setRfqSubCategory(e.target.value)}
+              className="w-full border rounded-xl p-3"
+            />
+
+            <input
+              placeholder="Quantity"
+              value={rfqQuantity}
+              onChange={(e) => setRfqQuantity(e.target.value)}
+              className="w-full border rounded-xl p-3"
+            />
+
+            <textarea
+              placeholder="Additional details"
+              value={rfqMessage}
+              onChange={(e) => setRfqMessage(e.target.value)}
+              className="w-full border rounded-xl p-3"
+            />
+
+            <button
+              onClick={submitGlobalRFQ}
+              className="w-full bg-[var(--color-primary-green)] text-white py-3 rounded-full font-semibold"
+            >
+              {rfqLoading ? "Submitting..." : "Submit Requirement"}
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

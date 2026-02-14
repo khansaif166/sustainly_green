@@ -234,7 +234,7 @@ export default function BuyerRFQDetailPage() {
           </div>
 
           <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
-            <FiMail /> {rfq.vendorContact.email}
+            <FiMail /> {rfq.vendorContact.businessEmail}
           </div>
 
           <a
