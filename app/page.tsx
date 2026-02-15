@@ -118,7 +118,7 @@ export default function HomePage() {
         const q = query(
           collection(db, "products"),
           where("approved", "==", true),
-          where("listingType", "==", "Product"),
+          where("featured", "==", true),
           orderBy("createdAt", "desc"),
           limit(8),
         );
