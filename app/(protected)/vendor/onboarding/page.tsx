@@ -141,7 +141,7 @@ export default function VendorOnboardingPage() {
         { merge: true }
       );
 
-      router.push("/vendor/pending");
+      router.push("/vendor/dashbaord");
     } catch (err) {
       console.error(err);
       setError("Something went wrong. Please try again.");

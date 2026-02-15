@@ -60,13 +60,16 @@ export default function RegisterPage() {
 
       // 4️⃣ Vendor doc (if vendor)
       if (role === "VENDOR") {
-        await setDoc(doc(db, "vendors", user.uid), {
-          uid: user.uid,
-          company: "",
-          country: "",
-          approved: false,
-          createdAt: serverTimestamp(),
-        });
+        await setDoc(doc(db, "users", user.uid), {
+  uid: user.uid,
+  name,
+  email: user.email,
+  role,
+  emailVerified: false,
+  vendorProfileComplete: role === "VENDOR" ? false : null,
+  vendorApproved: false,
+  createdAt: serverTimestamp(),
+});
       }
 
       // 5️⃣ Send email verification

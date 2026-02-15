@@ -62,8 +62,10 @@ export default function Header() {
   const [products, setProducts] = useState<Suggestion[]>([]);
   const [vendors, setVendors] = useState<Suggestion[]>([]);
   const [categories, setCategories] = useState<Suggestion[]>([]);
+  const [openMobileCategories, setOpenMobileCategories] = useState(false);
 
   const accountRef = useRef<HTMLDivElement>(null);
+  const mobileCatRef = useRef<HTMLDivElement>(null);
 
   /* ---------------- SCROLL HIDE ---------------- */
   useEffect(() => {
@@ -102,14 +104,14 @@ export default function Header() {
       /* PRODUCTS (PUBLIC APPROVED) */
       try {
         const pSnap = await getDocs(
-          query(collection(db, "products"), where("approved", "==", true))
+          query(collection(db, "products"), where("approved", "==", true)),
         );
         setProducts(
           pSnap.docs.map((d) => ({
             id: d.id,
             title: d.data().title || "",
             type: "product",
-          }))
+          })),
         );
       } catch (e) {
         console.warn("Products fetch blocked:", e);
@@ -118,14 +120,14 @@ export default function Header() {
       /* VENDORS (PUBLIC APPROVED ONLY) */
       try {
         const vSnap = await getDocs(
-          query(collection(db, "vendors"), where("approved", "==", true))
+          query(collection(db, "vendors"), where("approved", "==", true)),
         );
         setVendors(
           vSnap.docs.map((d) => ({
             id: d.id,
             title: d.data().companyName || "",
             type: "vendor",
-          }))
+          })),
         );
       } catch (e) {
         console.warn("Vendors fetch blocked:", e);
@@ -139,7 +141,7 @@ export default function Header() {
             id: d.id,
             title: d.data().name || "",
             type: "category",
-          }))
+          })),
         );
       } catch (e) {
         console.warn("Categories fetch blocked:", e);
@@ -176,10 +178,10 @@ export default function Header() {
     profile?.role === "ADMIN"
       ? "/admin"
       : profile?.role === "BUYER"
-      ? "/buyer/dashboard"
-      : profile?.role === "VENDOR"
-      ? "/vendor/dashboard"
-      : "/";
+        ? "/buyer/dashboard"
+        : profile?.role === "VENDOR"
+          ? "/vendor/dashboard"
+          : "/";
 
   /* ---------------- SEARCH ACTION ---------------- */
   function handleSearch() {
@@ -362,122 +364,177 @@ export default function Header() {
         </div>
 
         {/* MOBILE ICONS */}
-      {/* ================= MOBILE RIGHT SIDE ================= */}
-<div className="flex items-center gap-2 ml-auto lg:hidden">
-  {/* SIGN IN / USER */}
-  {!loadingUser && !authUser && (
-    <Link
-      href="/login"
-      className="text-sm font-medium border px-3 py-1.5 rounded-full"
-    >
-      Sign in
-    </Link>
-  )}
+        {/* ================= MOBILE RIGHT SIDE ================= */}
+        <div className="flex items-center gap-2 ml-auto lg:hidden">
+          {/* SIGN IN / USER */}
+          {!loadingUser && !authUser && (
+            <div className="flex items-center gap-2">
+              {/* BUY BUTTON */}
+              <Link
+                href="/login"
+                className="
+        px-4 py-1.5 rounded-full text-sm font-medium
+        border border-[var(--color-border)]
+        text-[var(--color-text-primary)]
+        bg-white
+        hover:bg-[var(--color-bg-soft)]
+        transition
+      "
+              >
+                Buy
+              </Link>
 
-  {!loadingUser && authUser && (
-    <button
-      onClick={() => router.push(dashboardLink)}
-      className="p-2 rounded-full bg-gray-100"
-    >
-      <User className="h-5 w-5" />
-    </button>
-  )}
+              {/* SELL BUTTON */}
+              <Link
+                href="/login"
+                className="
+        px-4 py-1.5 rounded-full text-sm font-semibold text-white
+        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+        shadow-md hover:shadow-lg hover:brightness-95
+        transition
+      "
+              >
+                Sell
+              </Link>
+            </div>
+          )}
 
-  {/* MENU BUTTON */}
-  <button
-    onClick={() => setOpenMobile((p) => !p)}
-    className="p-2 rounded-full bg-gray-100"
-  >
-    {openMobile ? <X /> : <Menu />}
-  </button>
-</div>
-</div>
+          {!loadingUser && authUser && (
+            <button
+              onClick={() => router.push(dashboardLink)}
+              className="p-2 px-4 rounded-full bg-gray-100"
+            >
+              Dashboard
+            </button>
+          )}
 
-{/* ================= MOBILE SEARCH BAR ================= */}
-<div className="lg:hidden px-4 pb-3">
-  <div className="flex gap-2">
-    {/* SEARCH */}
-    <div className="relative flex-1">
-      <input
-        value={queryText}
-        onChange={(e) => setQueryText(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-        placeholder="Search products"
-        className="w-full h-10 pl-10 pr-3 rounded-full border border-gray-300 text-sm outline-none"
-      />
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-    </div>
-
-    {/* CATEGORY BUTTON */}
-    <button
-      onClick={() => router.push("/browse")}
-      className="h-10 px-4 rounded-full border border-gray-300 text-sm font-medium whitespace-nowrap"
-    >
-      Category
-    </button>
-  </div>
-</div>
-
-{/* ================= MOBILE MENU ================= */}
-{openMobile && (
-  <div className="lg:hidden bg-white border-t">
-    <div className="px-6 py-5 space-y-4 text-sm flex flex-col">
-      {!loadingUser && !authUser && (
-        <div className="flex gap-3">
-          <Link
-            href="/login"
-            onClick={() => setOpenMobile(false)}
-            className="flex-1 text-center py-2 rounded-full border"
+          {/* MENU BUTTON */}
+          <button
+            onClick={() => setOpenMobile((p) => !p)}
+            className="p-2 rounded-full bg-gray-100"
           >
-            Sign in
-          </Link>
-          <Link
-            href="/register"
-            onClick={() => setOpenMobile(false)}
-            className="flex-1 text-center py-2 rounded-full bg-black text-white"
-          >
-            Register
-          </Link>
+            {openMobile ? <X /> : <Menu />}
+          </button>
+        </div>
+      </div>
+
+      {/* ================= MOBILE SEARCH BAR ================= */}
+      <div className="lg:hidden px-4 pb-3">
+        <div className="flex gap-2">
+          {/* SEARCH */}
+          <div className="relative flex-1">
+            <input
+              value={queryText}
+              onChange={(e) => setQueryText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Search products"
+              className="w-full h-10 pl-10 pr-3 rounded-full border border-gray-300 text-sm outline-none"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
+
+          {/* CATEGORY BUTTON */}
+          <div className="relative">
+            <button
+              onClick={() => setOpenMobileCategories((p) => !p)}
+              className="h-10 px-4 rounded-full border border-gray-300 text-sm font-medium whitespace-nowrap bg-white"
+            >
+              {selectedCategory
+                ? categories.find((c) => c.id === selectedCategory)?.title ||
+                  "Category"
+                : "Category"}
+            </button>
+
+            {openMobileCategories && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border z-50 max-h-64 overflow-y-auto">
+                <button
+                  onClick={() => {
+                    setSelectedCategory("");
+                    setOpenMobileCategories(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                >
+                  All Categories
+                </button>
+
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      setSelectedCategory(c.id);
+                      setOpenMobileCategories(false);
+                      router.push(`/browse?category=${c.id}`);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                  >
+                    {c.title}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ================= MOBILE MENU ================= */}
+      {openMobile && (
+        <div className="lg:hidden bg-white border-t">
+          <div className="px-6 py-5 space-y-4 text-sm flex flex-col">
+            {!loadingUser && !authUser && (
+              <div className="flex gap-3">
+                <Link
+                  href="/login"
+                  onClick={() => setOpenMobile(false)}
+                  className="flex-1 text-center py-2 rounded-full border"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setOpenMobile(false)}
+                  className="flex-1 text-center py-2 rounded-full bg-black text-white"
+                >
+                  Register
+                </Link>
+              </div>
+            )}
+
+            {!loadingUser && authUser && (
+              <>
+                <p className="font-semibold">Hi, {profile?.name || "User"}</p>
+                <button
+                  className="text-left"
+                  onClick={() => {
+                    setOpenMobile(false);
+                    router.push(dashboardLink);
+                  }}
+                >
+                  Go to Dashboard
+                </button>
+                <button
+                  onClick={async () => {
+                    await signOut(auth);
+                    setOpenMobile(false);
+                    router.push("/");
+                  }}
+                  className="text-red-600 text-left"
+                >
+                  Logout
+                </button>
+              </>
+            )}
+
+            <hr />
+
+            <Link href="/deals" onClick={() => setOpenMobile(false)}>
+              Daily Deals
+            </Link>
+            <Link href="/help" onClick={() => setOpenMobile(false)}>
+              Help & Contact
+            </Link>
+          </div>
         </div>
       )}
-
-      {!loadingUser && authUser && (
-        <>
-          <p className="font-semibold">Hi, {profile?.name || "User"}</p>
-          <button
-            className="text-left"
-            onClick={() => {
-              setOpenMobile(false);
-              router.push(dashboardLink);
-            }}
-          >
-            Go to Dashboard
-          </button>
-          <button
-            onClick={async () => {
-              await signOut(auth);
-              setOpenMobile(false);
-              router.push("/");
-            }}
-            className="text-red-600 text-left"
-          >
-            Logout
-          </button>
-        </>
-      )}
-
-      <hr />
-
-      <Link href="/deals" onClick={() => setOpenMobile(false)}>
-        Daily Deals
-      </Link>
-      <Link href="/help" onClick={() => setOpenMobile(false)}>
-        Help & Contact
-      </Link>
-    </div>
-  </div>
-)}
-
     </header>
   );
 }

@@ -216,11 +216,20 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setOpenGlobalRFQ(true);
-    }, 4000); // show after 4 seconds
+    const LAST_SHOWN_KEY = "globalRFQ_lastShown";
+    const TWELVE_HOURS = 12 * 60 * 60 * 1000;
 
-    return () => clearTimeout(timer);
+    const lastShown = localStorage.getItem(LAST_SHOWN_KEY);
+    const now = Date.now();
+
+    if (!lastShown || now - Number(lastShown) > TWELVE_HOURS) {
+      const timer = setTimeout(() => {
+        setOpenGlobalRFQ(true);
+        localStorage.setItem(LAST_SHOWN_KEY, now.toString());
+      }, 4000); // delay before showing
+
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   async function submitGlobalRFQ() {
@@ -429,7 +438,7 @@ export default function HomePage() {
                       src={p.images[0]}
                       alt={p.title}
                       className="
-                  h-full w-full object-cover md:object-cover
+                  h-70 md:h-full w-full object-cover md:object-cover
                   transition-transform duration-500
                   group-hover:scale-105
                 "
@@ -495,7 +504,7 @@ export default function HomePage() {
                         src={p.images[0]}
                         alt={p.title}
                         className="
-                    h-full w-full object-cover
+                    h-70 md:h-full w-full object-cover
                     transition-transform duration-500
                     group-hover:scale-105
                   "
@@ -576,7 +585,7 @@ export default function HomePage() {
                       <img
                         src={s.images[0]}
                         alt={s.title}
-                        className="h-full w-full object-cover"
+                        className="h-70 md:h-full w-full object-cover"
                       />
                     ) : (
                       <div className="h-full flex items-center justify-center text-xs text-gray-500">
@@ -669,71 +678,98 @@ export default function HomePage() {
       <Footer />
 
       {openGlobalRFQ && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white w-full max-w-lg rounded-3xl p-8 space-y-5 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          {/* overlay */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+          {/* modal */}
+          <div className="relative w-full max-w-xl rounded-3xl bg-white shadow-[0_25px_80px_rgba(0,0,0,0.25)] border border-[var(--color-border)] p-8 space-y-6 animate-[fadeIn_.25s_ease]">
+            {/* close */}
             <button
               onClick={() => setOpenGlobalRFQ(false)}
-              className="absolute top-4 right-4 text-gray-400"
+              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 transition"
             >
               ✕
             </button>
 
-            <h2 className="text-xl font-semibold">Tell Us What You Need</h2>
+            {/* header */}
+            <div>
+              <h2 className="text-2xl font-semibold text-[var(--color-text-primary)]">
+                Tell Us What You Need
+              </h2>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+                Receive quotes from verified sustainable vendors.
+              </p>
+            </div>
 
-            <input
-              placeholder="Full Name *"
-              value={rfqName}
-              onChange={(e) => setRfqName(e.target.value)}
-              className="w-full border rounded-xl p-3"
-            />
+            {/* form */}
+            <div className="space-y-4">
+              <input
+                placeholder="Full Name *"
+                value={rfqName}
+                onChange={(e) => setRfqName(e.target.value)}
+                className="rfq-input"
+              />
 
-            <input
-              placeholder="Email *"
-              value={rfqEmail}
-              onChange={(e) => setRfqEmail(e.target.value)}
-              className="w-full border rounded-xl p-3"
-            />
+              <input
+                placeholder="Email *"
+                value={rfqEmail}
+                onChange={(e) => setRfqEmail(e.target.value)}
+                className="rfq-input"
+              />
 
-            <select
-              value={rfqCategory}
-              onChange={(e) => setRfqCategory(e.target.value)}
-              className="w-full border rounded-xl p-3"
-            >
-              <option value="">Select Category *</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              <select
+                value={rfqCategory}
+                onChange={(e) => setRfqCategory(e.target.value)}
+                className="rfq-input"
+              >
+                <option value="">Select Category *</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
 
-            <input
-              placeholder="Subcategory"
-              value={rfqSubCategory}
-              onChange={(e) => setRfqSubCategory(e.target.value)}
-              className="w-full border rounded-xl p-3"
-            />
+              <input
+                placeholder="Subcategory"
+                value={rfqSubCategory}
+                onChange={(e) => setRfqSubCategory(e.target.value)}
+                className="rfq-input"
+              />
 
-            <input
-              placeholder="Quantity"
-              value={rfqQuantity}
-              onChange={(e) => setRfqQuantity(e.target.value)}
-              className="w-full border rounded-xl p-3"
-            />
+              <input
+                placeholder="Quantity"
+                value={rfqQuantity}
+                onChange={(e) => setRfqQuantity(e.target.value)}
+                className="rfq-input"
+              />
 
-            <textarea
-              placeholder="Additional details"
-              value={rfqMessage}
-              onChange={(e) => setRfqMessage(e.target.value)}
-              className="w-full border rounded-xl p-3"
-            />
+              <textarea
+                placeholder="Additional details"
+                value={rfqMessage}
+                onChange={(e) => setRfqMessage(e.target.value)}
+                className="rfq-input h-24 resize-none"
+              />
+            </div>
 
+            {/* CTA */}
             <button
               onClick={submitGlobalRFQ}
-              className="w-full bg-[var(--color-primary-green)] text-white py-3 rounded-full font-semibold"
+              className="
+          w-full rounded-full py-3 text-sm font-semibold text-white
+          bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+          shadow-lg hover:shadow-xl hover:brightness-95
+          transition
+        "
             >
               {rfqLoading ? "Submitting..." : "Submit Requirement"}
             </button>
+
+            {/* trust note */}
+            <p className="text-xs text-center text-[var(--color-text-secondary)]">
+              Your request will be shared only with verified vendors.
+            </p>
           </div>
         </div>
       )}

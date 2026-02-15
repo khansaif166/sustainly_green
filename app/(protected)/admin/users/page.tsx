@@ -251,7 +251,7 @@ export default function AdminUsers() {
                   {/* ACTIONS */}
                   <td className="px-3 md:px-6 py-4 text-right space-x-2 whitespace-nowrap">
                     {/* CHANGE ROLE */}
-                    <button
+                    {/* <button
                       onClick={() =>
                         changeRole(u, u.role === "BUYER" ? "VENDOR" : "BUYER")
                       }
@@ -259,7 +259,7 @@ export default function AdminUsers() {
                     >
                       <Edit2 className="h-3 w-3" />
                       <span className="hidden md:inline">Change Role</span>
-                    </button>
+                    </button> */}
 
                     {/* BLOCK / UNBLOCK */}
                     <button

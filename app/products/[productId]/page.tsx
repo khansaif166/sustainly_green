@@ -32,6 +32,7 @@ type Product = {
   currency?: string;
   moq?: number;
   sustainabilityTags?: string[];
+  tagNames?: string[];
   approved?: boolean;
 };
 
@@ -56,10 +57,27 @@ export default function ProductDetailPage() {
       if (snap.exists()) {
         const data = snap.data() as Omit<Product, "id">;
 
-        setProduct({ id: snap.id, ...data });
+        let tagNames: string[] = [];
+
+        if (data.sustainabilityTags?.length) {
+          const tagPromises = data.sustainabilityTags.map(async (tagId) => {
+            const tagSnap = await getDoc(doc(db, "tags", tagId));
+            return tagSnap.exists() ? tagSnap.data().name : null;
+          });
+
+          tagNames = (await Promise.all(tagPromises)).filter(
+            Boolean,
+          ) as string[];
+        }
+
+        setProduct({
+          id: snap.id,
+          ...data,
+          tagNames,
+        });
+
         setActiveImage(data.images?.[0] || null);
 
-        // ✅ INCREMENT VIEWS (SAFE + ATOMIC)
         await updateDoc(ref, {
           views: increment(1),
           lastViewedAt: serverTimestamp(),
@@ -261,11 +279,11 @@ export default function ProductDetailPage() {
                 </p>
 
                 <div className="flex flex-wrap gap-2">
-                  {(product.sustainabilityTags ?? []).map((t) => (
+                  {(product.tagNames ?? []).map((t) => (
                     <span
                       key={t}
                       className="inline-flex items-center gap-1 px-3 py-1 rounded-full
-                      bg-(--color-bg-soft) text-xs text-(--color-text-secondary)"
+      bg-(--color-bg-soft) text-xs text-(--color-text-secondary)"
                     >
                       <Tag className="h-3 w-3" />
                       {t}

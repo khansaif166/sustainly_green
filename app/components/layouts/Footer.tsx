@@ -119,7 +119,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3 text-[13px]">
               <li className="flex items-center gap-2">
-                <HiOutlineMail className="text-[#6BCF9B] text-base" />
+                <HiOutlineMail className="text-[#6BCF9B] text-base w-[22] h-[22]" />
                 grow@sustainlygreen.com
               </li>
               {/* <li className="flex items-center gap-2">
@@ -127,7 +127,7 @@ export default function Footer() {
                 +44 20 39961521
               </li> */}
               <li className="flex items-center gap-2 w-[80%]">
-                <HiOutlineLocationMarker className="text-[#6BCF9B] text-base w-[25] h-[25]" />
+                <HiOutlineLocationMarker className="text-[#6BCF9B] text-base w-[22] h-[22]" />
                 Sustainly Green India Pvt Ltd 
 Chennai, Tamil Nadu,
 India

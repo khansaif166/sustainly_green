@@ -8,6 +8,8 @@ import {
   query,
   where,
   orderBy,
+  getDoc,
+  doc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -51,6 +53,7 @@ export default function VendorDashboardPage() {
 
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   /* ================= LOAD DATA ================= */
   useEffect(() => {
@@ -60,16 +63,24 @@ export default function VendorDashboardPage() {
         return;
       }
 
+      const userSnap = await getDoc(doc(db, "users", u.uid));
+
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+
+        if (!data.vendorProfileComplete) {
+          setNeedsOnboarding(true);
+        }
+      }
+
       const q = query(
         collection(db, "rfqs"),
         where("vendorId", "==", u.uid),
-        orderBy("createdAt", "asc")
+        orderBy("createdAt", "asc"),
       );
 
       const snap = await getDocs(q);
-      setRfqs(
-        snap.docs.map((d) => ({ id: d.id, ...d.data() } as RFQ))
-      );
+      setRfqs(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as RFQ));
       setLoading(false);
     });
 
@@ -80,9 +91,7 @@ export default function VendorDashboardPage() {
   const total = rfqs.length;
   const quoted = rfqs.filter((r) => r.status === "QUOTED").length;
   const accepted = rfqs.filter((r) => r.status === "ACCEPTED").length;
-  const pending = rfqs.filter(
-    (r) => r.status === "RFQ_REQUESTED"
-  ).length;
+  const pending = rfqs.filter((r) => r.status === "RFQ_REQUESTED").length;
 
   const revenue = rfqs
     .filter((r) => r.status === "ACCEPTED" && r.vendorResponse?.price)
@@ -92,9 +101,7 @@ export default function VendorDashboardPage() {
   const trendData = Array.from({ length: 6 }).map((_, i) => ({
     month: `M${i + 1}`,
     rfqs: rfqs.filter((_, idx) => idx <= i).length,
-    deals: rfqs.filter(
-      (r, idx) => idx <= i && r.status === "ACCEPTED"
-    ).length,
+    deals: rfqs.filter((r, idx) => idx <= i && r.status === "ACCEPTED").length,
   }));
 
   const statusData = [
@@ -102,7 +109,6 @@ export default function VendorDashboardPage() {
     { name: "Quoted", value: quoted },
     { name: "Accepted", value: accepted },
   ];
-
 
   if (loading) {
     return (
@@ -114,8 +120,7 @@ export default function VendorDashboardPage() {
 
   return (
     <main className="space-y-10 pb-30">
-
-       <Link
+      <Link
         href="/"
         className="
           inline-flex items-center gap-2
@@ -134,6 +139,27 @@ export default function VendorDashboardPage() {
       </Link>
 
       {/* ================= HEADER ================= */}
+      {needsOnboarding && (
+        <div className="rounded-3xl border border-amber-300 bg-amber-50 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-amber-900">
+              Complete your vendor profile
+            </h3>
+            <p className="text-sm text-amber-800 mt-1">
+              Finish onboarding to appear in search results and start receiving
+              RFQs.
+            </p>
+          </div>
+
+          <Link
+            href="/vendor/onboarding"
+            className="inline-flex items-center justify-center rounded-full bg-amber-500 text-white px-6 py-2 text-sm font-semibold hover:opacity-90 transition"
+          >
+            Complete Now
+          </Link>
+        </div>
+      )}
+
       <section className="flex justify-between items-center ">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
@@ -325,9 +351,7 @@ function PremiumKpi({
       `}
     >
       <div>
-        <p className="text-xs text-[var(--color-text-secondary)]">
-          {label}
-        </p>
+        <p className="text-xs text-[var(--color-text-secondary)]">{label}</p>
         <p className="text-xl font-semibold text-[var(--color-text-primary)] mt-1">
           {value}
         </p>

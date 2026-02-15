@@ -40,9 +40,9 @@ export default function VendorLayout({
         border-b border-[var(--color-border)]
         px-4 py-3 md:hidden
       ">
-        <h1 className="text-sm font-semibold text-[var(--color-text-primary)]">
-          Vendor Panel
-        </h1>
+        <Link href="/" className="shrink-0">
+          <img src="/log.webp" className="md:h-12 h-10" />
+        </Link>
         <button onClick={() => setOpen(true)}>
           <Menu className="w-5 h-5 text-[var(--color-text-primary)]" />
         </button>
@@ -65,9 +65,9 @@ export default function VendorLayout({
           px-5 py-4
           border-b border-[var(--color-border)]
         ">
-          <h2 className="text-sm font-semibold text-[var(--color-primary-green)]">
-            Sustainly Vendor
-          </h2>
+           <Link href="/" className="shrink-0">
+          <img src="/log.webp" className="md:h-10 h-10" />
+        </Link>
           <button onClick={() => setOpen(false)} className="md:hidden">
             <X className="w-5 h-5 text-[var(--color-text-primary)]" />
           </button>

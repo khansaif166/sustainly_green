@@ -62,10 +62,10 @@ export default function AddProductPage() {
       setUser(u);
 
       const vendorSnap = await getDoc(doc(db, "vendors", u.uid));
-      if (!vendorSnap.exists() || !vendorSnap.data().approved) {
-        router.push("/vendor/pending");
-        return;
-      }
+      // if (!vendorSnap.exists() || !vendorSnap.data().approved) {
+      //   router.push("/vendor/pending");
+      //   return;
+      // }
 
       setVendorApproved(true);
     });
@@ -127,53 +127,63 @@ export default function AddProductPage() {
         imageUrls.push(url);
       }
 
+      // map selected tag ids to names
+      const selectedTagObjects = tags
+        .filter((t) => selectedTags.includes(t.id))
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+        }));
+
+      const selectedTagNames = selectedTagObjects.map((t) => t.name);
+
       // get vendor data
-const vendorRef = doc(db, "vendors", user.uid);
-const vendorSnap = await getDoc(vendorRef);
+      const vendorRef = doc(db, "vendors", user.uid);
+      const vendorSnap = await getDoc(vendorRef);
 
-let vendorName = "Unknown Vendor";
+      let vendorName = "Unknown Vendor";
 
-if (vendorSnap.exists()) {
-  vendorName = vendorSnap.data().companyName || "Unknown Vendor";
-}
+      if (vendorSnap.exists()) {
+        vendorName = vendorSnap.data().companyName || "Unknown Vendor";
+      }
 
-await addDoc(collection(db, "products"), {
-  vendorId: user.uid,
-  vendorName, // ✅ store vendor name
+      await addDoc(collection(db, "products"), {
+        vendorId: user.uid,
+        vendorName, 
 
-  title,
-  description,
+        title,
+        description,
 
-  listingType,
-  availableFor,
+        listingType,
+        availableFor,
 
-  categoryId,
-  subCategoryId,
+        categoryId,
+        subCategoryId,
 
-  images: imageUrls,
+        images: imageUrls,
 
-  priceType,
-  price: price ? Number(price) : null,
-  currency,
-  moq: moq ? Number(moq) : null,
-  discount,
+        priceType,
+        price: price ? Number(price) : null,
+        currency,
+        moq: moq ? Number(moq) : null,
+        discount,
 
-  shipRegions,
-  inStock,
-  featured: false,
-  isAd: false,
+        shipRegions,
+        inStock,
+        featured: false,
+        isAd: false,
 
-  sustainabilityTags: selectedTags,
-  sustainabilityClaim,
-  approved: false,
-  status: "PENDING",
-  views: 0,
-  lastViewedAt: null,
+        sustainabilityTagIds: selectedTags,
+        sustainabilityTagNames: selectedTagNames,
+        sustainabilityClaim,
+        approved: false,
+        status: "PENDING",
+        views: 0,
+        lastViewedAt: null,
 
-  createdAt: serverTimestamp(),
-  updatedAt: serverTimestamp(),
-});
-
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
       router.push("/vendor/dashboard");
     } catch (err) {
