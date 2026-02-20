@@ -381,7 +381,7 @@ export default function Header() {
         transition
       "
               >
-                Buy
+                Buyer
               </Link>
 
               {/* SELL BUTTON */}
@@ -394,7 +394,7 @@ export default function Header() {
         transition
       "
               >
-                Sell
+                Seller
               </Link>
             </div>
           )}

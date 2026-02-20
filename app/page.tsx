@@ -47,7 +47,7 @@ export default function HomePage() {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [heroAd, setHeroAd] = useState<any>(null);
 
-  const heroImage = heroAd?.imageUrl || "/ban.webp";
+  const heroImage = heroAd?.imageUrl || "";
   const [currentBanner, setCurrentBanner] = useState<any>(null);
   const [loadingBanner, setLoadingBanner] = useState(true);
   const [openGlobalRFQ, setOpenGlobalRFQ] = useState(false);
@@ -59,6 +59,9 @@ export default function HomePage() {
   const [rfqQuantity, setRfqQuantity] = useState("");
   const [rfqMessage, setRfqMessage] = useState("");
   const [rfqLoading, setRfqLoading] = useState(false);
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
+  const [loadingAllProducts, setLoadingAllProducts] = useState(true);
+  const [loadingServices, setLoadingServices] = useState(true);
 
   useEffect(() => {
     async function loadBanner() {
@@ -133,6 +136,8 @@ export default function HomePage() {
         );
       } catch (err) {
         console.error("HOME_FEATURED_ERROR", err);
+      } finally {
+        setLoadingFeatured(false);
       }
     }
 
@@ -264,6 +269,21 @@ export default function HomePage() {
     setRfqMessage("");
   }
 
+  const SkeletonCard = () => (
+    <div className="animate-pulse bg-white rounded-3xl p-4 space-y-3">
+      <div className="h-40 bg-gray-200 rounded-2xl" />
+      <div className="h-4 bg-gray-200 rounded w-3/4" />
+      <div className="h-3 bg-gray-200 rounded w-1/2" />
+    </div>
+  );
+
+  const SkeletonCircle = () => (
+    <div className="animate-pulse flex flex-col items-center gap-3">
+      <div className="w-28 h-28 bg-gray-200 rounded-2xl" />
+      <div className="w-16 h-3 bg-gray-200 rounded" />
+    </div>
+  );
+
   return (
     <main className="bg-gray-50 min-h-screen w-full">
       <Header />
@@ -276,11 +296,15 @@ export default function HomePage() {
           )}
 
           {/* Image */}
-          <img
-            src={heroImage}
-            alt="Hero Banner"
-            className="w-full h-auto object-contain bg-black"
-          />
+          {loadingBanner ? (
+            <div className="h-[180px] md:h-[300px] bg-gray-200 animate-pulse rounded-xl" />
+          ) : (
+            <img
+              src={heroImage}
+              alt="Hero Banner"
+              className="w-full h-auto object-contain bg-black"
+            />
+          )}
 
           {/* Content */}
           {/* <div className="relative z-10 mx-auto px-6 pt-16 pb-12">
@@ -353,7 +377,11 @@ export default function HomePage() {
         </div>
 
         {loadingCategories ? (
-          <p className="text-sm text-gray-500">Loading categories...</p>
+          <div className="flex gap-6 overflow-hidden">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonCircle key={i} />
+            ))}
+          </div>
         ) : (
           <div
             ref={scrollRef}
@@ -411,7 +439,11 @@ export default function HomePage() {
         </div>
 
         {loadingProducts ? (
-          <p className="text-sm text-gray-500">Loading products...</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
         ) : featuredProducts.length === 0 ? (
           <p className="text-sm text-gray-500">No featured products yet.</p>
         ) : (
@@ -481,7 +513,11 @@ export default function HomePage() {
         </div>
 
         {loadingProducts ? (
-          <p className="text-sm text-gray-500">Loading products...</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
         ) : allProducts.length === 0 ? (
           <p className="text-sm text-gray-500">No products found.</p>
         ) : (
@@ -564,7 +600,13 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {services.length === 0 ? (
+        {loadingServices ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        ) : services.length === 0 ? (
           <p className="text-sm text-gray-500">No services found.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 md:gap-8">
