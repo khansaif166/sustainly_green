@@ -596,7 +596,7 @@ export default function HomePage() {
             href="/browse?type=Service"
             className="text-sm font-medium text-[var(--color-ocean-blue)] hover:underline"
           >
-            Browse services →
+            Browse services → 
           </Link>
         </div>
 
