@@ -29,7 +29,7 @@ const nav = [
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Vendors", href: "/admin/vendors", icon: Building2 },
   { name: "Products", href: "/admin/products", icon: Package },
-
+  { name: "Leads", href: "/admin/leads", icon: FileText },
   { name: "Categories", href: "/admin/categories", icon: Layers },
   { name: "Sub Categories", href: "/admin/subcategories", icon: ListTree },
   { name: "Tags", href: "/admin/tags", icon: Tag },
@@ -57,7 +57,6 @@ export default function AdminLayout({
 
   return (
     <div className="flex h-screen bg-[var(--color-bg-soft)] overflow-hidden">
-
       {/* ================= DESKTOP SIDEBAR ================= */}
       <aside
         className="
@@ -220,7 +219,6 @@ export default function AdminLayout({
 
       {/* ================= CONTENT ================= */}
       <div className="flex-1 flex flex-col ml-0 md:ml-64">
-
         {/* MOBILE TOP BAR */}
         <header
           className="
@@ -242,9 +240,7 @@ export default function AdminLayout({
         </header>
 
         {/* PAGE CONTENT */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {children}
-        </main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </div>
     </div>
   );
