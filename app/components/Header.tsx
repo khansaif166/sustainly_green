@@ -226,9 +226,63 @@ export default function Header() {
 
           <div className="flex items-center gap-4">
             {/* <Link href="/vendor">Sell</Link> */}
-            <Bell className="h-4 w-4" />
-            <ShoppingCart className="h-4 w-4" />
+            {!loadingUser && !authUser && (
+              <div className="flex items-center gap-2">
+                {/* BUY BUTTON */}
+                <Link
+                  href="/buyer"
+                  className="
+        px-4 py-1.5 rounded-full text-sm font-semibold text-white
+        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+        shadow-md hover:shadow-lg hover:brightness-95
+        transition
+      "
+                >
+                  Buyer
+                </Link>
+
+                {/* SELL BUTTON */}
+                <Link
+                  href="/login"
+                  className="
+        px-4 py-1.5 rounded-full text-sm font-semibold text-white
+        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+        shadow-md hover:shadow-lg hover:brightness-95
+        transition
+      "
+                >
+                  Seller
+                </Link>
+                <Link
+                  href="/certification"
+                  className="
+        px-4 py-1.5 rounded-full text-sm font-semibold text-white
+        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+        shadow-md hover:shadow-lg hover:brightness-95
+        transition
+      "
+                >
+                  Get Certification
+                </Link>
+              </div>
+            )}
           </div>
+
+          {!loadingUser && authUser && (
+            <>
+              <Link
+                href="/certification"
+                className="
+        px-4 py-1.5 rounded-full text-sm font-semibold text-white
+        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+        shadow-md hover:shadow-lg hover:brightness-95
+        transition
+      "
+              >
+                Get Certification
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -369,21 +423,6 @@ export default function Header() {
           {/* SIGN IN / USER */}
           {!loadingUser && !authUser && (
             <div className="flex items-center gap-2">
-              {/* BUY BUTTON */}
-              <Link
-                href="/login"
-                className="
-        px-4 py-1.5 rounded-full text-sm font-medium
-        border border-[var(--color-border)]
-        text-[var(--color-text-primary)]
-        bg-white
-        hover:bg-[var(--color-bg-soft)]
-        transition
-      "
-              >
-                Buyer
-              </Link>
-
               {/* SELL BUTTON */}
               <Link
                 href="/login"
@@ -395,6 +434,18 @@ export default function Header() {
       "
               >
                 Seller
+              </Link>
+
+              <Link
+                href="/certification"
+                className="
+        px-4 py-1.5 rounded-full text-sm font-semibold text-white
+        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+        shadow-md hover:shadow-lg hover:brightness-95
+        transition
+      "
+              >
+                Get Certification
               </Link>
             </div>
           )}
@@ -408,6 +459,17 @@ export default function Header() {
             </button>
           )}
 
+          <Link
+            href="/certification"
+            className="
+        px-4 py-1.5 rounded-full text-sm font-semibold text-white
+        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+        shadow-md hover:shadow-lg hover:brightness-95
+        transition
+      "
+          >
+            Get Certified
+          </Link>
           {/* MENU BUTTON */}
           <button
             onClick={() => setOpenMobile((p) => !p)}

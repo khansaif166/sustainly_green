@@ -62,6 +62,8 @@ export default function HomePage() {
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [loadingAllProducts, setLoadingAllProducts] = useState(true);
   const [loadingServices, setLoadingServices] = useState(true);
+  const [blogs, setBlogs] = useState<any[]>([]);
+  const [loadingBlogs, setLoadingBlogs] = useState(true);
 
   useEffect(() => {
     async function loadBanner() {
@@ -268,6 +270,33 @@ export default function HomePage() {
     setRfqQuantity("");
     setRfqMessage("");
   }
+
+  useEffect(() => {
+    async function fetchBlogs() {
+      try {
+        const q = query(
+          collection(db, "blogs"),
+          orderBy("createdAt", "desc"),
+          limit(3),
+        );
+
+        const snap = await getDocs(q);
+
+        setBlogs(
+          snap.docs.map((doc) => ({
+            id: doc.id,
+            ...(doc.data() as any),
+          })),
+        );
+      } catch (err) {
+        console.error("HOME_BLOGS_ERROR", err);
+      } finally {
+        setLoadingBlogs(false);
+      }
+    }
+
+    fetchBlogs();
+  }, []);
 
   const SkeletonCard = () => (
     <div className="animate-pulse bg-white rounded-3xl p-4 space-y-3">
@@ -596,7 +625,7 @@ export default function HomePage() {
             href="/browse?type=Service"
             className="text-sm font-medium text-[var(--color-ocean-blue)] hover:underline"
           >
-            Browse services → 
+            Browse services →
           </Link>
         </div>
 
@@ -715,6 +744,107 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* ================= BLOGS ================= */}
+      <section className="max-w-full mx-auto px-4 md:px-10 py-14 bg-gray-50">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
+              Insights
+            </p>
+
+            <h2 className="text-xl font-semibold text-gray-900">
+              Latest from our Blog
+            </h2>
+          </div>
+
+          <Link
+            href="/blogs"
+            className="text-sm font-medium text-[var(--color-ocean-blue)] hover:underline"
+          >
+            View all →
+          </Link>
+        </div>
+
+        {loadingBlogs ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        ) : blogs.length === 0 ? (
+          <p className="text-sm text-gray-500">No blogs published yet.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {blogs.map((blog) => (
+                <Link
+                  key={blog.id}
+                  href={`/blogs/${blog.id}`}
+                  className="
+          group bg-white border border-gray-100
+          rounded-3xl overflow-hidden
+          hover:shadow-xl transition
+        "
+                >
+                  {/* IMAGE */}
+
+                  <div className="h-auto bg-gray-100 overflow-hidden">
+                    {blog.image ? (
+                      <img
+                        src={blog.image}
+                        alt={blog.title}
+                        className="
+                w-full h-full object-cover
+                group-hover:scale-105
+                transition duration-500
+              "
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                        Blog Image
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CONTENT */}
+
+                  <div className="p-6 space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                      {blog.title}
+                    </h3>
+
+                    <p className="text-sm text-gray-600 line-clamp-3">
+                      {blog.content?.replace(/<[^>]+>/g, "").slice(0, 120)}...
+                    </p>
+
+                    <span className="text-sm font-medium text-[var(--color-ocean-blue)]">
+                      Read More →
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* VIEW MORE BUTTON */}
+
+            <div className="mt-10 flex justify-center">
+              <Link
+                href="/blogs"
+                className="
+        rounded-full px-8 py-3
+        bg-[var(--color-primary-green)]
+        text-white text-sm font-semibold
+        shadow-lg hover:shadow-xl hover:brightness-95
+        transition
+      "
+              >
+                View More Blogs
+              </Link>
+            </div>
+          </>
+        )}
       </section>
 
       <Footer />

@@ -11,6 +11,7 @@ import {
   startAfter,
 } from "firebase/firestore";
 import * as XLSX from "xlsx";
+import { CalendarDays, FileSpreadsheet } from "lucide-react";
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([]);
@@ -28,48 +29,46 @@ export default function LeadsPage() {
   }, []);
 
   async function loadLeads(next = false) {
-  if (loading) return;
+    if (loading) return;
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    let q;
+    try {
+      let q;
 
-    if (next && lastDoc) {
-      q = query(
-        collection(db, "rfqs"),
-        orderBy("createdAt", "desc"),
-        startAfter(lastDoc),
-        limit(pageSize)
-      );
-    } else {
-      q = query(
-        collection(db, "rfqs"),
-        orderBy("createdAt", "desc"),
-        limit(pageSize)
-      );
+      if (next && lastDoc) {
+        q = query(
+          collection(db, "rfqs"),
+          orderBy("createdAt", "desc"),
+          startAfter(lastDoc),
+          limit(pageSize),
+        );
+      } else {
+        q = query(
+          collection(db, "rfqs"),
+          orderBy("createdAt", "desc"),
+          limit(pageSize),
+        );
+      }
+
+      const snap = await getDocs(q);
+
+      const newLeads = snap.docs.map((doc) => normalizeRFQ(doc));
+
+      setLeads((prev) => {
+        const merged = next ? [...prev, ...newLeads] : newLeads;
+
+        // remove duplicates
+        return Array.from(new Map(merged.map((i) => [i.id, i])).values());
+      });
+
+      setLastDoc(snap.docs[snap.docs.length - 1] || null);
+    } catch (e) {
+      console.error("Leads load error:", e);
+    } finally {
+      setLoading(false);
     }
-
-    const snap = await getDocs(q);
-
-    const newLeads = snap.docs.map((doc) => normalizeRFQ(doc));
-
-    setLeads((prev) => {
-      const merged = next ? [...prev, ...newLeads] : newLeads;
-
-      // remove duplicates
-      return Array.from(
-        new Map(merged.map((i) => [i.id, i])).values()
-      );
-    });
-
-    setLastDoc(snap.docs[snap.docs.length - 1] || null);
-  } catch (e) {
-    console.error("Leads load error:", e);
-  } finally {
-    setLoading(false);
   }
-}
 
   function normalizeRFQ(doc: any) {
     const d = doc.data();
@@ -101,15 +100,11 @@ export default function LeadsPage() {
     }
 
     if (dateFrom) {
-      data = data.filter(
-        (l) => l.rawDate >= new Date(dateFrom)
-      );
+      data = data.filter((l) => l.rawDate >= new Date(dateFrom));
     }
 
     if (dateTo) {
-      data = data.filter(
-        (l) => l.rawDate <= new Date(dateTo)
-      );
+      data = data.filter((l) => l.rawDate <= new Date(dateTo));
     }
 
     setFiltered(data);
@@ -129,146 +124,161 @@ export default function LeadsPage() {
       <h1 className="text-2xl font-semibold">Customers / Leads</h1>
 
       {/* Tabs */}
-      <div className="flex gap-3">
-        {["ALL", "GLOBAL", "DIRECT"].map((t) => (
-          <button
-            key={t}
-            onClick={() => setActiveTab(t)}
-            className={`px-4 py-2 rounded-full text-sm ${
-              activeTab === t
-                ? "bg-black text-white"
-                : "border"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
 
-      {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
-        <input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          className="border p-2 rounded"
-        />
+      {/* ================= TOP FILTER BAR ================= */}
+      <div className="bg-white rounded-2xl shadow-sm p-4 mb-5">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          {/* ---------- Tabs ---------- */}
+          <div className="flex gap-2 bg-gray-100 p-1 rounded-full w-fit">
+            {["ALL", "GLOBAL", "DIRECT"].map((t) => (
+              <button
+                key={t}
+                onClick={() => setActiveTab(t)}
+                className={`px-5 py-2 text-sm font-medium rounded-full transition-all duration-200
+          ${
+            activeTab === t
+              ? "bg-black text-white shadow"
+              : "text-gray-600 hover:bg-white"
+          }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
 
-        <button
-          onClick={exportExcel}
-          className="bg-green-600 text-white px-4 py-2 rounded"
-        >
-          Export Excel
-        </button>
+          {/* ---------- Filters ---------- */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* From Date */}
+            <div className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-gray-50">
+              <CalendarDays size={16} className="text-gray-500" />
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="bg-transparent outline-none text-sm"
+              />
+            </div>
+
+            {/* To Date */}
+            <div className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-gray-50">
+              <CalendarDays size={16} className="text-gray-500" />
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="bg-transparent outline-none text-sm"
+              />
+            </div>
+
+            {/* Export */}
+            <button
+              onClick={exportExcel}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 
+        text-white px-4 py-2 rounded-lg shadow-sm transition"
+            >
+              <FileSpreadsheet size={18} />
+              Export Excel
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Table */}
-     <div className="bg-white rounded-2xl shadow-sm border border-[var(--color-border)] overflow-hidden">
-  <div className="overflow-x-auto">
-    <table className="w-full text-sm">
-      
-      {/* HEADER */}
-      <thead className="bg-[var(--color-bg-soft)] text-left sticky top-0 z-10">
-        <tr className="text-[var(--color-text-secondary)] text-xs uppercase tracking-wider">
-          <th className="p-4">Customer</th>
-          <th>Email</th>
-          <th>Requirement</th>
-          <th>Qty</th>
-          <th>Country</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Date</th>
-        </tr>
-      </thead>
+      <div className="bg-white rounded-2xl shadow-sm border border-[var(--color-border)] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            {/* HEADER */}
+            <thead className="bg-[var(--color-bg-soft)] text-left sticky top-0 z-10">
+              <tr className="text-[var(--color-text-secondary)] text-xs uppercase tracking-wider">
+                <th className="p-4">Customer</th>
+                <th>Email</th>
+                <th>Requirement</th>
+                <th>Qty</th>
+                <th>Country</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
 
-      {/* BODY */}
-      <tbody>
-        {filtered.map((l, i) => (
-          <tr
-            key={l.id}
-            className={`
+            {/* BODY */}
+            <tbody>
+              {filtered.map((l, i) => (
+                <tr
+                  key={l.id}
+                  className={`
               hover:bg-[var(--color-bg-soft)]
               transition
               ${i % 2 === 0 ? "bg-white" : "bg-gray-50/40"}
             `}
-          >
-            <td className="p-4 font-medium text-[var(--color-text-primary)]">
-              {l.name}
-            </td>
+                >
+                  <td className="p-4 font-medium text-[var(--color-text-primary)]">
+                    {l.name}
+                  </td>
 
-            <td className="text-[var(--color-text-secondary)]">
-              {l.email}
-            </td>
+                  <td className="text-[var(--color-text-secondary)]">
+                    {l.email}
+                  </td>
 
-            <td className="max-w-[240px] truncate">
-              {l.title}
-            </td>
+                  <td className="max-w-[240px] truncate">{l.title}</td>
 
-            <td>{l.quantity}</td>
+                  <td>{l.quantity}</td>
 
-            <td className="capitalize">{l.country}</td>
+                  <td className="capitalize">{l.country}</td>
 
-            {/* TYPE BADGE */}
-            <td>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-medium
+                  {/* TYPE BADGE */}
+                  <td>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium
                   ${
                     l.type === "GLOBAL"
                       ? "bg-blue-100 text-blue-700"
                       : "bg-emerald-100 text-emerald-700"
                   }`}
-              >
-                {l.type}
-              </span>
-            </td>
+                    >
+                      {l.type}
+                    </span>
+                  </td>
 
-            {/* STATUS BADGE */}
-            <td>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-medium
+                  {/* STATUS BADGE */}
+                  <td>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium
                   ${
                     l.status === "OPEN"
                       ? "bg-orange-100 text-orange-700"
                       : l.status === "RFQ_REQUESTED"
-                      ? "bg-purple-100 text-purple-700"
-                      : l.status === "ACCEPTED"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-600"
+                        ? "bg-purple-100 text-purple-700"
+                        : l.status === "ACCEPTED"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-600"
                   }`}
-              >
-                {l.status}
-              </span>
-            </td>
+                    >
+                      {l.status}
+                    </span>
+                  </td>
 
-            <td className="text-xs text-gray-500">
-              {l.createdAt}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+                  <td className="text-xs text-gray-500">{l.createdAt}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-  {/* EMPTY STATE */}
-  {filtered.length === 0 && !loading && (
-    <div className="p-10 text-center text-sm text-gray-500">
-      No leads found
-    </div>
-  )}
+        {/* EMPTY STATE */}
+        {filtered.length === 0 && !loading && (
+          <div className="p-10 text-center text-sm text-gray-500">
+            No leads found
+          </div>
+        )}
 
-  {/* LOADING */}
-  {loading && (
-    <div className="p-8 text-center text-sm text-gray-500">
-      Loading leads...
-    </div>
-  )}
-</div>
+        {/* LOADING */}
+        {loading && (
+          <div className="p-8 text-center text-sm text-gray-500">
+            Loading leads...
+          </div>
+        )}
+      </div>
 
       {/* Pagination */}
       <button

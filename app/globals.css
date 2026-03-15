@@ -98,3 +98,50 @@ body {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+.form-label{
+  @apply text-sm font-medium
+  text-[var(--color-text-primary)]
+  mb-1 block;
+}
+
+.form-input{
+  @apply w-full border
+  border-[var(--color-border)]
+  rounded-xl p-3 text-sm
+  outline-none
+  focus:ring-2
+  focus:ring-[var(--color-primary-green)];
+}
+
+.toolbar-btn{
+display:flex;
+align-items:center;
+justify-content:center;
+padding:6px 10px;
+border-radius:8px;
+transition:0.2s;
+}
+
+.toolbar-btn:hover{
+background:#e5e7eb;
+}
+
+.toolbar-btn.active{
+background:linear-gradient(
+135deg,
+var(--color-primary-green),
+var(--color-ocean-blue)
+);
+color:white;
+}
+
+.ProseMirror {
+  width: 100%;
+  min-height: 200px;
+  outline: none;
+}
+
+.ProseMirror p {
+  margin: 0;
+}
