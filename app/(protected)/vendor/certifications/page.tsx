@@ -1,60 +1,102 @@
 "use client";
 
-import { useEffect,useState } from "react";
-import { auth,db } from "@/lib/firebase";
+import { useEffect, useState } from "react";
+import { auth, db } from "@/lib/firebase";
 import {
- collection,
- query,
- where,
- getDocs
+  collection,
+  query,
+  where,
+  getDocs
 } from "firebase/firestore";
 
-export default function VendorCertifications(){
+type Certification = {
+  id: string;
+  certificationType?: string;
+  status?: string;
+  vendorId?: string;
+};
 
-const [data,setData]=useState([]);
+export default function VendorCertifications() {
 
-useEffect(()=>{
+  const [data, setData] = useState<Certification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-async function load(){
+  useEffect(() => {
 
- const uid = auth.currentUser?.uid;
+    async function load() {
 
- const q=query(
-  collection(db,"certificationRequests"),
-  where("vendorId","==",uid)
- );
+      const uid = auth.currentUser?.uid;
 
- const snap=await getDocs(q);
+      if (!uid) {
+        setLoading(false);
+        return;
+      }
 
- setData(
-  snap.docs.map(d=>({id:d.id,...d.data()}))
- );
-}
+      try {
 
-load();
+        const q = query(
+          collection(db, "certificationRequests"),
+          where("vendorId", "==", uid)
+        );
 
-},[]);
+        const snap = await getDocs(q);
 
-return(
-<main className="p-10">
+        const list: Certification[] = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<Certification, "id">)
+        }));
 
-<h1 className="text-2xl font-semibold mb-6">
-My Certifications
-</h1>
+        setData(list);
 
-<div className="space-y-4">
+      } catch (err) {
+        console.error("Error loading certifications:", err);
+      }
 
-{data.map((r:any)=>(
-<div key={r.id}
-className="bg-white p-6 rounded-2xl border">
+      setLoading(false);
+    }
 
-<p>Certification: {r.certificationType}</p>
-<p>Status: {r.status}</p>
+    load();
 
-</div>
-))}
+  }, []);
 
-</div>
-</main>
-);
+  return (
+    <main className="p-10">
+
+      <h1 className="text-2xl font-semibold mb-6">
+        My Certifications
+      </h1>
+
+      {loading && (
+        <p className="text-gray-500">Loading certifications...</p>
+      )}
+
+      {!loading && data.length === 0 && (
+        <p className="text-gray-500">No certifications found</p>
+      )}
+
+      <div className="space-y-4">
+
+        {data.map((r) => (
+          <div
+            key={r.id}
+            className="bg-white p-6 rounded-2xl border shadow-sm"
+          >
+
+            <p>
+              <span className="font-medium">Certification:</span>{" "}
+              {r.certificationType}
+            </p>
+
+            <p>
+              <span className="font-medium">Status:</span>{" "}
+              {r.status}
+            </p>
+
+          </div>
+        ))}
+
+      </div>
+
+    </main>
+  );
 }
