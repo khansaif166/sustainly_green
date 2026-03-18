@@ -47,19 +47,19 @@ export default function BlogDetail() {
           <span className="text-gray-800 font-medium">{blog.title}</span>
         </nav>
       </div>
-      <div className="w-auto mx-auto py-16 px-6 flex flex-col md:flex-row items-start gap-10">
+      <div className="w-auto mx-auto py-16 px-6 flex flex-col md:flex-col items-start gap-10">
         {/* Blog Image */}
-        <div className="md:w-1/2 w-full">
+        <div className="w-full">
           {blog.image && (
             <img
               src={blog.image}
-              className="w-full rounded-2xl shadow-md object-cover"
+              className="w-[350px] rounded-2xl shadow-md object-cover"
             />
           )}
         </div>
 
         {/* Blog Content */}
-        <div className="md:w-1/2 w-full">
+        <div className=" w-full">
           <h1 className="text-4xl font-bold mb-6 leading-tight">
             {blog.title}
           </h1>

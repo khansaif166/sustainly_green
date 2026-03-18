@@ -290,7 +290,7 @@ export default function Header() {
       <div className="px-4 py-4 flex items-center gap-4">
         {/* LOGO */}
         <Link href="/" className="shrink-0">
-          <img src="/log.webp" className="md:h-12 h-10" />
+          <img src="/log.webp" className="md:h-12 h-8" />
         </Link>
 
         {/* SEARCH (DESKTOP) */}
@@ -427,7 +427,7 @@ export default function Header() {
               <Link
                 href="/login"
                 className="
-        px-4 py-1.5 rounded-full text-sm font-semibold text-white
+        px-4 py-1.5 rounded-full text-[8px] font-semibold text-white
         bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
         shadow-md hover:shadow-lg hover:brightness-95
         transition
@@ -436,7 +436,7 @@ export default function Header() {
                 Seller
               </Link>
 
-              <Link
+              {/* <Link
                 href="/certification"
                 className="
         px-4 py-1.5 rounded-full text-sm font-semibold text-white
@@ -446,14 +446,14 @@ export default function Header() {
       "
               >
                 Get Certification
-              </Link>
+              </Link> */}
             </div>
           )}
 
           {!loadingUser && authUser && (
             <button
               onClick={() => router.push(dashboardLink)}
-              className="p-2 px-4 rounded-full bg-gray-100"
+              className="p-2 px-4 rounded-full bg-gray-100 text-[8px]"
             >
               Dashboard
             </button>
@@ -462,9 +462,9 @@ export default function Header() {
           <Link
             href="/certification"
             className="
-        px-4 py-1.5 rounded-full text-sm font-semibold text-white
+        px-4 py-1.5 rounded-full  font-semibold text-white
         bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-        shadow-md hover:shadow-lg hover:brightness-95
+        shadow-md hover:shadow-lg hover:brightness-95 text-[8px]
         transition
       "
           >
