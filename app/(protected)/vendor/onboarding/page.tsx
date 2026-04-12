@@ -42,6 +42,9 @@ export default function VendorOnboardingPage() {
   const [businessEmail, setBusinessEmail] = useState("");
   const [phone, setPhone] = useState("");
 
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
   const [hasCertifications, setHasCertifications] = useState(false);
   const [selectedCerts, setSelectedCerts] = useState<string[]>([]);
   const [certFiles, setCertFiles] = useState<File[]>([]);
@@ -80,6 +83,14 @@ export default function VendorOnboardingPage() {
     );
   }
 
+  function handleLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+    }
+  }
+
   function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     setCertFiles(e.target.files ? Array.from(e.target.files) : []);
   }
@@ -97,6 +108,14 @@ export default function VendorOnboardingPage() {
     setSubmitting(true);
 
     try {
+      let logoUrl = "";
+      if (logoFile) {
+        const path = `vendors/${user?.uid}/logo/${Date.now()}_${logoFile.name}`;
+        logoUrl = await uploadFileWithProgress(logoFile, path, (p) =>
+          setUploadProgress((prev) => ({ ...prev, logo: p }))
+        );
+      }
+
       const certUrls: string[] = [];
 
       if (hasCertifications) {
@@ -112,6 +131,7 @@ export default function VendorOnboardingPage() {
       await setDoc(doc(db, "vendors", user!.uid), {
         uid: user!.uid,
         companyName,
+        logoUrl,
         registrationNo,
         businessType,
         primaryCategory,
@@ -166,6 +186,24 @@ export default function VendorOnboardingPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-10">
+            {/* LOGO */}
+            <section className="flex flex-col items-center justify-center gap-4 border-2 border-dashed border-gray-200 rounded-xl p-6 bg-gray-50/50">
+              {logoPreview ? (
+                <img src={logoPreview} alt="Logo Preview" className="h-24 w-24 rounded-full object-cover border border-gray-200 shadow-sm bg-white" />
+              ) : (
+                <div className="h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 font-medium text-sm border border-gray-200">
+                  Logo
+                </div>
+              )}
+              <div className="text-center">
+                <label className="cursor-pointer text-sm font-semibold text-black hover:underline">
+                  Upload Company Logo
+                  <input type="file" accept="image/*" className="hidden" onChange={handleLogo} />
+                </label>
+                <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 2MB</p>
+              </div>
+            </section>
+
             {/* CORE INFO */}
             <section>
               <h2 className="text-sm font-semibold text-gray-900 mb-4">

@@ -41,6 +41,8 @@ type Vendor = {
     twitter?: string;
   };
 
+  logoUrl?: string;
+
   approved: boolean;
 };
 
@@ -196,13 +198,22 @@ export default function AdminVendorsPage() {
               }}
             >
               <div className="flex justify-between items-start gap-4">
-                <div>
-                  <h2 className="font-semibold text-[var(--color-text-primary)]">
-                    {v.companyName}
-                  </h2>
-                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                    {v.businessType} • {v.city}, {v.country}
-                  </p>
+                <div className="flex items-center gap-3">
+                  {v.logoUrl ? (
+                    <img src={v.logoUrl} alt={v.companyName} className="w-10 h-10 rounded-full object-cover bg-white border border-gray-200" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[var(--color-bg-soft)] text-[var(--color-text-secondary)] flex items-center justify-center font-bold text-lg border border-gray-300 shrink-0 uppercase">
+                      {v.companyName ? v.companyName.charAt(0) : "?"}
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="font-semibold text-[var(--color-text-primary)]">
+                      {v.companyName}
+                    </h2>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                      {v.businessType} • {v.city}, {v.country}
+                    </p>
+                  </div>
                 </div>
 
                 <StatusBadge approved={v.approved} />

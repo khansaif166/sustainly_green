@@ -22,6 +22,7 @@ type Vendor = {
   description?: string;
   email?: string;
   location?: string;
+  logoUrl?: string;
 };
 
 type Product = {
@@ -107,13 +108,23 @@ export default function VendorProfilePage() {
       <main className="max-w-full mx-auto px-6 py-12 space-y-10">
         {/* ================= VENDOR INFO ================= */}
         <section className="bg-white rounded-3xl p-8 shadow-sm space-y-4">
-          <h1 className="text-2xl font-semibold text-gray-900">
-            {vendor.companyName || "Vendor"}
-          </h1>
-
-          {vendor.location && (
-            <p className="text-sm text-gray-500">{vendor.location}</p>
-          )}
+          <div className="flex items-center gap-4">
+            {vendor.logoUrl ? (
+              <img src={vendor.logoUrl} alt={vendor.companyName || "Vendor"} className="w-16 h-16 rounded-full object-cover border border-gray-200 bg-white" />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center font-bold text-2xl text-gray-500 border border-gray-200 shrink-0 uppercase">
+                {vendor.companyName ? vendor.companyName.charAt(0) : "V"}
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {vendor.companyName || "Vendor"}
+              </h1>
+              {vendor.location && (
+                <p className="text-sm text-gray-500 mt-1">{vendor.location}</p>
+              )}
+            </div>
+          </div>
 
           {vendor.description && (
             <p className="text-sm text-gray-600 leading-relaxed">

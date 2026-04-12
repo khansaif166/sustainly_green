@@ -10,7 +10,6 @@ import { auth, db, setLocalPersistence } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { sendEmailVerification } from "firebase/auth";
 
 // React Icons
 import {
@@ -54,7 +53,7 @@ export default function RegisterPage() {
         name, // ✅ SAVE NAME
         email: user.email,
         role,
-        emailVerified: false,
+        emailVerified: true,
         createdAt: serverTimestamp(),
       });
 
@@ -65,18 +64,19 @@ export default function RegisterPage() {
   name,
   email: user.email,
   role,
-  emailVerified: false,
+  emailVerified: true,
   vendorProfileComplete: role === "VENDOR" ? false : null,
   vendorApproved: false,
   createdAt: serverTimestamp(),
 });
       }
 
-      // 5️⃣ Send email verification
-      await sendEmailVerification(user);
-
-      // 6️⃣ Redirect
-      router.push("/verify-email");
+      // 5️⃣ Redirect
+      if (role === "BUYER") {
+        router.push("/");
+      } else if (role === "VENDOR") {
+        router.push("/vendor/onboarding");
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Registration failed");

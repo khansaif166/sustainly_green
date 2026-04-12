@@ -178,36 +178,36 @@ export default function HomePage() {
 
   /* ---------------- LOAD SERVICES ---------------- */
   useEffect(() => {
-  async function fetchServices() {
-    try {
-      setLoadingServices(true); // start loading
+    async function fetchServices() {
+      try {
+        setLoadingServices(true); // start loading
 
-      const q = query(
-        collection(db, "products"),
-        where("approved", "==", true),
-        where("listingType", "==", "Service"),
-        orderBy("createdAt", "desc"),
-        limit(8)
-      );
+        const q = query(
+          collection(db, "products"),
+          where("approved", "==", true),
+          where("listingType", "==", "Service"),
+          orderBy("createdAt", "desc"),
+          limit(8),
+        );
 
-      const snap = await getDocs(q);
+        const snap = await getDocs(q);
 
-      const data = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as any),
-      }));
+        const data = snap.docs.map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as any),
+        }));
 
-      setServices(data || []); // always safe
-    } catch (err) {
-      console.error("HOME_SERVICES_ERROR", err);
-      setServices([]); // fallback important
-    } finally {
-      setLoadingServices(false); 
+        setServices(data || []); // always safe
+      } catch (err) {
+        console.error("HOME_SERVICES_ERROR", err);
+        setServices([]); // fallback important
+      } finally {
+        setLoadingServices(false);
+      }
     }
-  }
 
-  fetchServices();
-}, []);
+    fetchServices();
+  }, []);
   //  Ads
   /* ---------------- LOAD HERO BANNER ---------------- */
   useEffect(() => {
@@ -654,19 +654,19 @@ export default function HomePage() {
           "
               >
                 {/* Service icon block */}
-               <div className="h-[200px] rounded-2xl overflow-hidden bg-[var(--color-bg-soft)] mb-4">
-  {s.images?.[0] ? (
-    <img
-      src={s.images[0]}
-      alt={s.title}
-      className="w-full h-full object-cover"
-    />
-  ) : (
-    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-      Service
-    </div>
-  )}
-</div>
+                <div className="h-[200px] rounded-2xl overflow-hidden bg-[var(--color-bg-soft)] mb-4">
+                  {s.images?.[0] ? (
+                    <img
+                      src={s.images[0]}
+                      alt={s.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                      Service
+                    </div>
+                  )}
+                </div>
 
                 <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
                   {s.title}

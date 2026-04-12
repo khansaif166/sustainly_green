@@ -6,7 +6,6 @@ import { auth, db, setLocalPersistence } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { sendEmailVerification } from "firebase/auth";
 import { sendPasswordResetEmail } from "firebase/auth";
 // React Icons
 import {
@@ -23,8 +22,6 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const [showResend, setShowResend] = useState(false);
-  const [resent, setResent] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   async function handlePasswordReset() {
@@ -67,23 +64,7 @@ export default function LoginPage() {
         throw new Error("User profile not found.");
       }
 
-      if (!user.emailVerified) {
-        setError("Please verify your email before logging in.");
-        setShowResend(true);
-        return;
-      }
-
-      async function resendVerification() {
-        if (!auth.currentUser) return;
-        await sendEmailVerification(auth.currentUser);
-        setResent(true);
-      }
       const userData = userSnap.data();
-      if (!user.emailVerified) {
-        await auth.signOut();
-        setError("Please verify your email before logging in.");
-        return;
-      }
       // 🔁 Role based redirect
       if (userData.role === "ADMIN") {
         router.push("/admin");
@@ -138,12 +119,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function resendVerification() {
-    if (!auth.currentUser) return;
-    await sendEmailVerification(auth.currentUser);
-    setResent(true);
   }
 
   return (
@@ -268,21 +243,7 @@ export default function LoginPage() {
               <div className="text-sm font-medium text-red-600">{error}</div>
             )}
 
-            {showResend && (
-              <button
-                type="button"
-                onClick={resendVerification}
-                className="text-sm font-medium text-black underline"
-              >
-                Resend verification email
-              </button>
-            )}
 
-            {resent && (
-              <p className="text-xs text-green-600">
-                Verification email sent again. Please check spam too.
-              </p>
-            )}
 
             {/* Submit */}
             <button

@@ -12,7 +12,7 @@ import { Search, Building2, BadgeCheck, Clock } from "lucide-react";
 type Vendor = {
   id: string;
   name?: string;
-  logo?: string;
+  logoUrl?: string;
   description?: string;
   approved?: boolean;
   companyName?: string;
@@ -102,15 +102,17 @@ export default function FindVendorsPage() {
                 {/* HEADER */}
                 <div className="flex items-start justify-between">
                   {/* LOGO */}
-                  <div className="h-14 w-14 rounded-xl bg-[var(--color-bg-soft)] flex items-center justify-center overflow-hidden">
-                    {v.logo ? (
+                  <div className="h-14 w-14 rounded-xl bg-[var(--color-bg-soft)] flex items-center justify-center overflow-hidden shrink-0">
+                    {v.logoUrl ? (
                       <img
-                        src={v.logo}
-                        alt={v.name || "Vendor"}
-                        className="h-full w-full object-cover"
+                        src={v.logoUrl}
+                        alt={v.companyName || "Vendor"}
+                        className="h-full w-full object-cover bg-white"
                       />
                     ) : (
-                      <Building2 className="h-6 w-6 text-[var(--color-primary-green)]" />
+                      <div className="h-full w-full flex items-center justify-center font-bold text-xl text-[var(--color-text-secondary)] uppercase bg-[var(--color-bg-soft)] border border-[var(--color-border)]">
+                        {v.companyName ? v.companyName.charAt(0) : "V"}
+                      </div>
                     )}
                   </div>
 
