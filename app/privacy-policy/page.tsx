@@ -30,7 +30,7 @@ export default function PrivacyPolicyPage() {
         {/* ================= HEADER ================= */}
         <header className="text-center mb-19">
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
-            Sustainly Green Ltd — Privacy Policy
+            Sustainly Green — Privacy Policy
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-2">
             Last updated: 12-Jan-2026
@@ -59,7 +59,7 @@ export default function PrivacyPolicyPage() {
             </h2>
 
             <p>
-              Sustainly Green Ltd (“Sustainly Green Ltd”, “we”, “our”, “us”) operates
+              Sustainly Green (“Sustainly Green”, “we”, “our”, “us”) operates
               an online sustainable sourcing platform and directory connecting
               sustainability-focused manufacturers, Traders, Wholesalers,
               Distributors and service providers, and users worldwide. For the
@@ -78,7 +78,7 @@ export default function PrivacyPolicyPage() {
             </ul>
 
             <p className="mt-3">
-              Vendors and service providers listing on Sustainly Green Ltd act as
+              Vendors and service providers listing on Sustainly Green act as
               independent controllers for the personal data they collect from you
               directly (e.g., via their websites, forms, or contracts). They must
               publish their own privacy notices.
@@ -149,7 +149,7 @@ export default function PrivacyPolicyPage() {
             </h2>
 
             <ul className="list-disc pl-6 space-y-2">
-              <li>Sustainly Green Ltd is controller for Platform operations (accounts, security, analytics, messaging relay).</li>
+              <li>Sustainly Green is controller for Platform operations (accounts, security, analytics, messaging relay).</li>
               <li>Vendors/Manufacturers are independent controllers for the data they collect in their own funnels and for sustainability claims.</li>
             </ul>
           </section>

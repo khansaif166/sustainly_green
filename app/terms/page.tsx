@@ -49,7 +49,7 @@ export default function TermsPage() {
         >
           <Section title="SECTION 1: INTRODUCTION">
             <p>
-              Sustainly Green Ltd is a UK-registered company committed to
+              Sustainly Green is a UK-registered company committed to
               accelerating the global transition to a sustainable, eco-conscious
               future. It operates as an innovative online platform connecting
               green and sustainable manufacturers, and service providers, and
@@ -80,7 +80,7 @@ export default function TermsPage() {
           <Section title="SECTION 2: DEFINITIONS">
             <ul className="list-disc space-y-2 pl-10">
               <li>
-                <b>Sustainly Green</b> refers to Sustainly Green Ltd and its
+                <b>Sustainly Green</b> refers to Sustainly Green and its
                 affiliates.
               </li>
               <li>
@@ -212,7 +212,7 @@ export default function TermsPage() {
 
           <Section title="SECTION 14: CONTACT AND NOTICES">
             <p>
-              <b>Sustainly Green Ltd</b>
+              <b>Sustainly Green</b>
             </p>
             <p>Winchester House, 259-269 Old Marylebone Road</p>
             <p>London, NW1 5RA, United Kingdom</p>

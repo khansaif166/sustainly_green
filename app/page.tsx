@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
@@ -13,12 +13,42 @@ import {
   limit,
   getDoc,
   doc,
+  addDoc,
+  serverTimestamp,
 } from "firebase/firestore";
-import { useRef } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import Header from "./components/Header";
 import Footer from "./components/layouts/Footer";
-import { addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  HiBuildingOffice2,
+  HiMagnifyingGlass,
+  HiClipboardDocumentList,
+  HiCheckBadge,
+  HiPencilSquare,
+  HiBeaker,
+  HiTrophy,
+  HiUserGroup,
+  HiEnvelope,
+  HiLink,
+  HiTag,
+  HiChartBar
+} from "react-icons/hi2";
+import {
+  FiSearch,
+  FiPackage,
+  FiUsers,
+  FiTool,
+  FiChevronDown,
+  FiArrowRight,
+  FiX,
+  FiTrendingUp,
+  FiStar,
+} from "react-icons/fi";
+import {
+  HiOutlineSparkles,
+  HiOutlineShieldCheck,
+  HiOutlineClock,
+} from "react-icons/hi2";
+import { MdOutlineEnergySavingsLeaf } from "react-icons/md";
 
 /* ---------------- TYPES ---------------- */
 type Product = {
@@ -34,24 +64,82 @@ type Category = {
   imageUrl?: string;
 };
 
+type Vendor = {
+  id: string;
+  companyName: string;
+  category?: string;
+  ecoScore?: number;
+  ecoTier?: string; // platinum | gold | silver | bronze
+  brownLensScore?: number; // out of 5
+  certifications?: string[];
+  location?: string;
+  logoText?: string;
+};
+
+/* ---- SMART SEARCH TYPES ---- */
+type SearchResult = {
+  id: string;
+  type: "product" | "vendor" | "service";
+  label: string;
+  sub?: string;
+  href: string;
+};
+
+const POPULAR_SEARCHES = [
+  { label: "Solar EPC", href: "/browse?q=solar+epc", type: "product" as const },
+  {
+    label: "EPR Compliance",
+    href: "/browse?q=epr+compliance&type=Service",
+    type: "service" as const,
+  },
+  {
+    label: "Recycled Packaging",
+    href: "/browse?q=recycled+packaging",
+    type: "product" as const,
+  },
+  {
+    label: "EV Charging Infrastructure",
+    href: "/browse?q=ev+charging",
+    type: "product" as const,
+  },
+  {
+    label: "Water Treatment",
+    href: "/browse?q=water+treatment&type=Service",
+    type: "service" as const,
+  },
+  {
+    label: "Carbon Credits",
+    href: "/browse?q=carbon+credits",
+    type: "product" as const,
+  },
+  {
+    label: "ESG Consulting",
+    href: "/browse?q=esg+consulting&type=Service",
+    type: "service" as const,
+  },
+  {
+    label: "ISO 14001 Vendors",
+    href: "/browse?q=iso+14001&type=Vendor",
+    type: "vendor" as const,
+  },
+];
+
 export default function HomePage() {
   const router = useRouter();
 
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
-
   const [categories, setCategories] = useState<Category[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [services, setServices] = useState<Product[]>([]);
-
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const [heroAd, setHeroAd] = useState<any>(null);
+  const [loadingVendors, setLoadingVendors] = useState(true);
+  const [loadingServices, setLoadingServices] = useState(true);
+  const [blogs, setBlogs] = useState<any[]>([]);
+  const [loadingBlogs, setLoadingBlogs] = useState(true);
 
-  const heroImage = heroAd?.imageUrl || "";
-  const [currentBanner, setCurrentBanner] = useState<any>(null);
-  const [loadingBanner, setLoadingBanner] = useState(true);
   const [openGlobalRFQ, setOpenGlobalRFQ] = useState(false);
-
   const [rfqName, setRfqName] = useState("");
   const [rfqEmail, setRfqEmail] = useState("");
   const [rfqCategory, setRfqCategory] = useState("");
@@ -59,26 +147,157 @@ export default function HomePage() {
   const [rfqQuantity, setRfqQuantity] = useState("");
   const [rfqMessage, setRfqMessage] = useState("");
   const [rfqLoading, setRfqLoading] = useState(false);
-  const [loadingFeatured, setLoadingFeatured] = useState(true);
-  const [loadingAllProducts, setLoadingAllProducts] = useState(true);
-  const [loadingServices, setLoadingServices] = useState(true);
-  const [blogs, setBlogs] = useState<any[]>([]);
-  const [loadingBlogs, setLoadingBlogs] = useState(true);
 
+  // Tab states
+  const [howTab, setHowTab] = useState<"buyer" | "vendor" | "cert">("buyer");
+  const [activeVendorFilter, setActiveVendorFilter] = useState("All Vendors");
+
+  // Smart Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchType, setSearchType] = useState("all");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [typeDropOpen, setTypeDropOpen] = useState(false);
+
+  // Close on outside click
   useEffect(() => {
-    async function loadBanner() {
-      const snap = await getDoc(doc(db, "settings", "homepageBanner"));
+    function onOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchFocused(false);
+      }
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, []);
 
-      if (snap.exists()) {
-        setCurrentBanner(snap.data());
+  // Live search
+  const runSearch = useCallback(async (q: string, stype: string) => {
+    if (!q.trim()) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const results: SearchResult[] = [];
+      const ql = q.toLowerCase();
+
+      // Search products
+      if (stype === "all" || stype === "product") {
+        const snap = await getDocs(
+          query(
+            collection(db, "products"),
+            where("approved", "==", true),
+            where("listingType", "==", "Product"),
+            orderBy("title"),
+            limit(20),
+          ),
+        );
+        snap.docs.forEach((d) => {
+          const data = d.data() as any;
+          if ((data.title || "").toLowerCase().includes(ql)) {
+            results.push({
+              id: d.id,
+              type: "product",
+              label: data.title,
+              sub: data.categoryId,
+              href: `/products/${d.id}`,
+            });
+          }
+        });
       }
 
-      setLoadingBanner(false);
-    }
+      // Search services
+      if (stype === "all" || stype === "service") {
+        const snap = await getDocs(
+          query(
+            collection(db, "products"),
+            where("approved", "==", true),
+            where("listingType", "==", "Service"),
+            orderBy("title"),
+            limit(20),
+          ),
+        );
+        snap.docs.forEach((d) => {
+          const data = d.data() as any;
+          if ((data.title || "").toLowerCase().includes(ql)) {
+            results.push({
+              id: d.id,
+              type: "service",
+              label: data.title,
+              sub: "Service",
+              href: `/products/${d.id}`,
+            });
+          }
+        });
+      }
 
-    loadBanner();
+      // Search vendors
+      if (stype === "all" || stype === "vendor") {
+        const snap = await getDocs(
+          query(
+            collection(db, "vendors"),
+            where("approved", "==", true),
+            limit(30),
+          ),
+        );
+        snap.docs.forEach((d) => {
+          const data = d.data() as any;
+          if (
+            (data.companyName || "").toLowerCase().includes(ql) ||
+            (data.category || "").toLowerCase().includes(ql)
+          ) {
+            results.push({
+              id: d.id,
+              type: "vendor",
+              label: data.companyName,
+              sub: data.category,
+              href: `/find-vendors/${d.id}`,
+            });
+          }
+        });
+      }
+
+      setSearchResults(results.slice(0, 8));
+    } catch (e) {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
   }, []);
-  /* ---------------- LOAD CATEGORIES ---------------- */
+
+  function handleSearchInput(val: string) {
+    setSearchQuery(val);
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    if (!val.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setSearchLoading(true);
+    searchDebounce.current = setTimeout(() => runSearch(val, searchType), 380);
+  }
+
+  function doSearch() {
+    if (!searchQuery.trim()) {
+      router.push("/browse");
+      return;
+    }
+    const typeParam =
+      searchType === "all"
+        ? ""
+        : searchType === "vendor"
+          ? "&type=Vendor"
+          : searchType === "service"
+            ? "&type=Service"
+            : "&type=Product";
+    router.push(`/browse?q=${encodeURIComponent(searchQuery)}${typeParam}`);
+    setSearchFocused(false);
+  }
+
+  /* ---------------- LOAD DATA ---------------- */
   useEffect(() => {
     async function fetchCategories() {
       try {
@@ -86,13 +305,9 @@ export default function HomePage() {
           collection(db, "categories"),
           where("active", "==", true),
         );
-
         const snap = await getDocs(q);
         setCategories(
-          snap.docs.map((d) => ({
-            id: d.id,
-            ...(d.data() as any),
-          })),
+          snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })),
         );
       } catch (err) {
         console.error("HOME_CATEGORIES_ERROR", err);
@@ -100,53 +315,28 @@ export default function HomePage() {
         setLoadingCategories(false);
       }
     }
-
     fetchCategories();
   }, []);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const scrollCategories = (dir: "left" | "right") => {
-    if (!scrollRef.current) return;
-
-    scrollRef.current.scrollBy({
-      left: dir === "left" ? -320 : 320,
-      behavior: "smooth",
-    });
-  };
-
-  /* ---------------- LOAD PRODUCTS ---------------- */
-  /* ---------------- LOAD FEATURED PRODUCTS ---------------- */
   useEffect(() => {
-    async function fetchFeatured() {
+    async function fetchVendors() {
       try {
         const q = query(
-          collection(db, "products"),
+          collection(db, "vendors"),
           where("approved", "==", true),
-          where("featured", "==", true),
-          orderBy("createdAt", "desc"),
-          limit(8),
+          limit(6),
         );
-
         const snap = await getDocs(q);
-
-        setFeaturedProducts(
-          snap.docs.map((doc) => ({
-            id: doc.id,
-            ...(doc.data() as any),
-          })),
-        );
+        setVendors(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
       } catch (err) {
-        console.error("HOME_FEATURED_ERROR", err);
+        console.error("HOME_VENDORS_ERROR", err);
       } finally {
-        setLoadingFeatured(false);
+        setLoadingVendors(false);
       }
     }
-
-    fetchFeatured();
+    fetchVendors();
   }, []);
 
-  /* ---------------- LOAD ALL PRODUCTS ---------------- */
   useEffect(() => {
     async function fetchAllProducts() {
       try {
@@ -157,14 +347,9 @@ export default function HomePage() {
           orderBy("createdAt", "desc"),
           limit(8),
         );
-
         const snap = await getDocs(q);
-
         setAllProducts(
-          snap.docs.map((doc) => ({
-            id: doc.id,
-            ...(doc.data() as any),
-          })),
+          snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })),
         );
       } catch (err) {
         console.error("HOME_ALL_PRODUCTS_ERROR", err);
@@ -172,16 +357,12 @@ export default function HomePage() {
         setLoadingProducts(false);
       }
     }
-
     fetchAllProducts();
   }, []);
 
-  /* ---------------- LOAD SERVICES ---------------- */
   useEffect(() => {
     async function fetchServices() {
       try {
-        setLoadingServices(true); // start loading
-
         const q = query(
           collection(db, "products"),
           where("approved", "==", true),
@@ -189,56 +370,50 @@ export default function HomePage() {
           orderBy("createdAt", "desc"),
           limit(8),
         );
-
         const snap = await getDocs(q);
-
-        const data = snap.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as any),
-        }));
-
-        setServices(data || []); // always safe
+        setServices(
+          snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })),
+        );
       } catch (err) {
-        console.error("HOME_SERVICES_ERROR", err);
-        setServices([]); // fallback important
+        setServices([]);
       } finally {
         setLoadingServices(false);
       }
     }
-
     fetchServices();
   }, []);
-  //  Ads
-  /* ---------------- LOAD HERO BANNER ---------------- */
-  useEffect(() => {
-    async function fetchBanner() {
-      try {
-        const snap = await getDoc(doc(db, "settings", "homepageBanner"));
 
-        if (snap.exists()) {
-          setHeroAd(snap.data());
-        }
+  useEffect(() => {
+    async function fetchBlogs() {
+      try {
+        const q = query(
+          collection(db, "blogs"),
+          orderBy("createdAt", "desc"),
+          limit(3),
+        );
+        const snap = await getDocs(q);
+        setBlogs(
+          snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })),
+        );
       } catch (err) {
-        console.error("HOME_BANNER_ERROR", err);
+        console.error("HOME_BLOGS_ERROR", err);
+      } finally {
+        setLoadingBlogs(false);
       }
     }
-
-    fetchBanner();
+    fetchBlogs();
   }, []);
 
   useEffect(() => {
     const LAST_SHOWN_KEY = "globalRFQ_lastShown";
     const TWELVE_HOURS = 12 * 60 * 60 * 1000;
-
     const lastShown = localStorage.getItem(LAST_SHOWN_KEY);
     const now = Date.now();
-
     if (!lastShown || now - Number(lastShown) > TWELVE_HOURS) {
       const timer = setTimeout(() => {
         setOpenGlobalRFQ(true);
         localStorage.setItem(LAST_SHOWN_KEY, now.toString());
-      }, 4000); // delay before showing
-
+      }, 4000);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -248,9 +423,7 @@ export default function HomePage() {
       alert("Please fill required fields");
       return;
     }
-
     setRfqLoading(true);
-
     await addDoc(collection(db, "rfqs"), {
       type: "GLOBAL",
       name: rfqName,
@@ -262,11 +435,8 @@ export default function HomePage() {
       status: "OPEN",
       createdAt: serverTimestamp(),
     });
-
     setRfqLoading(false);
     setOpenGlobalRFQ(false);
-
-    // reset
     setRfqName("");
     setRfqEmail("");
     setRfqCategory("");
@@ -275,623 +445,1555 @@ export default function HomePage() {
     setRfqMessage("");
   }
 
-  useEffect(() => {
-    async function fetchBlogs() {
-      try {
-        const q = query(
-          collection(db, "blogs"),
-          orderBy("createdAt", "desc"),
-          limit(4),
-        );
-
-        const snap = await getDocs(q);
-
-        setBlogs(
-          snap.docs.map((doc) => ({
-            id: doc.id,
-            ...(doc.data() as any),
-          })),
-        );
-      } catch (err) {
-        console.error("HOME_BLOGS_ERROR", err);
-      } finally {
-        setLoadingBlogs(false);
-      }
+  function getEcoBadgeClass(tier?: string) {
+    switch (tier?.toLowerCase()) {
+      case "platinum":
+        return "eco-badge eco-plat";
+      case "gold":
+        return "eco-badge eco-gold";
+      case "silver":
+        return "eco-badge eco-silver";
+      case "bronze":
+        return "eco-badge eco-bronze";
+      default:
+        return "eco-badge eco-silver";
     }
+  }
 
-    fetchBlogs();
-  }, []);
+  const staticVendors: Vendor[] = [
+    {
+      id: "1",
+      companyName: "SolarEdge Technologies India",
+      category: "Renewable Energy · Solar EPC & Systems",
+      ecoScore: 94,
+      ecoTier: "platinum",
+      brownLensScore: 5,
+      certifications: ["ISO 14001", "BEE Certified", "MNRE Approved"],
+      location: "Chennai, TN",
+      logoText: "SE",
+    },
+    {
+      id: "2",
+      companyName: "GreenPack Solutions Pvt Ltd",
+      category: "Sustainable Packaging · Recycled Materials",
+      ecoScore: 81,
+      ecoTier: "gold",
+      brownLensScore: 4,
+      certifications: ["EPR Compliant", "FSC Certified", "GRS Certified"],
+      location: "Pune, MH",
+      logoText: "GP",
+    },
+    {
+      id: "3",
+      companyName: "Aqua Enviro Systems",
+      category: "Water Management · ETP & STP Systems",
+      ecoScore: 78,
+      ecoTier: "gold",
+      brownLensScore: 4,
+      certifications: ["ISO 9001", "CPCB Approved", "NABL Tested"],
+      location: "Bengaluru, KA",
+      logoText: "AE",
+    },
+  ];
 
-  const SkeletonCard = () => (
-    <div className="animate-pulse bg-white rounded-3xl p-4 space-y-3">
-      <div className="h-40 bg-gray-200 rounded-2xl" />
-      <div className="h-4 bg-gray-200 rounded w-3/4" />
-      <div className="h-3 bg-gray-200 rounded w-1/2" />
-    </div>
-  );
+  const displayVendors =
+    vendors.length > 0 ? vendors.slice(0, 3) : staticVendors;
 
-  const SkeletonCircle = () => (
-    <div className="animate-pulse flex flex-col items-center gap-3">
-      <div className="w-28 h-28 bg-gray-200 rounded-2xl" />
-      <div className="w-16 h-3 bg-gray-200 rounded" />
-    </div>
-  );
+  const vendorFilters = [
+    "All Vendors",
+    "Platinum",
+    "Gold",
+    "Tamil Nadu",
+    "Maharashtra",
+    "Renewable Energy",
+    "Packaging",
+    "EPR Compliant",
+  ];
+
+  const howVendorSteps = [
+  {
+    num: "01",
+    icon: <HiPencilSquare size={22} />,
+    title: "Submit your profile",
+    desc: "Register your business, upload certifications, and describe your sustainable products or services.",
+  },
+  {
+    num: "02",
+    icon: <HiBeaker size={22} />,
+    title: "Brown Lens review",
+    desc: "Our team verifies your sustainability claims across all 5 criteria before your listing goes live.",
+  },
+  {
+    num: "03",
+    icon: <HiTrophy size={22} />,
+    title: "Receive Eco Score",
+    desc: "Get a Bronze, Silver, Gold, or Platinum Eco Score badge that builds instant buyer trust.",
+  },
+  {
+    num: "04",
+    icon: <HiUserGroup size={22} />,
+    title: "Connect & convert",
+    desc: "Receive RFQs from corporate buyers, respond to inquiries, and grow your B2B enterprise pipeline.",
+  },
+];
+
+const howBuyerSteps = [
+  {
+    num: "01",
+    icon: <HiBuildingOffice2 size={22} />,
+    title: "Register your company",
+    desc: "Create a verified corporate buyer account with your GST details and procurement categories.",
+  },
+  {
+    num: "02",
+    icon: <HiMagnifyingGlass size={22} />,
+    title: "Search & filter vendors",
+    desc: "Browse by category, Eco Score tier, certification, location, and minimum order quantity.",
+  },
+  {
+    num: "03",
+    icon: <HiClipboardDocumentList size={22} />,
+    title: "Raise an RFQ",
+    desc: "Send a Request for Quotation directly to one or multiple verified vendors simultaneously.",
+  },
+  {
+    num: "04",
+    icon: <HiCheckBadge size={22} />,
+    title: "Verify & close",
+    desc: "Review compliance docs, compare quotes, and finalise procurement with full BRSR-ready documentation.",
+  },
+];
+
+const howCertSteps = [
+  {
+    num: "01",
+    icon: <HiEnvelope size={22} />,
+    title: "Apply for partnership",
+    desc: "Submit your certification framework, accreditation documents, and partner application for review.",
+  },
+  {
+    num: "02",
+    icon: <HiLink size={22} />,
+    title: "Integrate standards",
+    desc: "Your certification criteria are mapped and embedded into our Brown Lens verification framework.",
+  },
+  {
+    num: "03",
+    icon: <HiTag size={22} />,
+    title: "Co-brand on badges",
+    desc: "Your logo appears on the Eco Score badges of all vendors certified under your framework.",
+  },
+  {
+    num: "04",
+    icon: <HiChartBar size={22} />,
+    title: "Expand your reach",
+    desc: "Access our 500+ corporate buyer network and scale your certification program's visibility across India.",
+  },
+];
+
+  const activeHowSteps =
+    howTab === "buyer"
+      ? howBuyerSteps
+      : howTab === "vendor"
+        ? howVendorSteps
+        : howCertSteps;
+
+  const staticCategories = [
+    { id: "s1", name: "Renewable Energy", count: "84 vendors", icon: "☀️" },
+    {
+      id: "s2",
+      name: "Sustainable Packaging",
+      count: "67 vendors",
+      icon: "📦",
+    },
+    { id: "s3", name: "Green Mobility", count: "42 vendors", icon: "🚗" },
+    { id: "s4", name: "Water Management", count: "38 vendors", icon: "💧" },
+    { id: "s5", name: "Waste Management", count: "55 vendors", icon: "♻️" },
+    { id: "s6", name: "Sustainable Textiles", count: "49 vendors", icon: "👕" },
+    { id: "s7", name: "Green Construction", count: "31 vendors", icon: "🏗️" },
+    { id: "s8", name: "Agri & Food", count: "44 vendors", icon: "🌾" },
+  ];
+
+  const staticCategories2 = [
+    { id: "s9", name: "Energy Storage", count: "27 vendors", icon: "🔋" },
+    { id: "s10", name: "Carbon Credits", count: "19 vendors", icon: "🌡️" },
+    { id: "s11", name: "Clean Manufacturing", count: "36 vendors", icon: "🏭" },
+    { id: "s12", name: "Energy Efficiency", count: "41 vendors", icon: "💡" },
+    { id: "s13", name: "Green Chemicals", count: "22 vendors", icon: "🧪" },
+    { id: "s14", name: "ESG Consulting", count: "33 vendors", icon: "📊" },
+  ];
+
+  const displayCategoriesRow1 =
+    categories.length > 0
+      ? categories
+          .slice(0, 8)
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            count: "",
+            icon: "🌿",
+            imageUrl: c.imageUrl,
+          }))
+      : staticCategories;
+
+  const displayCategoriesRow2 =
+    categories.length > 8
+      ? categories
+          .slice(8, 14)
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            count: "",
+            icon: "🌿",
+            imageUrl: c.imageUrl,
+          }))
+      : staticCategories2;
 
   return (
-    <main className="bg-gray-50 min-h-screen w-full">
+    <main style={{ background: "var(--white)" }}>
       <Header />
-      {/* ================= HERO ================= */}
-      <section className="max-w-full mx-auto rounded-2xl mb-5">
-        <section className="relative overflow-hidden h-[auto] md:h-[auto]">
-          {/* Clickable hero layer */}
-          {heroAd?.linkUrl && (
-            <Link href={heroAd.linkUrl} className="absolute inset-0 z-10" />
-          )}
 
-          {/* Image */}
-          {loadingBanner ? (
-            <div className="h-[180px] md:h-[300px] bg-gray-200 animate-pulse rounded-xl" />
-          ) : (
-            <img
-              src={heroImage}
-              alt="Hero Banner"
-              className="w-full h-auto object-contain bg-black"
-            />
-          )}
+      {/* ═══════════════════════════════════════ HERO ═══════════════════════════════════════ */}
+      <section className="hero">
+        <div className="hero-blob blob1" />
+        <div className="hero-blob blob2" />
+        <div className="hero-blob blob3" />
+        <div className="hero-grid" />
 
-          {/* Content */}
-          {/* <div className="relative z-10 mx-auto px-6 pt-16 pb-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-              <div>
-                <span className="inline-block mb-3 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-medium">
-                  Sustainable B2B Marketplace
-                </span>
+        <div className="hero-content">
+          <div className="hero-eyebrow">
+            <div className="hero-eyebrow-dot" />
+            India's First Verified B2B Sustainable Marketplace
+          </div>
 
-                <h1 className="text-3xl md:text-4xl font-bold text-black leading-tight">
-                  Discover Verified <br />
-                  <span className="text-black">Sustainable Products</span>
-                  <br />
-                  From Trusted Vendors
-                </h1>
+          <h1 className="hero-h1">
+            <span className="green">Source verified.</span>
+            <br />
+            Sell sustainably.
+            <br />
+            <span className="italic">Grow responsibly.</span>
+          </h1>
 
-                <p className="mt-4 text-black text-sm max-w-xl">
-                  Sustainly connects buyers with verified eco-friendly vendors
-                  worldwide.
-                </p>
+          <p className="hero-sub">
+            Connecting <b>corporate procurement teams</b> with{" "}
+            <b>ESG-verified vendors</b> — every sourcing decision backed by
+            proof, not promises.
+          </p>
 
-                <div className="mt-6 flex gap-3">
-                  <Link
-                    href="/register"
-                    className="rounded-full bg-black text-white px-5 py-2 text-sm font-medium"
+          {/* ===== SMART SEARCH BAR ===== */}
+          <style>{`
+            .smart-search-wrap { position: relative; width: 750px; z-index: 40; }
+            .smart-search-bar {
+              display: flex;
+              align-items: center;
+              background: rgba(255,255,255,0.07);
+              border: 1.5px solid rgba(255,255,255,0.14);
+              border-radius: 16px;
+              overflow: visible;
+              backdrop-filter: blur(16px);
+              transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+            }
+            .smart-search-bar:focus-within {
+              border-color: var(--g, #1db954);
+              background: rgba(255,255,255,0.1);
+              box-shadow: 0 0 0 4px rgba(29,185,84,0.12);
+            }
+            .ss-type-select {
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              padding: 0 14px 0 16px;
+              height: 52px;
+              border-right: 1px solid rgba(255,255,255,0.1);
+              cursor: pointer;
+              flex-shrink: 0;
+              position: relative;
+            }
+            .ss-type-label {
+              font-size: 13px;
+              font-weight: 600;
+              color: rgba(255,255,255,0.75);
+              white-space: nowrap;
+              user-select: none;
+            }
+            .ss-type-chevron { color: rgba(255,255,255,0.4); flex-shrink: 0; }
+            .ss-type-dropdown {
+              position: absolute;
+              top: calc(100% + 10px);
+              left: 0;
+              background: #1a2e1f;
+              border: 1px solid rgba(255,255,255,0.12);
+              border-radius: 12px;
+              overflow: hidden;
+              min-width: 160px;
+              box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+              z-index: 50;
+            }
+            .ss-type-opt {
+              display: flex;
+              align-items: center;
+              gap: 9px;
+              padding: 10px 16px;
+              cursor: pointer;
+              font-size: 13px;
+              font-weight: 500;
+              color: rgba(255,255,255,0.7);
+              border: none;
+              background: none;
+              width: 100%;
+              font-family: inherit;
+              transition: background 0.12s, color 0.12s;
+            }
+            .ss-type-opt:hover { background: rgba(255,255,255,0.07); color: #fff; }
+            .ss-type-opt.active { background: rgba(29,185,84,0.15); color: var(--g, #1db954); font-weight: 700; }
+            .ss-input-wrap { flex: 1; position: relative; }
+            .ss-input {
+              width: 100%;
+              height: 52px;
+              background: none;
+              border: none;
+              outline: none;
+              color: #fff;
+              font-size: 15px;
+              font-family: inherit;
+              padding: 0 12px;
+            }
+            .ss-input::placeholder { color: rgba(255,255,255,0.35); }
+            .ss-clear {
+              width: 26px; height: 26px;
+              border-radius: 7px;
+              background: rgba(255,255,255,0.08);
+              border: none; cursor: pointer;
+              display: flex; align-items: center; justify-content: center;
+              color: rgba(255,255,255,0.5);
+              margin-right: 8px;
+              flex-shrink: 0;
+              transition: background 0.15s;
+            }
+            .ss-clear:hover { background: rgba(255,255,255,0.16); color: #fff; }
+            .ss-search-btn {
+              height: 52px;
+              padding: 0 22px;
+              background: var(--g, #1db954);
+              border: none;
+              border-radius: 0 14px 14px 0;
+              color: #fff;
+              font-size: 14px;
+              font-weight: 700;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              font-family: inherit;
+              flex-shrink: 0;
+              transition: background 0.15s;
+            }
+            .ss-search-btn:hover { background: var(--g2, #16a34a); }
+
+            /* Dropdown panel */
+            .ss-dropdown {
+              position: absolute;
+              top: calc(100% + 10px);
+              left: 0;
+              right: 0;
+              background: #fff;
+              border: 1px solid rgba(0,0,0,0.09);
+              border-radius: 16px;
+              overflow: hidden;
+              box-shadow: 0 16px 50px rgba(0,0,0,0.18);
+              z-index: 50;
+            }
+            .ss-drop-head {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              padding: 12px 16px 8px;
+              font-size: 11px;
+              font-weight: 700;
+              color: #888;
+              letter-spacing: 0.05em;
+              text-transform: uppercase;
+              border-bottom: 1px solid rgba(0,0,0,0.05);
+            }
+            .ss-drop-item {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              padding: 11px 16px;
+              text-decoration: none;
+              transition: background 0.12s;
+              cursor: pointer;
+              border: none;
+              background: none;
+              width: 100%;
+              font-family: inherit;
+              text-align: left;
+            }
+            .ss-drop-item:hover { background: rgba(0,0,0,0.03); }
+            .ss-item-icon {
+              width: 32px; height: 32px;
+              border-radius: 8px;
+              display: flex; align-items: center; justify-content: center;
+              flex-shrink: 0;
+              font-size: 13px;
+            }
+            .ss-item-icon.product { background: rgba(59,130,246,0.1); color: #3b82f6; }
+            .ss-item-icon.vendor { background: rgba(29,185,84,0.1); color: var(--g, #1db954); }
+            .ss-item-icon.service { background: rgba(168,85,247,0.1); color: #a855f7; }
+            .ss-item-label {
+              font-size: 13.5px;
+              font-weight: 600;
+              color: var(--text, #111);
+              flex: 1;
+            }
+            .ss-item-sub {
+              font-size: 11px;
+              color: #888;
+            }
+            .ss-item-type-badge {
+              font-size: 10px;
+              font-weight: 700;
+              padding: 2px 7px;
+              border-radius: 50px;
+              letter-spacing: 0.04em;
+              text-transform: uppercase;
+            }
+            .ss-item-type-badge.product { background: rgba(59,130,246,0.1); color: #3b82f6; }
+            .ss-item-type-badge.vendor { background: rgba(29,185,84,0.1); color: var(--g2, #16a34a); }
+            .ss-item-type-badge.service { background: rgba(168,85,247,0.1); color: #a855f7; }
+            .ss-popular-grid {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 8px;
+              padding: 12px 16px 14px;
+            }
+            .ss-popular-pill {
+              display: inline-flex;
+              align-items: center;
+              gap: 5px;
+              padding: 5px 12px;
+              border-radius: 50px;
+              font-size: 12px;
+              font-weight: 600;
+              color: var(--text2, #555);
+              background: rgba(0,0,0,0.05);
+              text-decoration: none;
+              border: none;
+              cursor: pointer;
+              font-family: inherit;
+              transition: background 0.12s, color 0.12s;
+            }
+            .ss-popular-pill:hover { background: rgba(29,185,84,0.1); color: var(--g2, #16a34a); }
+            .ss-loading {
+              padding: 16px;
+              text-align: center;
+              font-size: 13px;
+              color: #888;
+            }
+            .ss-no-results {
+              padding: 16px;
+              text-align: center;
+              font-size: 13px;
+              color: #888;
+            }
+            .ss-see-all {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              padding: 11px;
+              font-size: 13px;
+              font-weight: 700;
+              color: var(--g2, #16a34a);
+              border-top: 1px solid rgba(0,0,0,0.06);
+              text-decoration: none;
+              cursor: pointer;
+              border: none;
+              background: none;
+              font-family: inherit;
+              width: 100%;
+              transition: background 0.12s;
+            }
+            .ss-see-all:hover { background: rgba(29,185,84,0.05); }
+          `}</style>
+
+          {(() => {
+            const typeOpts = [
+              {
+                val: "all",
+                label: "All Categories",
+                icon: <HiOutlineSparkles size={14} />,
+              },
+              {
+                val: "product",
+                label: "Products",
+                icon: <FiPackage size={14} />,
+              },
+              { val: "vendor", label: "Vendors", icon: <FiUsers size={14} /> },
+              { val: "service", label: "Services", icon: <FiTool size={14} /> },
+            ];
+            const selectedType =
+              typeOpts.find((t) => t.val === searchType) || typeOpts[0];
+
+            return (
+              <div className="smart-search-wrap" ref={searchRef}>
+                <div className="smart-search-bar">
+                  {/* Type selector */}
+                  <div
+                    className="ss-type-select"
+                    onClick={() => setTypeDropOpen((o) => !o)}
                   >
-                    Join as Vendor
-                  </Link>
-
-                  <Link
-                    href="/browse"
-                    className="rounded-full border border-gray-200 bg-white text-gray-700 px-5 py-2 text-sm font-medium"
-                  >
-                    Browse Products
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div> */}
-        </section>
-      </section>
-
-      {/* ================= CATEGORIES ================= */}
-      <section className="max-w-full pl-4 md:px-10 mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Browse by Category
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Explore products & services by category
-            </p>
-          </div>
-
-          {/* Desktop arrows */}
-          <div className="hidden md:flex gap-2">
-            <button
-              onClick={() => scrollCategories("left")}
-              className="p-2 rounded-full bg-white border shadow-sm hover:bg-gray-50"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              onClick={() => scrollCategories("right")}
-              className="p-2 rounded-full bg-white border shadow-sm hover:bg-gray-50"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
-
-        {loadingCategories ? (
-          <div className="flex gap-6 overflow-hidden">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <SkeletonCircle key={i} />
-            ))}
-          </div>
-        ) : (
-          <div
-            ref={scrollRef}
-            className="flex gap-6 overflow-x-auto scroll-smooth scrollbar-hide pb-2"
-          >
-            {categories.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => router.push(`/browse?category=${c.id}`)}
-                className="flex-shrink-0 flex flex-col items-center group mr-2 md:mr-10"
-              >
-                {/* Circle Image */}
-                <div className="w-32 h-32 rounded-[20px] object-contain bg-gray-100 overflow-hidden flex items-center justify-center transition-shadow group-hover:shadow-md ">
-                  {c.imageUrl ? (
-                    <img
-                      src={c.imageUrl}
-                      alt={c.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <span className="text-xs text-gray-400">No image</span>
-                  )}
-                </div>
-
-                {/* Category Name */}
-                <p className="mt-3 text-[10px] font-medium text-gray-900  text-center whitespace-nowrap">
-                  {c.name}
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ================= FEATURED PRODUCTS ================= */}
-      <section className="max-w-full mx-auto px-4 md:px-10 py-14">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-yellow-600">
-              Handpicked
-            </p>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Featured Products
-            </h2>
-          </div>
-
-          <Link
-            href="/browse"
-            className="text-sm font-medium text-[var(--color-ocean-blue)] hover:underline"
-          >
-            View all →
-          </Link>
-        </div>
-
-        {loadingProducts ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        ) : featuredProducts.length === 0 ? (
-          <p className="text-sm text-gray-500">No featured products yet.</p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 md:gap-8">
-            {featuredProducts.map((p) => (
-              <Link
-                key={p.id}
-                href={`/products/${p.id}`}
-                className="
-            group bg-white rounded-3xl border border-gray-100 
-            p-2 md:p-4 transition-all duration-300
-            hover:shadow-xl hover:-translate-y-1 h-full
-          "
-              >
-                {/* Image */}
-                <div className="relative md:h-70 bg-gray-100 rounded-2xl mb-4 overflow-hidden">
-                  {/* Featured badge */}
-                  <span className="absolute top-3 left-3 z-10 bg-yellow-400 text-black text-xs font-semibold px-3 py-1 rounded-full shadow">
-                    Featured
-                  </span>
-
-                  {p.images?.[0] && (
-                    <img
-                      src={p.images[0]}
-                      alt={p.title}
-                      className="
-                  h-70 md:h-full w-full object-cover md:object-cover
-                  transition-transform duration-500
-                  group-hover:scale-105
-                "
-                    />
-                  )}
-                </div>
-
-                {/* Content */}
-                <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
-                  {p.title}
-                </h3>
-
-                <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                  {p.description}
-                </p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="max-w-full mx-auto px-4 md:px-10 py-14 bg-gray-50">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
-              New Arrivals
-            </p>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Latest Products
-            </h2>
-          </div>
-
-          <Link
-            href="/browse"
-            className="text-sm font-medium text-[var(--color-ocean-blue)] hover:underline"
-          >
-            Browse all →
-          </Link>
-        </div>
-
-        {loadingProducts ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        ) : allProducts.length === 0 ? (
-          <p className="text-sm text-gray-500">No products found.</p>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 md:gap-8">
-              {allProducts.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/products/${p.id}`}
-                  className="
-              group bg-white rounded-3xl border border-gray-100 
-              p-2 md:p-4 transition-all duration-300
-              hover:shadow-lg hover:-translate-y-1
-            "
-                >
-                  {/* Image */}
-                  <div className="relative md:h-70 bg-gray-100 rounded-2xl mb-4 overflow-hidden ">
-                    {p.images?.[0] && (
-                      <img
-                        src={p.images[0]}
-                        alt={p.title}
-                        className="
-                    h-70 md:h-full w-full object-cover
-                    transition-transform duration-500
-                    group-hover:scale-105
-                  "
-                      />
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
-                    {p.title}
-                  </h3>
-
-                  <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                    {p.description}
-                  </p>
-                </Link>
-              ))}
-            </div>
-
-            {/* Browse All Button */}
-            <div className="mt-10 flex justify-center">
-              <Link
-                href="/browse"
-                className="
-            rounded-full px-8 py-3
-            bg-[var(--color-primary-green)]
-            text-white text-sm font-semibold
-            shadow-lg hover:shadow-xl hover:brightness-95
-            transition
-          "
-              >
-                Browse All Products
-              </Link>
-            </div>
-          </>
-        )}
-      </section>
-
-      {/* ================= LATEST SERVICES ================= */}
-      <section className="max-w-full mx-auto px-4 md:px-10 py-14 bg-white">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
-              New Services
-            </p>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Latest Services
-            </h2>
-          </div>
-
-          <Link
-            href="/browse?type=Service"
-            className="text-sm font-medium text-[var(--color-ocean-blue)] hover:underline"
-          >
-            Browse services →
-          </Link>
-        </div>
-
-        {loadingServices ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        ) : services.length === 0 ? (
-          <p className="text-sm text-gray-500">No services found.</p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 md:gap-8">
-            {services.map((s) => (
-              <Link
-                key={s.id}
-                href={`/products/${s.id}`}
-                className="
-            group bg-white rounded-3xl border border-gray-100
-            p-2 md:p-4 transition-all duration-300
-            hover:shadow-lg hover:-translate-y-1
-          "
-              >
-                {/* Service icon block */}
-                <div className="h-[200px] rounded-2xl overflow-hidden bg-[var(--color-bg-soft)] mb-4">
-                  {s.images?.[0] ? (
-                    <img
-                      src={s.images[0]}
-                      alt={s.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-                      Service
-                    </div>
-                  )}
-                </div>
-
-                <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
-                  {s.title}
-                </h3>
-
-                <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                  {s.description}
-                </p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* ================= CTA ================= */}
-      <section className="max-w-full mx-auto px-6 py-16">
-        <div
-          className="
-      relative overflow-hidden
-      rounded-3xl p-10 text-center
-      bg-gradient-to-r
-      from-[var(--color-primary-green)]
-      to-[var(--color-ocean-blue)]
-      shadow-[0_30px_80px_rgba(0,0,0,0.18)]
-    "
-        >
-          {/* Soft overlay for depth */}
-          <div
-            className="
-        absolute inset-0
-        bg-white/5
-        backdrop-blur-sm
-        pointer-events-none
-      "
-          />
-
-          <div className="relative z-10 max-w-2xl mx-auto">
-            <h3 className="text-white text-2xl font-semibold">
-              Ready to join the sustainable economy?
-            </h3>
-
-            <p className="text-white/90 text-sm mt-2">
-              Create your account and start connecting with verified buyers &
-              vendors worldwide.
-            </p>
-
-            <div className="mt-6 flex justify-center gap-4 flex-wrap">
-              <Link
-                href="/register"
-                className="
-            rounded-full
-            bg-[var(--color-solar-yellow)]
-            text-black
-            px-6 py-2.5
-            text-sm font-semibold
-            hover:brightness-95
-            transition
-          "
-              >
-                Create Account
-              </Link>
-
-              <Link
-                href="/login"
-                className="
-            rounded-full
-            border border-white/40
-            text-white
-            px-6 py-2.5
-            text-sm font-medium
-            hover:bg-white/10
-            transition
-          "
-              >
-                Login
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= BLOGS ================= */}
-      <section className="max-w-full mx-auto px-4 md:px-10 py-14 bg-gray-50">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
-              Insights
-            </p>
-
-            <h2 className="text-xl font-semibold text-gray-900">
-              Latest from our Blog
-            </h2>
-          </div>
-
-          <Link
-            href="/blogs"
-            className="text-sm font-medium text-[var(--color-ocean-blue)] hover:underline"
-          >
-            View all →
-          </Link>
-        </div>
-
-        {loadingBlogs ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        ) : blogs.length === 0 ? (
-          <p className="text-sm text-gray-500">No blogs published yet.</p>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              {blogs.map((blog) => (
-                <Link
-                  key={blog.id}
-                  href={`/blogs/${blog.id}`}
-                  className="
-          group bg-white border border-gray-100
-          rounded-3xl overflow-hidden
-          hover:shadow-xl transition
-        "
-                >
-                  {/* IMAGE */}
-
-                  <div className="h-auto bg-gray-100 overflow-hidden">
-                    {blog.image ? (
-                      <img
-                        src={blog.image}
-                        alt={blog.title}
-                        className="
-                w-full h-full object-cover
-                group-hover:scale-105
-                transition duration-500
-              "
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                        Blog Image
+                    {selectedType.icon}
+                    <span className="ss-type-label">{selectedType.label}</span>
+                    <FiChevronDown size={12} className="ss-type-chevron" />
+                    {typeDropOpen && (
+                      <div className="ss-type-dropdown">
+                        {typeOpts.map((opt) => (
+                          <button
+                            key={opt.val}
+                            className={`ss-type-opt${searchType === opt.val ? " active" : ""}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSearchType(opt.val);
+                              setTypeDropOpen(false);
+                              if (searchQuery) runSearch(searchQuery, opt.val);
+                            }}
+                          >
+                            {opt.icon} {opt.label}
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
 
-                  {/* CONTENT */}
-
-                  <div className="p-6 space-y-3">
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
-                      {blog.title}
-                    </h3>
-
-                    <p className="text-sm text-gray-600 line-clamp-3">
-                      {blog.content?.replace(/<[^>]+>/g, "").slice(0, 120)}...
-                    </p>
-
-                    <span className="text-sm font-medium text-[var(--color-ocean-blue)]">
-                      Read More →
-                    </span>
+                  {/* Input */}
+                  <div className="ss-input-wrap">
+                    <input
+                      className="ss-input"
+                      type="text"
+                      placeholder={
+                        searchType === "vendor"
+                          ? "Search vendors by name, category, location…"
+                          : searchType === "service"
+                            ? "Search services like ESG consulting, EPR…"
+                            : searchType === "product"
+                              ? "Search products like solar panels, packaging…"
+                              : "Search vendors, products, services, certifications…"
+                      }
+                      value={searchQuery}
+                      onChange={(e) => handleSearchInput(e.target.value)}
+                      onFocus={() => setSearchFocused(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") doSearch();
+                      }}
+                      autoComplete="off"
+                    />
                   </div>
+
+                  {/* Clear */}
+                  {searchQuery && (
+                    <button
+                      className="ss-clear"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSearchResults([]);
+                      }}
+                    >
+                      <FiX size={12} />
+                    </button>
+                  )}
+
+                  {/* Search button */}
+                  <button className="ss-search-btn" onClick={doSearch}>
+                    <FiSearch size={14} />
+                    Search
+                  </button>
+                </div>
+
+                {/* Dropdown panel */}
+                {searchFocused && (
+                  <div className="ss-dropdown">
+                    {searchLoading && (
+                      <div className="ss-loading">Searching…</div>
+                    )}
+
+                    {!searchLoading &&
+                      searchQuery.trim() &&
+                      searchResults.length > 0 && (
+                        <>
+                          <div className="ss-drop-head">
+                            <FiSearch size={11} /> Results
+                          </div>
+                          {searchResults.map((r) => (
+                            <Link
+                              key={r.id}
+                              href={r.href}
+                              className="ss-drop-item"
+                              onClick={() => setSearchFocused(false)}
+                            >
+                              <div className={`ss-item-icon ${r.type}`}>
+                                {r.type === "vendor" ? (
+                                  <FiUsers size={14} />
+                                ) : r.type === "service" ? (
+                                  <FiTool size={14} />
+                                ) : (
+                                  <FiPackage size={14} />
+                                )}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div className="ss-item-label">{r.label}</div>
+                                {r.sub && (
+                                  <div className="ss-item-sub">{r.sub}</div>
+                                )}
+                              </div>
+                              <span className={`ss-item-type-badge ${r.type}`}>
+                                {r.type}
+                              </span>
+                            </Link>
+                          ))}
+                          <button className="ss-see-all" onClick={doSearch}>
+                            See all results for &ldquo;{searchQuery}&rdquo;{" "}
+                            <FiArrowRight size={13} />
+                          </button>
+                        </>
+                      )}
+
+                    {!searchLoading &&
+                      searchQuery.trim() &&
+                      searchResults.length === 0 && (
+                        <div className="ss-no-results">
+                          No results found.{" "}
+                          <Link
+                            href={`/browse?q=${encodeURIComponent(searchQuery)}`}
+                            style={{ color: "var(--g2)" }}
+                            onClick={() => setSearchFocused(false)}
+                          >
+                            Browse all →
+                          </Link>
+                        </div>
+                      )}
+
+                    {!searchLoading && !searchQuery.trim() && (
+                      <>
+                        <div className="ss-drop-head">
+                          <FiTrendingUp size={11} /> Popular Searches
+                        </div>
+                        <div className="ss-popular-grid">
+                          {POPULAR_SEARCHES.map((p) => (
+                            <Link
+                              key={p.label}
+                              href={p.href}
+                              className="ss-popular-pill"
+                              onClick={() => setSearchFocused(false)}
+                            >
+                              {p.type === "vendor" ? (
+                                <FiUsers size={11} />
+                              ) : p.type === "service" ? (
+                                <FiTool size={11} />
+                              ) : (
+                                <FiPackage size={11} />
+                              )}
+                              {p.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="hero-cta-row">
+            <Link href="/register?role=BUYER" className="hcta hcta-buyer">
+              {" "}
+              I'm a Buyer — Start Sourcing
+            </Link>
+            <Link href="/register?role=VENDOR" className="hcta hcta-vendor">
+              {" "}
+              I'm a Vendor — Get Listed
+            </Link>
+          </div>
+        </div>
+
+        <div className="hero-stats">
+          <div className="hstat">
+            <div className="hstat-num">
+              450<span>+</span>
+            </div>
+            <div className="hstat-lbl">Verified Vendors</div>
+          </div>
+          <div className="hstat">
+            <div className="hstat-num">
+              16<span>+</span>
+            </div>
+            <div className="hstat-lbl">Categories</div>
+          </div>
+          <div className="hstat">
+            <div className="hstat-num">
+              500<span>+</span>
+            </div>
+            <div className="hstat-lbl">Corporate Buyers</div>
+          </div>
+          <div className="hstat">
+            <div className="hstat-num">5</div>
+            <div className="hstat-lbl">Verification Criteria</div>
+          </div>
+          <div className="hstat">
+            <div className="hstat-num" style={{ color: "var(--g)" }}>
+              0
+            </div>
+            <div className="hstat-lbl">Greenwashing Tolerated</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════ TRUST MARQUEE ═══════════════════════════════════════ */}
+      <div className="marquee-wrap">
+        <div className="marquee-track">
+          {[
+            <>
+              <svg viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                />
+                <polyline
+                  points="4,7 6,9 10,5"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <b>Brown Lens Verified</b> — Anti-Greenwashing Standard
+            </>,
+            <>
+              <svg viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                />
+                <polyline
+                  points="4,7 6,9 10,5"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              ISO 14001 · GRS · FSC · BEE · CPCB Accepted
+            </>,
+            <>
+              <svg viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                />
+                <polyline
+                  points="4,7 6,9 10,5"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <b>BRSR-Ready</b> Compliance Reports
+            </>,
+            <>
+              <svg viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                />
+                <polyline
+                  points="4,7 6,9 10,5"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <b>EPR Compliance</b> Vendors Available
+            </>,
+            <>
+              <svg viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                />
+                <polyline
+                  points="4,7 6,9 10,5"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              RFQ System · Bulk Inquiry · Direct Connect
+            </>,
+            <>
+              <svg viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                />
+                <polyline
+                  points="4,7 6,9 10,5"
+                  stroke="#1DB954"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <b>India HQ</b> — Chennai, Tamil Nadu
+            </>,
+          ].flatMap((item, i) => [
+            <div key={`a-${i}`} className="mitem">
+              {item}
+            </div>,
+            <div key={`b-${i}`} className="mitem">
+              {item}
+            </div>,
+          ])}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════ CATEGORIES ═══════════════════════════════════════ */}
+      <section className="sec cat-sec">
+        <div className="container">
+          <div className="sec-head-row">
+            <div>
+              <div className="sec-eye">Browse Platform</div>
+              <h2 className="sec-h">
+                Source across <b>16+ categories</b>
+              </h2>
+              <p className="sec-sub">
+                Every category is verified, compliance-ready, and built
+                exclusively for corporate B2B procurement.
+              </p>
+            </div>
+            <Link href="/categories" className="link-all">
+              View all categories →
+            </Link>
+          </div>
+
+          <div className="cat-grid">
+            {[...displayCategoriesRow1, ...displayCategoriesRow2]
+              .slice(0, 4)
+              .map((c: any) => (
+                <div
+                  key={c.id}
+                  className="cat-card"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => router.push(`/browse?category=${c.id}`)}
+                >
+                  <div className="cat-icon">
+                    {c.imageUrl ? (
+                      <img src={c.imageUrl} alt={c.name} />
+                    ) : (
+                      c.icon
+                    )}
+                  </div>
+                  <div className="cat-name">{c.name}</div>
+                  {c.count && <div className="cat-count">{c.count}</div>}
+                </div>
+              ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════ VERIFIED VENDORS ═══════════════════════════════════════ */}
+      <section className="sec vendors-sec">
+        <div className="container">
+          <div className="sec-head-row">
+            <div>
+              <div className="sec-eye">Vendor Spotlight</div>
+              <h2 className="sec-h">
+                Top-rated <b>verified suppliers</b>
+              </h2>
+              <p className="sec-sub">
+                Hand-picked vendors who passed all 5 Brown Lens criteria. Ready
+                for corporate RFQs.
+              </p>
+            </div>
+            <Link href="/browse?type=vendor" className="link-all">
+              Browse all 450+ vendors →
+            </Link>
+          </div>
+
+          <div className="vendor-filters">
+            {vendorFilters.map((f) => (
+              <button
+                key={f}
+                className={`vf${activeVendorFilter === f ? " on" : ""}`}
+                onClick={() => setActiveVendorFilter(f)}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          <div className="vendor-grid">
+            {displayVendors.map((v) => (
+              <div key={v.id} className="vc">
+                <div className="vc-top">
+                  <div className="vc-logo">
+                    {v.logoText ||
+                      (v.companyName || "").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="vc-badges">
+                    <div className={getEcoBadgeClass(v.ecoTier)}>
+                      {(v.ecoTier || "SILVER").toUpperCase()}
+                    </div>
+                    <div className="bl-check">
+                      <div className="bl-dot" />
+                      Brown Lens {v.brownLensScore || 4}/5
+                    </div>
+                  </div>
+                </div>
+                <div className="vc-body">
+                  <div className="vc-name">{v.companyName}</div>
+                  <div className="vc-cat">{v.category}</div>
+                  <div className="vc-tags">
+                    {(v.certifications || []).map((cert) => (
+                      <span key={cert} className="vc-tag">
+                        {cert}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="vc-score-bar">
+                    <div className="vc-score-label">
+                      <span>Eco Score</span>
+                      <span style={{ fontWeight: 700, color: "var(--g)" }}>
+                        {v.ecoScore || 80} / 100
+                      </span>
+                    </div>
+                    <div className="vc-score-track">
+                      <div
+                        className="vc-score-fill"
+                        style={{ width: `${v.ecoScore || 80}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="vc-verified-strip">
+                  <div className="bl-dot" /> Verified · All claims audited ·
+                  Brown Lens Certified
+                </div>
+                <div className="vc-footer">
+                  <div className="vc-loc">
+                    <svg viewBox="0 0 12 14" fill="none">
+                      <path
+                        d="M6 1C3.79 1 2 2.79 2 5C2 8.5 6 13 6 13C6 13 10 8.5 10 5C10 2.79 8.21 1 6 1Z"
+                        stroke="currentColor"
+                        strokeWidth={1.3}
+                      />
+                      <circle
+                        cx="6"
+                        cy="5"
+                        r="1.5"
+                        stroke="currentColor"
+                        strokeWidth={1.3}
+                      />
+                    </svg>
+                    {v.location || "India"}
+                  </div>
+                  <button
+                    className="btn-rfq"
+                    onClick={() => router.push(`/vendor/${v.id}`)}
+                  >
+                    Send RFQ
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════ HOW IT WORKS ═══════════════════════════════════════ */}
+      <section className="sec how-sec">
+        <div className="container">
+          <div className="sec-head-row">
+            <div>
+              <div className="sec-eye">Platform Workflow</div>
+              <h2 className="sec-h">
+                How <b>Sustainly Ecohub</b> works
+              </h2>
+              <p className="sec-sub">
+                A structured B2B procurement process — built for corporate
+                teams, not individual shoppers.
+              </p>
+            </div>
+          </div>
+
+          <div className="how-tabs-wrap">
+            {(["buyer", "vendor", "cert"] as const).map((tab) => (
+              <button
+                key={tab}
+                className={`htab${howTab === tab ? " on" : ""}`}
+                onClick={() => setHowTab(tab)}
+              >
+                {tab === "buyer"
+                  ? "For Buyers"
+                  : tab === "vendor"
+                    ? "For Vendors"
+                    : "For Cert Bodies"}
+              </button>
+            ))}
+          </div>
+
+          <div className="how-steps">
+            {activeHowSteps.map((step, i) => (
+              <div
+                key={step.num}
+                className={`how-step${i === 0 ? " active" : ""}`}
+              >
+                <div className="how-num">{step.num}</div>
+                <div className="how-icon">{step.icon}</div>
+                <div className="how-title">{step.title}</div>
+                <div className="how-desc">{step.desc}</div>
+                {i < 3 && <div className="how-step-arrow">→</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════ WHY US ═══════════════════════════════════════ */}
+      <section className="why-sec">
+        <div className="why-blob wb1" />
+        <div className="why-blob wb2" />
+        <div className="container">
+          <div className="why-inner">
+            <div className="why-left">
+              <div className="sec-eye">Our Competitive Edge</div>
+              <h2 className="sec-h" style={{ color: "#fff" }}>
+                The gap <b style={{ color: "var(--g)" }}>we fill</b>
+              </h2>
+              <p className="sec-sub">
+                Others has no sustainability filter. EcoVadis has no
+                marketplace. We are the only platform that combines both —
+                exclusively for India.
+              </p>
+              <div className="why-feats">
+                <div className="wf">
+                  <div className="wf-icon">🔬</div>
+                  <div>
+                    <div className="wf-title">
+                      Brown Lens Anti-Greenwashing Gate
+                    </div>
+                    <div className="wf-desc">
+                      Every vendor clears a 5-criterion pass/fail verification.
+                      No unverified claims reach buyers.
+                    </div>
+                  </div>
+                </div>
+                <div className="wf">
+                  <div className="wf-icon">🏅</div>
+                  <div>
+                    <div className="wf-title">
+                      Eco Score — Tiered Trust System
+                    </div>
+                    <div className="wf-desc">
+                      Bronze to Platinum scoring gives buyers a comparable,
+                      instant view of each vendor's sustainability performance.
+                    </div>
+                  </div>
+                </div>
+                <div className="wf">
+                  <div className="wf-icon">🤝</div>
+                  <div>
+                    <div className="wf-title">Three-sided marketplace</div>
+                    <div className="wf-desc">
+                      Buyers, verified vendors, and certification bodies on one
+                      connected platform. A first in India.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="compare-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th className="hl">Sustainly Ecohub</th>
+                    <th>Others</th>
+                    <th>EcoVadis</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["B2B Marketplace", "✓", "✓", "✗"],
+                    ["Sustainability-only", "✓", "✗", "✓"],
+                    ["Anti-greenwashing check", "✓", "✗", "—"],
+                    ["Vendor Eco Score rating", "✓", "✗", "—"],
+                    ["RFQ & bulk inquiry", "✓", "✓", "✗"],
+                    ["India-first platform", "✓", "✓", "✗"],
+                    ["Cert body integration", "✓", "✗", "—"],
+                    ["BRSR reporting support", "✓", "✗", "—"],
+                  ].map(([feat, us, Others, ecoVadis]) => (
+                    <tr key={feat}>
+                      <td>{feat}</td>
+                      <td className="hl cy">{us}</td>
+                      <td
+                        className={
+                          Others === "✓"
+                            ? "cy"
+                            : Others === "✗"
+                              ? "cn"
+                              : "cm"
+                        }
+                      >
+                        {Others}
+                      </td>
+                      <td
+                        className={
+                          ecoVadis === "✓"
+                            ? "cy"
+                            : ecoVadis === "✗"
+                              ? "cn"
+                              : "cm"
+                        }
+                      >
+                        {ecoVadis}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════ BROWN LENS ═══════════════════════════════════════ */}
+      <section className="sec bl-sec">
+        <div className="container">
+          <div className="sec-head-row">
+            <div>
+              <div className="sec-eye">Proprietary Standard</div>
+              <h2 className="sec-h">
+                The <b>Brown Lens</b> Framework
+              </h2>
+              <p className="sec-sub">
+                5 criteria. Pass all or don't list. The only anti-greenwashing
+                gate for B2B sustainable procurement in India.
+              </p>
+            </div>
+          </div>
+          <div className="bl-grid">
+            <div className="bl-criteria">
+              {[
+                {
+                  n: 1,
+                  title: "Environmental Certification",
+                  desc: "Valid third-party cert (ISO 14001, GRS, FSC, BEE, CPCB or equivalent) must be current and verifiable.",
+                },
+                {
+                  n: 2,
+                  title: "Sustainability Claims Verification",
+                  desc: "All marketing claims cross-checked against actual certificates, lab reports, or audit documentation.",
+                },
+                {
+                  n: 3,
+                  title: "Business Legitimacy Check",
+                  desc: "MCA registration, GST filing status, and director profile verified to confirm entity credibility.",
+                },
+                {
+                  n: 4,
+                  title: "Supply Chain Transparency",
+                  desc: "Vendor must disclose material or service origin and demonstrate responsible sourcing practices.",
+                },
+                {
+                  n: 5,
+                  title: "Impact Measurement",
+                  desc: "Quantified impact data — carbon avoided, waste diverted, water saved — must be declared and auditable.",
+                },
+              ].map((c) => (
+                <div key={c.n} className="blc">
+                  <div className="blc-num">{c.n}</div>
+                  <div>
+                    <h5>{c.title}</h5>
+                    <p>{c.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <div className="bl-panel">
+                <div className="bl-panel-badge">🔬 Brown Lens Verified</div>
+                <h3>Built to end greenwashing in B2B procurement</h3>
+                <p>
+                  Most platforms accept anyone who claims to be sustainable.
+                  Brown Lens was built to change that — named after the
+                  principle of seeing through the green surface to what's
+                  actually underneath.
+                </p>
+                <p>
+                  Pass all 5 criteria, earn your Eco Score. Fail even one — you
+                  don't list. No exceptions. No workarounds.
+                </p>
+                <div className="eco-tiers">
+                  <span className="tier-pill t-br">🥉 Bronze</span>
+                  <span className="tier-pill t-si">🥈 Silver</span>
+                  <span className="tier-pill t-go">🥇 Gold</span>
+                  <span className="tier-pill t-pl">💎 Platinum</span>
+                </div>
+                <Link href="/brown-lens" className="bl-cta">
+                  <span>Apply for Brown Lens Verification</span>
+                  <span className="bl-cta-arr">→</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════ TESTIMONIALS ═══════════════════════════════════════ */}
+      <section className="sec testi-sec">
+        <div className="container">
+          <div className="sec-head-row">
+            <div>
+              <div className="sec-eye">Social Proof</div>
+              <h2 className="sec-h">
+                Trusted across <b>India</b>
+              </h2>
+            </div>
+          </div>
+          <div className="testi-grid">
+            {[
+              {
+                initials: "RS",
+                name: "Rohit Sharma",
+                role: "Head of Procurement, Tata Projects",
+                type: "Buyer",
+                quote:
+                  "Reduced our sustainable sourcing research time by 60%. The Brown Lens verification means we don't have to do our own due diligence on every claim.",
+              },
+              {
+                initials: "PM",
+                name: "Priya Menon",
+                role: "Founder, GreenPack Solutions",
+                type: "Vendor",
+                quote:
+                  "Our Eco Score badge became a competitive differentiator in enterprise pitches. Buyers trust it because it's independently verified, not self-declared.",
+              },
+              {
+                initials: "AK",
+                name: "Amit Krishnan",
+                role: "ESG Manager, Mahindra Group",
+                type: "Buyer",
+                quote:
+                  "Finally a platform built for B2B ESG procurement. The RFQ system and compliance documentation is exactly what our team needed for BRSR reporting.",
+              },
+            ].map((t) => (
+              <div key={t.name} className="tc">
+                <div className="tc-stars">★★★★★</div>
+                <p className="tc-quote">{t.quote}</p>
+                <div className="tc-person">
+                  <div className="tc-av">{t.initials}</div>
+                  <div>
+                    <div className="tc-name">{t.name}</div>
+                    <div className="tc-role">{t.role}</div>
+                  </div>
+                  <span
+                    className={`tc-type ${t.type === "Buyer" ? "tc-buyer" : "tc-vendor"}`}
+                  >
+                    {t.type}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════ PRICING ═══════════════════════════════════════ */}
+      <section className="sec price-sec">
+        <div className="container">
+          <div className="sec-eye">Vendor Plans</div>
+          <h2 className="sec-h">
+            Simple pricing. <b>Start free.</b>
+          </h2>
+          <p className="sec-sub" style={{ marginBottom: 0 }}>
+            All plans include Brown Lens verification and your Eco Score badge.
+          </p>
+
+          <div className="price-grid" style={{ marginTop: 40 }}>
+            {[
+              {
+                tier: "Free",
+                name: "Sprout",
+                desc: "For early-stage vendors getting started.",
+                price: "₹0",
+                period: "forever free",
+                pop: false,
+                feats: [
+                  "1 product / service listing",
+                  "Brown Lens verification",
+                  "Basic Eco Score badge",
+                  "Marketplace profile page",
+                  "5 RFQ responses / month",
+                ],
+                btnClass: "pc-btn-out",
+                btnText: "Get Started Free",
+                href: "/register?role=VENDOR&plan=free",
+              },
+              {
+                tier: "Starter",
+                name: "Growth",
+                desc: "For growing vendors building an enterprise pipeline.",
+                price: "₹4,999",
+                period: "per month",
+                pop: false,
+                feats: [
+                  "10 product / service listings",
+                  "Priority Brown Lens review",
+                  "Silver / Gold Eco Score eligible",
+                  "Featured in category search",
+                  "Unlimited RFQ responses",
+                  "Analytics dashboard",
+                ],
+                btnClass: "pc-btn-out",
+                btnText: "Start Growth Plan",
+                href: "/pricing",
+              },
+              {
+                tier: "Business",
+                name: "Canopy",
+                desc: "For established vendors wanting maximum buyer visibility.",
+                price: "₹9,999",
+                period: "per month",
+                pop: true,
+                feats: [
+                  "Unlimited listings",
+                  "Dedicated verification manager",
+                  "Gold / Platinum Eco Score eligible",
+                  "Homepage featured placement",
+                  "Buyer intro calls facilitated",
+                  "Priority RFQ routing",
+                  "BRSR-ready compliance reports",
+                ],
+                btnClass: "pc-btn-solid",
+                btnText: "Get Canopy Plan",
+                href: "/pricing",
+              },
+              {
+                tier: "Enterprise",
+                name: "Pro",
+                desc: "For enterprise vendors and multi-location businesses.",
+                price: "Custom",
+                period: "contact us",
+                pop: false,
+                feats: [
+                  "Everything in Canopy",
+                  "Multi-brand / multi-location",
+                  "Custom cert integration",
+                  "Dedicated account manager",
+                  "API access",
+                  "White-label reporting",
+                ],
+                btnClass: "pc-btn-out",
+                btnText: "Contact Sales",
+                href: "/contact",
+              },
+            ].map((plan) => (
+              <div key={plan.name} className={`pc${plan.pop ? " pop" : ""}`}>
+                {plan.pop && <div className="pop-label">Most Popular</div>}
+                <div className="pc-tier">{plan.tier}</div>
+                <div className="pc-name">{plan.name}</div>
+                <div className="pc-desc">{plan.desc}</div>
+                <div className="pc-price">{plan.price}</div>
+                <div className="pc-period">{plan.period}</div>
+                <ul className="pc-feats">
+                  {plan.feats.map((f) => (
+                    <li key={f}>{f}</li>
+                  ))}
+                </ul>
+                <Link href={plan.href} className={`pc-btn ${plan.btnClass}`}>
+                  {plan.btnText}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════ FINAL CTA ═══════════════════════════════════════ */}
+      <section className="fcta-sec">
+        <div className="fcta-blob1" />
+        <div className="fcta-blob2" />
+        <div className="fcta-inner">
+          <div className="fcta-top">
+            <h2 className="fcta-h">
+              Ready to build a<br />
+              <span className="green">verified</span> supply chain?
+            </h2>
+            <p className="fcta-sub">
+              Join India's only marketplace where every supplier is verified,
+              every claim is checked, and every deal is backed by proof.
+            </p>
+          </div>
+          <div className="fcta-cards">
+            <div className="fcta-card">
+              {/* <div className="fcta-card-icon">🏢</div> */}
+              <h3>Start sourcing sustainably</h3>
+              <p>
+                Access 450+ verified vendors across 16 categories. Raise RFQs,
+                compare Eco Scores, and meet your ESG procurement targets — all
+                in one platform.
+              </p>
+              <Link href="/register?role=BUYER" className="fcta-card-btn">
+                Register as a Buyer →
+              </Link>
+            </div>
+            <div className="fcta-card">
+              {/* <div className="fcta-card-icon">🌿</div> */}
+              <h3>Grow your B2B pipeline</h3>
+              <p>
+                Get Brown Lens verified, earn your Eco Score badge, and connect
+                directly with corporate procurement teams who are actively
+                sourcing sustainable solutions.
+              </p>
+              <Link href="/register?role=VENDOR" className="fcta-card-btn dark">
+                Onboard as a Vendor →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════ LATEST BLOGS ═══════════════════════════════════════ */}
+      {blogs.length > 0 && (
+        <section className="sec" style={{ background: "var(--off)" }}>
+          <div className="container">
+            <div className="sec-head-row">
+              <div>
+                <div className="sec-eye">Insights</div>
+                <h2 className="sec-h">
+                  Latest from our <b>Blog</b>
+                </h2>
+              </div>
+              <Link href="/blogs" className="link-all">
+                View all →
+              </Link>
+            </div>
+            <div className="testi-grid">
+              {blogs.map((blog) => (
+                <Link
+                  key={blog.id}
+                  href={`/blogs/${blog.id}`}
+                  className="tc"
+                  style={{ textDecoration: "none" }}
+                >
+                  {blog.image && (
+                    <div
+                      style={{
+                        height: 160,
+                        borderRadius: 12,
+                        overflow: "hidden",
+                        marginBottom: 8,
+                      }}
+                    >
+                      <img
+                        src={blog.image}
+                        alt={blog.title}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div className="tc-name" style={{ fontSize: 16 }}>
+                    {blog.title}
+                  </div>
+                  <p
+                    className="tc-role"
+                    style={{ fontSize: 13, lineHeight: 1.6 }}
+                  >
+                    {blog.content?.replace(/<[^>]+>/g, "").slice(0, 120)}...
+                  </p>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "var(--g2)",
+                    }}
+                  >
+                    Read More →
+                  </span>
                 </Link>
               ))}
             </div>
-
-            {/* VIEW MORE BUTTON */}
-
-            <div className="mt-10 flex justify-center">
-              <Link
-                href="/blogs"
-                className="
-        rounded-full px-8 py-3
-        bg-[var(--color-primary-green)]
-        text-white text-sm font-semibold
-        shadow-lg hover:shadow-xl hover:brightness-95
-        transition
-      "
-              >
-                View More Blogs
-              </Link>
-            </div>
-          </>
-        )}
-      </section>
+          </div>
+        </section>
+      )}
 
       <Footer />
 
+      {/* ═══════════════════════════════════════ GLOBAL RFQ MODAL ═══════════════════════════════════════ */}
       {openGlobalRFQ && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          {/* overlay */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-
-          {/* modal */}
-          <div className="relative w-full max-w-xl rounded-3xl bg-white shadow-[0_25px_80px_rgba(0,0,0,0.25)] border border-[var(--color-border)] p-8 space-y-6 animate-[fadeIn_.25s_ease]">
-            {/* close */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setOpenGlobalRFQ(false)}
+          />
+          <div className="relative w-full max-w-xl rounded-3xl bg-white shadow-[0_25px_80px_rgba(0,0,0,0.25)] p-8 space-y-6">
             <button
               onClick={() => setOpenGlobalRFQ(false)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 transition"
+              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700"
             >
               ✕
             </button>
-
-            {/* header */}
             <div>
-              <h2 className="text-2xl font-semibold text-[var(--color-text-primary)]">
+              <h2
+                className="text-2xl font-semibold"
+                style={{ color: "var(--text)" }}
+              >
                 Tell Us What You Need
               </h2>
-              <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+              <p className="text-sm mt-1" style={{ color: "var(--text3)" }}>
                 Receive quotes from verified sustainable vendors.
               </p>
             </div>
-
-            {/* form */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <input
                 placeholder="Full Name *"
                 value={rfqName}
                 onChange={(e) => setRfqName(e.target.value)}
                 className="rfq-input"
               />
-
               <input
                 placeholder="Email *"
                 value={rfqEmail}
                 onChange={(e) => setRfqEmail(e.target.value)}
                 className="rfq-input"
               />
-
               <select
                 value={rfqCategory}
                 onChange={(e) => setRfqCategory(e.target.value)}
@@ -904,21 +2006,18 @@ export default function HomePage() {
                   </option>
                 ))}
               </select>
-
               <input
                 placeholder="Subcategory"
                 value={rfqSubCategory}
                 onChange={(e) => setRfqSubCategory(e.target.value)}
                 className="rfq-input"
               />
-
               <input
                 placeholder="Quantity"
                 value={rfqQuantity}
                 onChange={(e) => setRfqQuantity(e.target.value)}
                 className="rfq-input"
               />
-
               <textarea
                 placeholder="Additional details"
                 value={rfqMessage}
@@ -926,22 +2025,26 @@ export default function HomePage() {
                 className="rfq-input h-24 resize-none"
               />
             </div>
-
-            {/* CTA */}
             <button
               onClick={submitGlobalRFQ}
-              className="
-          w-full rounded-full py-3 text-sm font-semibold text-white
-          bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-          shadow-lg hover:shadow-xl hover:brightness-95
-          transition
-        "
+              style={{
+                background: "var(--g)",
+                color: "#fff",
+                width: "100%",
+                padding: "13px",
+                borderRadius: 50,
+                fontWeight: 700,
+                fontSize: 15,
+                border: "none",
+                cursor: "pointer",
+              }}
             >
               {rfqLoading ? "Submitting..." : "Submit Requirement"}
             </button>
-
-            {/* trust note */}
-            <p className="text-xs text-center text-[var(--color-text-secondary)]">
+            <p
+              className="text-xs text-center"
+              style={{ color: "var(--text3)" }}
+            >
               Your request will be shared only with verified vendors.
             </p>
           </div>

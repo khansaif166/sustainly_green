@@ -51,7 +51,7 @@ export default function Header() {
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-
+  const [scrolled, setScrolled] = useState(false);
   /* SEARCH */
   const [queryText, setQueryText] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -71,10 +71,14 @@ export default function Header() {
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
+
       if (y > lastScrollY && y > 100) setShow(false);
       else setShow(true);
+
+      setScrolled(y > 20); // 👈 ADD THIS
       setLastScrollY(y);
     };
+
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, [lastScrollY]);
@@ -101,7 +105,6 @@ export default function Header() {
   /* ---------------- LOAD SEARCH DATA (ONCE) ---------------- */
   useEffect(() => {
     async function loadSearchData() {
-      /* PRODUCTS (PUBLIC APPROVED) */
       try {
         const pSnap = await getDocs(
           query(collection(db, "products"), where("approved", "==", true)),
@@ -113,11 +116,8 @@ export default function Header() {
             type: "product",
           })),
         );
-      } catch (e) {
-        console.warn("Products fetch blocked:", e);
-      }
+      } catch (e) {}
 
-      /* VENDORS (PUBLIC APPROVED ONLY) */
       try {
         const vSnap = await getDocs(
           query(collection(db, "vendors"), where("approved", "==", true)),
@@ -129,11 +129,8 @@ export default function Header() {
             type: "vendor",
           })),
         );
-      } catch (e) {
-        console.warn("Vendors fetch blocked:", e);
-      }
+      } catch (e) {}
 
-      /* CATEGORIES (ALWAYS PUBLIC) */
       try {
         const cSnap = await getDocs(collection(db, "categories"));
         setCategories(
@@ -143,9 +140,7 @@ export default function Header() {
             type: "category",
           })),
         );
-      } catch (e) {
-        console.warn("Categories fetch blocked:", e);
-      }
+      } catch (e) {}
     }
 
     loadSearchData();
@@ -188,131 +183,34 @@ export default function Header() {
     if (!queryText.trim() && !selectedCategory) return;
 
     const params = new URLSearchParams();
-
-    // default browse type
     params.set("type", "Product");
 
-    if (queryText.trim()) {
-      params.set("q", queryText.trim());
-    }
-
-    if (selectedCategory) {
-      params.set("category", selectedCategory);
-    }
+    if (queryText.trim()) params.set("q", queryText.trim());
+    if (selectedCategory) params.set("category", selectedCategory);
 
     router.push(`/browse?${params.toString()}`);
     setShowDropdown(false);
   }
 
   return (
-    <header
-      className={`sticky top-0 z-50 bg-white border-b transition-transform duration-300 ${
-        show ? "translate-y-0" : "-translate-y-full"
-      }`}
-    >
-      {/* ================= TOP BAR (DESKTOP) ================= */}
-      <div className="hidden lg:block border-b text-sm">
-        <div className="px-6 h-10 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {!loadingUser && authUser && (
-              <>
-                <span>Hi, {profile?.name || "User"}</span>
-                <Link href={dashboardLink}>Dashboard</Link>
-              </>
-            )}
-            <Link href="/deals">Daily Deals</Link>
-            <Link href="/help">Help & Contact</Link>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* <Link href="/vendor">Sell</Link> */}
-            {!loadingUser && !authUser && (
-              <div className="flex items-center gap-2">
-                {/* BUY BUTTON */}
-                <Link
-                  href="/buyer"
-                  className="
-        px-4 py-1.5 rounded-full text-sm font-semibold text-white
-        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-        shadow-md hover:shadow-lg hover:brightness-95
-        transition
-      "
-                >
-                  Buyer
-                </Link>
-
-                {/* SELL BUTTON */}
-                <Link
-                  href="/login"
-                  className="
-        px-4 py-1.5 rounded-full text-sm font-semibold text-white
-        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-        shadow-md hover:shadow-lg hover:brightness-95
-        transition
-      "
-                >
-                  Seller
-                </Link>
-                <Link
-                  href="/certification"
-                  className="
-        px-4 py-1.5 rounded-full text-sm font-semibold text-white
-        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-        shadow-md hover:shadow-lg hover:brightness-95
-        transition
-      "
-                >
-                  Get Certification
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {!loadingUser && authUser && (
-            <>
-              <Link
-                href="/certification"
-                className="
-        px-4 py-1.5 rounded-full text-sm font-semibold text-white
-        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-        shadow-md hover:shadow-lg hover:brightness-95
-        transition
-      "
-              >
-                Get Certification
-              </Link>
-            </>
-          )}
-        </div>
+    <>
+      <div className="ann">
+        🌿 <b>Brown Lens Verification is live.</b> India's first
+        anti-greenwashing standard for B2B procurement.
+        <Link href="#">See how it works →</Link>
       </div>
 
-      {/* ================= MAIN HEADER ================= */}
-      <div className="px-4 py-4 flex items-center gap-4">
-        {/* LOGO */}
-        <Link href="/" className="shrink-0">
-          <img src="/log.webp" className="md:h-12 h-8" />
-        </Link>
+      <nav className={`nav ${scrolled ? "nav-scrolled" : ""} ${!show && "-translate-y-full"} transition-all duration-300`}>
+        <div className="nav-inner">
+          <Link href="/" className="nav-logo">
+            <img src="/logo.png" alt="Sustainly Ecohub" width={150} />
+          </Link>
 
-        {/* SEARCH (DESKTOP) */}
-        <div className="relative hidden lg:flex flex-1">
-          <div className="flex w-full border-2 border-green-700 rounded-full overflow-hidden">
-            <div className="px-3 flex items-center text-gray-400">
-              <Search className="h-5 w-5" />
-            </div>
-
-            <input
-              value={queryText}
-              onChange={(e) => setQueryText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-              placeholder="Search products, vendors or categories"
-              className="flex-1 px-2 py-2 outline-none"
-            />
-
+          <div className="nav-search relative hidden lg:flex">
             <select
+              className="hs-cat bg-transparent border-none outline-none cursor-pointer"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="border-l px-3 text-sm"
             >
               <option value="">All Categories</option>
               {categories.map((c) => (
@@ -321,282 +219,181 @@ export default function Header() {
                 </option>
               ))}
             </select>
-
-            <button
-              onClick={handleSearch}
-              className="bg-yellow-400 px-6 font-semibold"
-            >
-              Search
-            </button>
-          </div>
-
-          {/* SUGGESTIONS */}
-          {showDropdown && suggestions.length > 0 && (
-            <div className="absolute top-full left-0 w-full bg-white rounded-xl shadow-xl mt-2 z-50">
-              {suggestions.map((s) => (
-                <button
-                  key={`${s.type}-${s.id}`}
-                  onMouseDown={() => {
-                    setShowDropdown(false);
-
-                    if (s.type === "product") {
-                      router.push(`/products/${s.id}`);
-                      return;
-                    }
-
-                    if (s.type === "vendor") {
-                      router.push(`/vendor/${s.id}`);
-                      return;
-                    }
-
-                    if (s.type === "category") {
-                      router.push(`/browse?category=${s.id}`);
-                      return;
-                    }
-                  }}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
-                >
-                  {s.type === "product" && <Package className="h-4 w-4" />}
-                  {s.type === "vendor" && <Building2 className="h-4 w-4" />}
-                  {s.type === "category" && <Layers className="h-4 w-4" />}
-                  <span className="truncate">{s.title}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* AUTH (DESKTOP) */}
-        <div className="hidden lg:flex items-center gap-3 ml-auto">
-          {!loadingUser && !authUser && (
-            <>
-              <Link
-                href="/login"
-                className="text-sm font-medium hover:underline"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/register"
-                className="text-sm font-medium bg-black text-white px-4 py-1.5 rounded-full"
-              >
-                Register
-              </Link>
-            </>
-          )}
-
-          {!loadingUser && authUser && (
-            <div className="relative" ref={accountRef}>
-              <button
-                onClick={() => setOpenAccount((p) => !p)}
-                className="p-2 rounded-full bg-gray-100"
-              >
-                <User />
-              </button>
-
-              {openAccount && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg">
-                  <button
-                    onClick={() => router.push(dashboardLink)}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
-                  >
-                    Go to Dashboard
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await signOut(auth);
-                      router.push("/");
-                    }}
-                    className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 text-sm"
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* MOBILE ICONS */}
-        {/* ================= MOBILE RIGHT SIDE ================= */}
-        <div className="flex items-center gap-2 ml-auto lg:hidden">
-          {/* SIGN IN / USER */}
-          {!loadingUser && !authUser && (
-            <div className="flex items-center gap-2">
-              {/* SELL BUTTON */}
-              <Link
-                href="/login"
-                className="
-        px-4 py-1.5 rounded-full text-[8px] font-semibold text-white
-        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-        shadow-md hover:shadow-lg hover:brightness-95
-        transition
-      "
-              >
-                Seller
-              </Link>
-
-              {/* <Link
-                href="/certification"
-                className="
-        px-4 py-1.5 rounded-full text-sm font-semibold text-white
-        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-        shadow-md hover:shadow-lg hover:brightness-95
-        transition
-      "
-              >
-                Get Certification
-              </Link> */}
-            </div>
-          )}
-
-          {!loadingUser && authUser && (
-            <button
-              onClick={() => router.push(dashboardLink)}
-              className="p-2 px-4 rounded-full bg-gray-100 text-[8px]"
-            >
-              Dashboard
-            </button>
-          )}
-
-          <Link
-            href="/certification"
-            className="
-        px-4 py-1.5 rounded-full  font-semibold text-white
-        bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-        shadow-md hover:shadow-lg hover:brightness-95 text-[8px]
-        transition
-      "
-          >
-            Get Certified
-          </Link>
-          {/* MENU BUTTON */}
-          <button
-            onClick={() => setOpenMobile((p) => !p)}
-            className="p-2 rounded-full bg-gray-100"
-          >
-            {openMobile ? <X /> : <Menu />}
-          </button>
-        </div>
-      </div>
-
-      {/* ================= MOBILE SEARCH BAR ================= */}
-      <div className="lg:hidden px-4 pb-3">
-        <div className="flex gap-2">
-          {/* SEARCH */}
-          <div className="relative flex-1">
             <input
+              type="text"
               value={queryText}
               onChange={(e) => setQueryText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="Search products"
-              className="w-full h-10 pl-10 pr-3 rounded-full border border-gray-300 text-sm outline-none"
+              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+              placeholder="Search vendors, products, certifications…"
             />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          </div>
-
-          {/* CATEGORY BUTTON */}
-          <div className="relative">
-            <button
-              onClick={() => setOpenMobileCategories((p) => !p)}
-              className="h-10 px-4 rounded-full border border-gray-300 text-sm font-medium whitespace-nowrap bg-white"
-            >
-              {selectedCategory
-                ? categories.find((c) => c.id === selectedCategory)?.title ||
-                  "Category"
-                : "Category"}
+            <button className="nav-search-btn" onClick={handleSearch}>
+              <svg viewBox="0 0 18 18" fill="none">
+                <circle
+                  cx="7.5"
+                  cy="7.5"
+                  r="5.5"
+                  stroke="white"
+                  strokeWidth={1.8}
+                />
+                <path
+                  d="M11.5 11.5L16 16"
+                  stroke="white"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                />
+              </svg>
             </button>
 
-            {openMobileCategories && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border z-50 max-h-64 overflow-y-auto">
-                <button
-                  onClick={() => {
-                    setSelectedCategory("");
-                    setOpenMobileCategories(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                >
-                  All Categories
-                </button>
-
-                {categories.map((c) => (
+            {showDropdown && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 w-full bg-white rounded-xl shadow-xl mt-2 z-50">
+                {suggestions.map((s) => (
                   <button
-                    key={c.id}
-                    onClick={() => {
-                      setSelectedCategory(c.id);
-                      setOpenMobileCategories(false);
-                      router.push(`/browse?category=${c.id}`);
+                    key={`${s.type}-${s.id}`}
+                    onMouseDown={() => {
+                      setShowDropdown(false);
+                      if (s.type === "product")
+                        router.push(`/products/${s.id}`);
+                      if (s.type === "vendor") router.push(`/vendor/${s.id}`);
+                      if (s.type === "category")
+                        router.push(`/browse?category=${s.id}`);
                     }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-800"
                   >
-                    {c.title}
+                    {s.type === "product" && <Package className="h-4 w-4" />}
+                    {s.type === "vendor" && <Building2 className="h-4 w-4" />}
+                    {s.type === "category" && <Layers className="h-4 w-4" />}
+                    <span className="truncate">{s.title}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* ================= MOBILE MENU ================= */}
-      {openMobile && (
-        <div className="lg:hidden bg-white border-t">
-          <div className="px-6 py-5 space-y-4 text-sm flex flex-col">
-            {!loadingUser && !authUser && (
-              <div className="flex gap-3">
-                <Link
-                  href="/login"
-                  onClick={() => setOpenMobile(false)}
-                  className="flex-1 text-center py-2 rounded-full border"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setOpenMobile(false)}
-                  className="flex-1 text-center py-2 rounded-full bg-black text-white"
-                >
-                  Register
-                </Link>
-              </div>
-            )}
+          <div className="nav-links">
+            <Link href="/browse?type=vendor" className="nav-link active">
+              Find Vendors
+            </Link>
+            <Link href="/categories" className="nav-link">
+              Categories
+            </Link>
+            <Link href="/brown-lens" className="nav-link">
+              Brown Lens
+            </Link>
+            <Link href="/pricing" className="nav-link">
+              Pricing
+            </Link>
+          </div>
 
-            {!loadingUser && authUser && (
+          <div className="nav-actions">
+            {!loadingUser && !authUser ? (
               <>
-                <p className="font-semibold">Hi, {profile?.name || "User"}</p>
-                <button
-                  className="text-left"
-                  onClick={() => {
-                    setOpenMobile(false);
-                    router.push(dashboardLink);
-                  }}
+                <Link href="/login" className="nbtn nbtn-ghost">
+                  Login
+                </Link>
+                <Link
+                  href="/register?role=VENDOR"
+                  className="nbtn nbtn-outline"
                 >
-                  Go to Dashboard
+                  List Business
+                </Link>
+                <Link href="/register?role=BUYER" className="nbtn nbtn-green">
+                  Start Sourcing
+                </Link>
+              </>
+            ) : (
+              <>
+                <span className="nbtn nbtn-ghost">
+                  Hi, {profile?.name || "User"}
+                </span>
+                <button
+                  onClick={() => router.push(dashboardLink)}
+                  className="nbtn nbtn-outline"
+                >
+                  Dashboard
                 </button>
                 <button
                   onClick={async () => {
                     await signOut(auth);
-                    setOpenMobile(false);
                     router.push("/");
                   }}
-                  className="text-red-600 text-left"
+                  className="nbtn nbtn-ghost text-red-600 border-none"
                 >
                   Logout
                 </button>
               </>
             )}
+          </div>
 
-            <hr />
-
-            <Link href="/deals" onClick={() => setOpenMobile(false)}>
-              Daily Deals
-            </Link>
-            <Link href="/help" onClick={() => setOpenMobile(false)}>
-              Help & Contact
-            </Link>
+          <div className="flex items-center gap-2 ml-auto lg:hidden">
+            <button
+              onClick={() => setOpenMobile((p) => !p)}
+              className="p-2 rounded-full bg-gray-100"
+            >
+              {openMobile ? <X /> : <Menu />}
+            </button>
           </div>
         </div>
-      )}
-    </header>
+
+        {openMobile && (
+          <div className="lg:hidden bg-white border-t">
+            <div className="px-6 py-5 space-y-4 text-sm flex flex-col">
+              {!loadingUser && !authUser && (
+                <div className="flex flex-col gap-3">
+                  <Link
+                    href="/login"
+                    onClick={() => setOpenMobile(false)}
+                    className="py-2.5 rounded-xl border text-center font-medium"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register?role=VENDOR"
+                    onClick={() => setOpenMobile(false)}
+                    className="py-2.5 rounded-xl border border-[var(--g)] text-[var(--g2)] text-center font-medium"
+                  >
+                    List Business
+                  </Link>
+                  <Link
+                    href="/register?role=BUYER"
+                    onClick={() => setOpenMobile(false)}
+                    className="py-2.5 rounded-xl bg-[var(--g)] text-white text-center font-medium"
+                  >
+                    Start Sourcing
+                  </Link>
+                </div>
+              )}
+
+              {!loadingUser && authUser && (
+                <>
+                  <p className="font-semibold text-gray-800">
+                    Hi, {profile?.name || "User"}
+                  </p>
+                  <button
+                    className="text-left font-medium text-gray-700"
+                    onClick={() => {
+                      setOpenMobile(false);
+                      router.push(dashboardLink);
+                    }}
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await signOut(auth);
+                      setOpenMobile(false);
+                      router.push("/");
+                    }}
+                    className="text-red-600 font-medium text-left"
+                  >
+                    Logout
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </nav>
+    </>
   );
 }
