@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
-import { FiArrowLeft, FiArrowRight, FiGrid, FiSearch } from "react-icons/fi";
+import { FiArrowLeft, FiGrid, FiSearch } from "react-icons/fi";
 import { HiOutlineSparkles } from "react-icons/hi2";
 
 type Category = {
@@ -184,92 +184,66 @@ export default function CategoriesPage() {
           .cats-content { padding: 24px 16px 48px; }
         }
 
-        /* ── CARD ── */
-        .cat-full-card {
-          background: #fff;
-          border: 1px solid rgba(0,0,0,0.07);
-          border-radius: 20px;
-          padding: 22px 20px;
-          cursor: pointer;
-          text-decoration: none;
+        /* ── CARD (SAME AS HOME PAGE) ── */
+        .cat-card {
+          background: var(--off);
+          border: 1.5px solid var(--gray2);
+          border-radius: 18px;
+          padding: 16px 12px 12px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
-          transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
-          position: relative;
-          overflow: hidden;
-        }
-        .cat-full-card::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(29,185,84,0.04) 0%, transparent 60%);
-          opacity: 0;
-          transition: opacity 0.25s;
-        }
-        .cat-full-card:hover {
-          box-shadow: 0 10px 36px rgba(0,0,0,0.1);
-          transform: translateY(-3px);
-          border-color: rgba(29,185,84,0.25);
-        }
-        .cat-full-card:hover::before { opacity: 1; }
-
-        .cfc-icon-wrap {
-          width: 52px;
-          height: 52px;
-          border-radius: 14px;
-          background: linear-gradient(135deg, rgba(29,185,84,0.12) 0%, rgba(29,185,84,0.05) 100%);
-          display: flex;
           align-items: center;
-          justify-content: center;
-          font-size: 26px;
+          justify-content: flex-start;
+          gap: 10px;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          text-align: center;
+          text-decoration: none;
+        }
+        
+        .cat-card:hover {
+          border-color: var(--g);
+          background: #EBF9F0;
+          transform: translateY(-4px);
+          box-shadow: 0 12px 30px rgba(29,185,84,0.15);
+        }
+
+        .cat-icon {
+          width: 100%;
+          height: 200px;
+          border-radius: 18px;
           overflow: hidden;
           flex-shrink: 0;
         }
-        .cfc-icon-wrap img {
+
+        .cat-icon img {
           width: 100%;
           height: 100%;
           object-fit: cover;
         }
-        .cfc-name {
-          font-size: 15px;
-          font-weight: 700;
-          color: #111;
-          margin: 0;
-          line-height: 1.3;
+        
+        .cat-card:hover .cat-icon {
+          transform: scale(1.08);
         }
-        .cfc-desc {
-          font-size: 12.5px;
-          color: #666;
-          line-height: 1.55;
-          margin: 0;
-          flex: 1;
-        }
-        .cfc-footer {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-top: 4px;
-          padding-top: 10px;
-          border-top: 1px solid rgba(0,0,0,0.05);
-        }
-        .cfc-count {
-          font-size: 11.5px;
+
+        .cat-name {
+          width: 100%;
+          text-align: center;
+          font-size: 14px;
           font-weight: 600;
-          color: var(--g2, #16a34a);
-          background: rgba(29,185,84,0.09);
-          padding: 3px 9px;
-          border-radius: 50px;
+          color: var(--text);
+          line-height: 1.3;
+          margin-top: 6px;
         }
-        .cfc-arrow {
-          color: var(--g2, #16a34a);
-          opacity: 0;
-          transform: translateX(-4px);
-          transition: opacity 0.18s, transform 0.18s;
+
+        .cat-card:hover .cat-name {
+          color: var(--g);
+          transform: translateY(2px);
         }
-        .cat-full-card:hover .cfc-arrow {
-          opacity: 1;
-          transform: translateX(0);
+
+        .cat-count {
+          font-size: 11px;
+          color: var(--text3);
         }
 
         /* ── SKELETON ── */
@@ -375,28 +349,24 @@ export default function CategoriesPage() {
               {displayList.map((c: any) => (
                 <div
                   key={c.id}
-                  className="cat-full-card"
+                  className="cat-card"
                   onClick={() => router.push(`/browse?category=${c.id}`)}
                 >
-                  <div className="cfc-icon-wrap">
+                  <div className="cat-icon">
                     {c.imageUrl ? (
                       <img src={c.imageUrl} alt={c.name} />
                     ) : (
-                      c.icon || "🌿"
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', background: 'rgba(29,185,84,0.1)' }}>
+                        {c.icon || "🌿"}
+                      </div>
                     )}
                   </div>
-                  <h3 className="cfc-name">{c.name}</h3>
-                  {(c.desc || c.description) && (
-                    <p className="cfc-desc">{c.desc || c.description}</p>
+                  <div className="cat-name">{c.name}</div>
+                  {(c.count || c.vendorCount) && (
+                    <div className="cat-count">
+                      {c.count || `${c.vendorCount} vendors`}
+                    </div>
                   )}
-                  <div className="cfc-footer">
-                    {(c.count || c.vendorCount) && (
-                      <span className="cfc-count">
-                        {c.count || `${c.vendorCount} vendors`}
-                      </span>
-                    )}
-                    <FiArrowRight size={15} className="cfc-arrow" />
-                  </div>
                 </div>
               ))}
             </div>

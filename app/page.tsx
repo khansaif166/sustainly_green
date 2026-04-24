@@ -1118,24 +1118,24 @@ const howCertSteps = [
         </div>
 
         <div className="hero-stats">
-          <div className="hstat">
+          {/* <div className="hstat">
             <div className="hstat-num">
               450<span>+</span>
             </div>
             <div className="hstat-lbl">Verified Vendors</div>
-          </div>
+          </div> */}
           <div className="hstat">
             <div className="hstat-num">
               16<span>+</span>
             </div>
             <div className="hstat-lbl">Categories</div>
           </div>
-          <div className="hstat">
+          {/* <div className="hstat">
             <div className="hstat-num">
               500<span>+</span>
             </div>
             <div className="hstat-lbl">Corporate Buyers</div>
-          </div>
+          </div> */}
           <div className="hstat">
             <div className="hstat-num">5</div>
             <div className="hstat-lbl">Verification Criteria</div>
@@ -1285,7 +1285,7 @@ const howCertSteps = [
             <div>
               <div className="sec-eye">Browse Platform</div>
               <h2 className="sec-h">
-                Source across <b>16+ categories</b>
+                All <b>Categories</b>
               </h2>
               <p className="sec-sub">
                 Every category is verified, compliance-ready, and built
@@ -1299,7 +1299,7 @@ const howCertSteps = [
 
           <div className="cat-grid">
             {[...displayCategoriesRow1, ...displayCategoriesRow2]
-              .slice(0, 4)
+              .slice(0, 12)
               .map((c: any) => (
                 <div
                   key={c.id}
@@ -1337,71 +1337,22 @@ const howCertSteps = [
               </p>
             </div>
             <Link href="/browse?type=vendor" className="link-all">
-              Browse all 450+ vendors →
+              Browse all vendors →
             </Link>
           </div>
 
-          <div className="vendor-filters">
-            {vendorFilters.map((f) => (
-              <button
-                key={f}
-                className={`vf${activeVendorFilter === f ? " on" : ""}`}
-                onClick={() => setActiveVendorFilter(f)}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-
           <div className="vendor-grid">
-            {displayVendors.map((v) => (
+            {displayVendors.slice(0, 4).map((v) => (
               <div key={v.id} className="vc">
                 <div className="vc-top">
                   <div className="vc-logo">
                     {v.logoText ||
                       (v.companyName || "").slice(0, 2).toUpperCase()}
                   </div>
-                  <div className="vc-badges">
-                    <div className={getEcoBadgeClass(v.ecoTier)}>
-                      {(v.ecoTier || "SILVER").toUpperCase()}
-                    </div>
-                    <div className="bl-check">
-                      <div className="bl-dot" />
-                      Brown Lens {v.brownLensScore || 4}/5
-                    </div>
-                  </div>
                 </div>
                 <div className="vc-body">
                   <div className="vc-name">{v.companyName}</div>
-                  <div className="vc-cat">{v.category}</div>
-                  <div className="vc-tags">
-                    {(v.certifications || []).map((cert) => (
-                      <span key={cert} className="vc-tag">
-                        {cert}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="vc-score-bar">
-                    <div className="vc-score-label">
-                      <span>Eco Score</span>
-                      <span style={{ fontWeight: 700, color: "var(--g)" }}>
-                        {v.ecoScore || 80} / 100
-                      </span>
-                    </div>
-                    <div className="vc-score-track">
-                      <div
-                        className="vc-score-fill"
-                        style={{ width: `${v.ecoScore || 80}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="vc-verified-strip">
-                  <div className="bl-dot" /> Verified · All claims audited ·
-                  Brown Lens Certified
-                </div>
-                <div className="vc-footer">
-                  <div className="vc-loc">
+                  <div className="vc-loc" style={{ marginTop: '8px' }}>
                     <svg viewBox="0 0 12 14" fill="none">
                       <path
                         d="M6 1C3.79 1 2 2.79 2 5C2 8.5 6 13 6 13C6 13 10 8.5 10 5C10 2.79 8.21 1 6 1Z"
@@ -1418,6 +1369,8 @@ const howCertSteps = [
                     </svg>
                     {v.location || "India"}
                   </div>
+                </div>
+                <div className="vc-footer">
                   <button
                     className="btn-rfq"
                     onClick={() => router.push(`/vendor/${v.id}`)}
@@ -1438,11 +1391,10 @@ const howCertSteps = [
             <div>
               <div className="sec-eye">Platform Workflow</div>
               <h2 className="sec-h">
-                How <b>Sustainly Ecohub</b> works
+                How <b>Sustainly Green</b> works
               </h2>
               <p className="sec-sub">
-                A structured B2B procurement process — built for corporate
-                teams, not individual shoppers.
+                Structured sustainable procurement for Indian corporates — verified suppliers, BRSR-aligned data, zero greenwashing risk.
               </p>
             </div>
           </div>
@@ -1489,19 +1441,17 @@ const howCertSteps = [
             <div className="why-left">
               <div className="sec-eye">Our Competitive Edge</div>
               <h2 className="sec-h" style={{ color: "#fff" }}>
-                The gap <b style={{ color: "var(--g)" }}>we fill</b>
+                The <b style={{ color: "var(--g)" }}>Verified Sustainable Sourcing Gap</b> We Solve
               </h2>
               <p className="sec-sub">
-                Others has no sustainability filter. EcoVadis has no
-                marketplace. We are the only platform that combines both —
-                exclusively for India.
+                Sustainly Green is the only verified sustainable sourcing platform that combines audited vendor discovery, BRSR-aligned data, and direct RFQ — built exclusively for India's corporate procurement teams.
               </p>
               <div className="why-feats">
                 <div className="wf">
                   <div className="wf-icon">🔬</div>
                   <div>
                     <div className="wf-title">
-                      Brown Lens Anti-Greenwashing Gate
+                      Anti-Greenwashing Gate
                     </div>
                     <div className="wf-desc">
                       Every vendor clears a 5-criterion pass/fail verification.
@@ -1513,11 +1463,10 @@ const howCertSteps = [
                   <div className="wf-icon">🏅</div>
                   <div>
                     <div className="wf-title">
-                      Eco Score — Tiered Trust System
+                      Certification Supports System
                     </div>
                     <div className="wf-desc">
-                      Bronze to Platinum scoring gives buyers a comparable,
-                      instant view of each vendor's sustainability performance.
+                      When you are compliant, you are 100% verified and trusted.
                     </div>
                   </div>
                 </div>
@@ -1539,22 +1488,19 @@ const howCertSteps = [
                 <thead>
                   <tr>
                     <th>Feature</th>
-                    <th className="hl">Sustainly Ecohub</th>
+                    <th className="hl">Sustainly Green</th>
                     <th>Others</th>
-                    <th>EcoVadis</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    ["B2B Marketplace", "✓", "✓", "✗"],
-                    ["Sustainability-only", "✓", "✗", "✓"],
-                    ["Anti-greenwashing check", "✓", "✗", "—"],
-                    ["Vendor Eco Score rating", "✓", "✗", "—"],
-                    ["RFQ & bulk inquiry", "✓", "✓", "✗"],
-                    ["India-first platform", "✓", "✓", "✗"],
-                    ["Cert body integration", "✓", "✗", "—"],
-                    ["BRSR reporting support", "✓", "✗", "—"],
-                  ].map(([feat, us, Others, ecoVadis]) => (
+                    ["B2B Marketplace", "✓", "✓"],
+                    ["Sustainability-only", "✓", "✗"],
+                    ["Anti-greenwashing check", "✓", "✗"],
+                    ["RFQ & bulk inquiry", "✓", "✓"],
+                    ["India-first platform", "✓", "✓"],
+                    ["BRSR reporting support", "✓", "✗"],
+                  ].map(([feat, us, Others]) => (
                     <tr key={feat}>
                       <td>{feat}</td>
                       <td className="hl cy">{us}</td>
@@ -1568,17 +1514,6 @@ const howCertSteps = [
                         }
                       >
                         {Others}
-                      </td>
-                      <td
-                        className={
-                          ecoVadis === "✓"
-                            ? "cy"
-                            : ecoVadis === "✗"
-                              ? "cn"
-                              : "cm"
-                        }
-                      >
-                        {ecoVadis}
                       </td>
                     </tr>
                   ))}
@@ -1627,11 +1562,6 @@ const howCertSteps = [
                   title: "Supply Chain Transparency",
                   desc: "Vendor must disclose material or service origin and demonstrate responsible sourcing practices.",
                 },
-                {
-                  n: 5,
-                  title: "Impact Measurement",
-                  desc: "Quantified impact data — carbon avoided, waste diverted, water saved — must be declared and auditable.",
-                },
               ].map((c) => (
                 <div key={c.n} className="blc">
                   <div className="blc-num">{c.n}</div>
@@ -1653,15 +1583,9 @@ const howCertSteps = [
                   actually underneath.
                 </p>
                 <p>
-                  Pass all 5 criteria, earn your Eco Score. Fail even one — you
+                  Pass all 4 criteria, get verified. Fail even one — you
                   don't list. No exceptions. No workarounds.
                 </p>
-                <div className="eco-tiers">
-                  <span className="tier-pill t-br">🥉 Bronze</span>
-                  <span className="tier-pill t-si">🥈 Silver</span>
-                  <span className="tier-pill t-go">🥇 Gold</span>
-                  <span className="tier-pill t-pl">💎 Platinum</span>
-                </div>
                 <Link href="/brown-lens" className="bl-cta">
                   <span>Apply for Brown Lens Verification</span>
                   <span className="bl-cta-arr">→</span>
@@ -1736,27 +1660,29 @@ const howCertSteps = [
         <div className="container">
           <div className="sec-eye">Vendor Plans</div>
           <h2 className="sec-h">
-            Simple pricing. <b>Start free.</b>
+            <b>Pricing</b>
           </h2>
           <p className="sec-sub" style={{ marginBottom: 0 }}>
-            All plans include Brown Lens verification and your Eco Score badge.
+            Transparent, flexible plans for every stage of growth.
           </p>
 
           <div className="price-grid" style={{ marginTop: 40 }}>
             {[
               {
                 tier: "Free",
-                name: "Sprout",
-                desc: "For early-stage vendors getting started.",
+                name: "Free",
+                desc: "For vendors starting their sustainable journey.",
                 price: "₹0",
                 period: "forever free",
                 pop: false,
                 feats: [
-                  "1 product / service listing",
-                  "Brown Lens verification",
-                  "Basic Eco Score badge",
-                  "Marketplace profile page",
-                  "5 RFQ responses / month",
+                  "Unlimited product listings",
+                  "Business Verification",
+                  "Vendor profile page",
+                  "Dashboard analytics",
+                  "Export reports",
+                  "1 RFQ response per month",
+                  "Self-declared certification",
                 ],
                 btnClass: "pc-btn-out",
                 btnText: "Get Started Free",
@@ -1764,57 +1690,76 @@ const howCertSteps = [
               },
               {
                 tier: "Starter",
-                name: "Growth",
-                desc: "For growing vendors building an enterprise pipeline.",
-                price: "₹4,999",
-                period: "per month",
+                name: "Starter",
+                desc: "For growing vendors expanding their reach.",
+                price: "₹999",
+                period: "per month / ₹9,990 per year",
                 pop: false,
                 feats: [
-                  "10 product / service listings",
-                  "Priority Brown Lens review",
-                  "Silver / Gold Eco Score eligible",
-                  "Featured in category search",
-                  "Unlimited RFQ responses",
-                  "Analytics dashboard",
+                  "Unlimited product listings",
+                  "Business Verification",
+                  "Vendor profile page",
+                  "Dashboard analytics",
+                  "Export reports",
+                  "5 RFQ responses per month",
+                  "Self-declared certification",
+                  "24 hrs response time SLA",
                 ],
                 btnClass: "pc-btn-out",
-                btnText: "Start Growth Plan",
+                btnText: "Start Starter Plan",
                 href: "/pricing",
               },
               {
-                tier: "Business",
-                name: "Canopy",
-                desc: "For established vendors wanting maximum buyer visibility.",
-                price: "₹9,999",
-                period: "per month",
+                tier: "Grow",
+                name: "Grow",
+                desc: "For vendors seeking market leadership.",
+                price: "₹1,999",
+                period: "per month / ₹19,990 per year",
                 pop: true,
                 feats: [
-                  "Unlimited listings",
-                  "Dedicated verification manager",
-                  "Gold / Platinum Eco Score eligible",
-                  "Homepage featured placement",
-                  "Buyer intro calls facilitated",
-                  "Priority RFQ routing",
-                  "BRSR-ready compliance reports",
+                  "Unlimited product listings",
+                  "Sustainly Verified Seal",
+                  "Brown Lens Review",
+                  "6 images per listing",
+                  "Video upload per listing",
+                  "Featured listings",
+                  "5 certifications upload",
+                  "Sustainly verified certification",
+                  "Basic carbon footprint support",
+                  "20 RFQ responses per month",
+                  "Custom vendor URL",
+                  "Company story section",
+                  "12 hrs response time SLA",
+                  "Priority onboarding support",
                 ],
                 btnClass: "pc-btn-solid",
-                btnText: "Get Canopy Plan",
+                btnText: "Get Grow Plan",
                 href: "/pricing",
               },
               {
                 tier: "Enterprise",
-                name: "Pro",
-                desc: "For enterprise vendors and multi-location businesses.",
-                price: "Custom",
-                period: "contact us",
+                name: "Enterprise",
+                desc: "For large organizations with premium needs.",
+                price: "₹3,499",
+                period: "per month / ₹34,999 per year",
                 pop: false,
                 feats: [
-                  "Everything in Canopy",
-                  "Multi-brand / multi-location",
-                  "Custom cert integration",
+                  "Unlimited product listings",
+                  "Sustainly Verified Seal",
+                  "Brown Lens Review",
+                  "10 images per listing",
+                  "Unlimited video uploads",
+                  "Featured listings",
+                  "Unlimited certification upload",
+                  "Sustainly verified certification",
+                  "Advanced carbon footprint support",
+                  "Unlimited RFQ responses",
+                  "Custom vendor URL",
+                  "Company story section",
+                  "2 hrs response time SLA",
+                  "Complete certification support",
                   "Dedicated account manager",
-                  "API access",
-                  "White-label reporting",
+                  "Priority onboarding support",
                 ],
                 btnClass: "pc-btn-out",
                 btnText: "Contact Sales",
@@ -1862,8 +1807,8 @@ const howCertSteps = [
               {/* <div className="fcta-card-icon">🏢</div> */}
               <h3>Start sourcing sustainably</h3>
               <p>
-                Access 450+ verified vendors across 16 categories. Raise RFQs,
-                compare Eco Scores, and meet your ESG procurement targets — all
+                Access verified vendors across multiple categories. Raise RFQs,
+                and meet your ESG procurement targets — all
                 in one platform.
               </p>
               <Link href="/register?role=BUYER" className="fcta-card-btn">
@@ -1874,7 +1819,7 @@ const howCertSteps = [
               {/* <div className="fcta-card-icon">🌿</div> */}
               <h3>Grow your B2B pipeline</h3>
               <p>
-                Get Brown Lens verified, earn your Eco Score badge, and connect
+                Get verified, and connect
                 directly with corporate procurement teams who are actively
                 sourcing sustainable solutions.
               </p>

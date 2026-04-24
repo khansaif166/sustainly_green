@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="footer-grid">
         {/* Brand */}
         <div>
-          <div className="footer-brand-name">Sustainly<span>Ecohub</span></div>
+          <div className="footer-brand-name">Sustainly<span> Green</span></div>
           <p className="footer-brand-sub">
             India's first verified B2B marketplace for sustainable sourcing — connecting ESG-certified vendors with corporate buyers under a zero-greenwashing standard.
           </p>
@@ -66,7 +66,7 @@ export default function Footer() {
       <div className="footer-bottom">
         <div className="footer-bottom-left">
           <p>
-            © {new Date().getFullYear()} Sustainly Ecohub India Pvt Ltd · Chennai, Tamil Nadu, India &nbsp;
+            © {new Date().getFullYear()} Sustainly Green India Pvt Ltd · Chennai, Tamil Nadu, India &nbsp;
             <span className="cin">grow@sustainlygreen.com</span>
           </p>
         </div>

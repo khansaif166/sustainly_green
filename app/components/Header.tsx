@@ -203,7 +203,7 @@ export default function Header() {
       <nav className={`nav ${scrolled ? "nav-scrolled" : ""} ${!show && "-translate-y-full"} transition-all duration-300`}>
         <div className="nav-inner">
           <Link href="/" className="nav-logo">
-            <img src="/logo.png" alt="Sustainly Ecohub" width={150} />
+            <img src="/log.webp" alt="Sustainly Green" className="w-[100px] md:w-[150px]"  />
           </Link>
 
           <div className="nav-search relative hidden lg:flex">
@@ -303,7 +303,7 @@ export default function Header() {
               </>
             ) : (
               <>
-                <span className="nbtn nbtn-ghost">
+                <span className="nbtn nbtn-ghost hidden md:flex">
                   Hi, {profile?.name || "User"}
                 </span>
                 <button
@@ -317,7 +317,7 @@ export default function Header() {
                     await signOut(auth);
                     router.push("/");
                   }}
-                  className="nbtn nbtn-ghost text-red-600 border-none"
+                  className="nbtn nbtn-ghost text-red-600 border-none  hidden md:flex"
                 >
                   Logout
                 </button>

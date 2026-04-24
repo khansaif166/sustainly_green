@@ -26,7 +26,7 @@
   /* ================= BORDERS ================= */
   --color-border: #e5e7eb;
 
-  /* ================= SUSTAINLY ECOHUB DESIGN TOKENS ================= */
+  /* ================= SUSTAINLY Green DESIGN TOKENS ================= */
   --g: #1DB954;
   --g2: #0F8C3B;
   --g3: #074D21;
@@ -939,6 +939,9 @@ footer { background: #050A06; padding: 60px 0 0; }
   .nav-links { display: none; }
   .nav-search { display: none; }
   .hero-h1 { font-size: 44px; }
+  .hero-content { padding: 60px 20px 40px; }
+  .hero-sub { font-size: 16px; }
+  .hero-eyebrow { font-size: 11px; }
   .cat-grid { grid-template-columns: repeat(3, 1fr); }
   .cat-grid-2 { grid-template-columns: repeat(3, 1fr); }
   .vendor-grid, .why-inner, .bl-grid, .fcta-cards { grid-template-columns: 1fr; }
@@ -947,14 +950,72 @@ footer { background: #050A06; padding: 60px 0 0; }
   .testi-grid { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .container, .nav-inner, .hero-content, .hero-stats, .footer-bottom, .fcta-inner { padding-left: 20px; padding-right: 20px; }
-  .hstat { padding: 8px 24px; }
-}
-@media (max-width: 600px) {
-  .hero-h1 { font-size: 34px; }
-  .cat-grid { grid-template-columns: repeat(2, 1fr); }
-  .how-steps, .price-grid, .fcta-cards { grid-template-columns: 1fr; }
+  .hstat { padding: 8px 24px; font-size: 12px; }
+  .how-tabs-wrap { width: 100%; overflow-x: auto; }
+  .htab { padding: 8px 16px; font-size: 12px; }
   .sec-h { font-size: 32px; }
-  .footer-grid { grid-template-columns: 1fr; }
+  .cat-icon { height: 160px; }
+}
+@media (max-width: 640px) {
+  .hero { min-height: 85vh; }
+  .hero-content { padding: 40px 16px 30px; }
+  .hero-h1 { font-size: 32px; margin-bottom: 16px; }
+  .hero-sub { font-size: 14px; margin-bottom: 32px; max-width: 100%; }
+  .hero-stats { padding: 20px 16px; gap: 0; }
+  .hstat { padding: 8px 12px; border-right: none; font-size: 11px; }
+  .hstat-num { font-size: 24px; }
+  .sec { padding: 50px 0; }
+  .container { padding: 0 16px; }
+  .sec-head-row { margin-bottom: 28px; }
+  .sec-h { font-size: 26px; margin-bottom: 12px; }
+  .sec-sub { font-size: 14px; }
+  .cat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .cat-card { padding: 12px 8px 8px; }
+  .cat-icon { height: 120px; }
+  .cat-name { font-size: 12px; margin-top: 4px; }
+  .how-steps, .price-grid, .fcta-cards { grid-template-columns: 1fr; }
+  .how-step { padding: 16px 14px; }
+  .how-num { font-size: 28px; }
+  .how-icon { font-size: 18px; }
+  .how-title { font-size: 14px; }
+  .how-desc { font-size: 12px; }
+  .how-step-arrow { display: none; }
+  .hcta { padding: 12px 20px; font-size: 14px; }
+  .vendor-grid { grid-template-columns: 1fr; }
+  .vc-top { padding: 16px 16px 0; }
+  .vc-body { padding: 12px 16px; }
+  .vc-footer { padding: 10px 16px; }
+  .vc-logo { width: 48px; height: 48px; font-size: 18px; }
+  .vc-name { font-size: 14px; }
+  .vc-cat { font-size: 11px; }
+  .link-all { font-size: 12px; }
+  .mitem { padding: 0 24px; font-size: 12px; }
+  .pc { padding: 20px 16px; }
+  .pc-price { font-size: 22px; }
+  .pc-feats { font-size: 12px; }
+  .pc-btn { font-size: 13px; padding: 10px 16px; }
+  .why-left { margin-bottom: 32px; }
+  .compare-wrap { overflow-x: auto; }
+  .testi-grid { gap: 12px; }
+  .tc { padding: 16px 12px; }
+  .tc-av { width: 40px; height: 40px; font-size: 16px; }
+  .tc-name { font-size: 13px; }
+  .tc-role { font-size: 11px; }
+  .tc-stars { font-size: 12px; }
+  .bl-grid { gap: 20px; }
+  .blc-num { font-size: 20px; }
+  .blc { padding: 16px; }
+  .wf { gap: 12px; }
+  .wf-icon { font-size: 32px; }
+  .wf-title { font-size: 14px; }
+  .wf-desc { font-size: 12px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 24px; }
+  .fcta-h { font-size: 28px; line-height: 1.2; }
+  .fcta-sub { font-size: 14px; }
+  .fcta-card { padding: 20px 16px; }
+  .fcta-card h3 { font-size: 16px; margin-bottom: 10px; }
+  .fcta-card p { font-size: 13px; }
+  .fcta-card-btn { font-size: 13px; padding: 10px 16px; }
 }
 
 .smart-search-wrap {
