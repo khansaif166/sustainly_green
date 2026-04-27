@@ -282,7 +282,18 @@ export default function AdminVendorsPage() {
             </div>
 
             {/* ACTIONS */}
-            <div className="mt-auto p-4 border-t border-[var(--color-border)] flex gap-2">
+            <div className="mt-auto p-4 border-t border-[var(--color-border)] flex flex-wrap gap-2">
+              <a
+                href={`/admin/vendors/${v.uid}`}
+                className="
+                  w-full inline-flex items-center justify-center gap-2
+                  px-4 py-2 rounded-full text-xs font-medium
+                  bg-gray-100 text-gray-800 hover:bg-gray-200 mb-1
+                "
+              >
+                View Full Onboarding Profile
+              </a>
+
               {!v.approved && (
                 <button
                   onClick={() => approveVendor(v.uid)}

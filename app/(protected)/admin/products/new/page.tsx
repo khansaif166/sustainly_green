@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import {
-  doc,
-  getDoc,
-  updateDoc,
   collection,
   getDocs,
+  addDoc,
+  doc,
   serverTimestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -20,27 +19,25 @@ const AVAILABILITY = ["B2B", "B2C"];
 const PRICE_TYPES = ["Fixed Price", "Starts From", "Price on Request"];
 const SHIP_REGIONS = ["Local Only", "Countrywide", "Regional", "Worldwide"];
 
-export default function EditProductPage() {
-  const { id } = useParams();
+export default function AdminAddProductPage() {
   const router = useRouter();
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   const [categories, setCategories] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
 
   /* ---------- FORM STATE ---------- */
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+  
   const [listingType, setListingType] = useState<string>("");
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subCategoryId, setSubCategoryId] = useState("");
   const [description, setDescription] = useState("");
-
-  const [existingImages, setExistingImages] = useState<string[]>([]);
-  const [newImages, setNewImages] = useState<File[]>([]);
+  const [images, setImages] = useState<File[]>([]);
   const [coverIndex, setCoverIndex] = useState(0);
 
   const [availableFor, setAvailableFor] = useState<string[]>([]);
@@ -56,51 +53,34 @@ export default function EditProductPage() {
   const [shipRegions, setShipRegions] = useState<string[]>([]);
   const [inStock, setInStock] = useState(true);
 
-  /* ---------- AUTH + LOAD ---------- */
+  const [loading, setLoading] = useState(false);
+
+  /* ---------- AUTH CHECK ---------- */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) return router.push("/login");
       setUser(u);
+    });
+    return () => unsub();
+  }, [router]);
 
-      const snap = await getDoc(doc(db, "products", id as string));
-      if (!snap.exists()) return router.push("/vendor/products");
-
-      const p = snap.data();
-      if (p.vendorId !== u.uid) return router.push("/vendor/products");
-
-      setListingType(
-        Array.isArray(p.listingType) ? p.listingType[0] : p.listingType || "",
-      );
-
-      setTitle(p.title || "");
-      setCategoryId(p.categoryId || "");
-      setSubCategoryId(p.subCategoryId || "");
-      setDescription(p.description || "");
-      setExistingImages(p.images || []);
-      setAvailableFor(p.availableFor || []);
-      setPriceType(p.priceType || "");
-      setPrice(p.price?.toString() || "");
-      setCurrency(p.currency || "USD");
-      setMoq(p.moq?.toString() || "");
-      setDiscount(p.discount || "");
-      setSelectedTags(p.sustainabilityTags || []);
-      setSustainabilityClaim(p.sustainabilityClaim || "");
-      setShipRegions(p.shipRegions || []);
-      setInStock(p.inStock ?? true);
-
-      const c = await getDocs(collection(db, "categories"));
-      const s = await getDocs(collection(db, "subcategories"));
-      const t = await getDocs(collection(db, "tags"));
+  /* ---------- LOAD MASTER DATA ---------- */
+  useEffect(() => {
+    async function load() {
+      const [c, s, t, v] = await Promise.all([
+        getDocs(collection(db, "categories")),
+        getDocs(collection(db, "subcategories")),
+        getDocs(collection(db, "tags")),
+        getDocs(collection(db, "vendors")),
+      ]);
 
       setCategories(c.docs.map((d) => ({ id: d.id, ...d.data() })));
       setSubCategories(s.docs.map((d) => ({ id: d.id, ...d.data() })));
       setTags(t.docs.map((d) => ({ id: d.id, ...d.data() })));
-
-      setLoading(false);
-    });
-
-    return () => unsub();
-  }, [id, router]);
+      setVendors(v.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }
+    load();
+  }, []);
 
   /* ---------- HELPERS ---------- */
   function toggle(list: string[], value: string, setter: any, max?: number) {
@@ -120,13 +100,26 @@ export default function EditProductPage() {
   /* ---------- SUBMIT ---------- */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
+    if (!user) return;
+    if (!selectedVendorId) {
+      alert("Please select a vendor.");
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      const uploaded: string[] = [];
-      for (const file of newImages) {
-        const path = `products/${user.uid}/${Date.now()}_${file.name}`;
-        uploaded.push(await uploadFileWithProgress(file, path));
+      const imageUrls: string[] = [];
+      const orderedImages = [
+        images[coverIndex],
+        ...images.filter((_, i) => i !== coverIndex),
+      ].filter(Boolean);
+
+      for (const file of orderedImages) {
+        // use admin uid for storage path, or vendor id? Let's use vendor id for consistency
+        const path = `products/${selectedVendorId}/${Date.now()}_${file.name}`;
+        const url = await uploadFileWithProgress(file, path);
+        imageUrls.push(url);
       }
 
       // map selected tag ids to names
@@ -139,71 +132,96 @@ export default function EditProductPage() {
 
       const selectedTagNames = selectedTagObjects.map((t) => t.name);
 
-      const allImages = [...existingImages, ...uploaded];
-      const orderedImages = [
-        allImages[coverIndex],
-        ...allImages.filter((_, i) => i !== coverIndex),
-      ].filter(Boolean); // remove undefined if no images
+      const vendor = vendors.find((v) => v.id === selectedVendorId);
+      const vendorName = vendor?.companyName || "Unknown Vendor";
 
-      await updateDoc(doc(db, "products", id as string), {
-        listingType,
+      await addDoc(collection(db, "products"), {
+        vendorId: selectedVendorId,
+        vendorName, 
+
         title,
         description,
+
+        listingType,
+        availableFor,
+
         categoryId,
         subCategoryId,
-        images: orderedImages,
-        availableFor,
+
+        images: imageUrls,
+
         priceType,
         price: price ? Number(price) : null,
         currency,
         moq: moq ? Number(moq) : null,
         discount,
+
+        shipRegions,
+        inStock,
+        featured: false,
+        isAd: false,
+
         sustainabilityTagIds: selectedTags,
         sustainabilityTagNames: selectedTagNames,
         sustainabilityClaim,
-        shipRegions,
-        inStock,
-        approved: false, // optional: require re-approval on edit?
+        approved: true, // admin created, so probably pre-approved?
+        status: "APPROVED",
+        views: 0,
+        lastViewedAt: null,
+
+        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      router.push("/vendor/products");
+      router.push("/admin/products");
     } catch (err) {
       console.error(err);
-      alert("Update failed");
+      alert("Failed to create listing");
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
-        Loading product…
-      </div>
-    );
-  }
-
   const uploadLabel =
-    newImages.length === 0
-      ? "Click to upload new images"
-      : newImages.map((f) => f.name).join(", ");
+    images.length === 0
+      ? "Click to upload images"
+      : images.map((f) => f.name).join(", ");
 
-  const allImages = [...existingImages, ...newImages];
-
+  /* ---------- UI ---------- */
   return (
     <main className="min-h-screen bg-gray-50 pb-10">
       <div className="max-w-full mx-auto space-y-8">
+        {/* HEADER */}
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
-            Edit Product / Service
+            Add Product / Service (Admin)
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            Update your listing details.
+            Create a product listing on behalf of a vendor.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          
+          <section className="bg-white rounded-2xl p-6 space-y-5">
+            <h2 className="section">Vendor Assignment</h2>
+            <div>
+              <label className="label">Select Vendor *</label>
+              <select
+                className="input"
+                value={selectedVendorId}
+                onChange={(e) => setSelectedVendorId(e.target.value)}
+                required
+              >
+                <option value="">Select a vendor</option>
+                {vendors.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.companyName || v.name || v.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </section>
+
           {/* BASIC INFO */}
           <section className="bg-white rounded-2xl p-6 space-y-5">
             <h2 className="section">Basic Listing Info</h2>
@@ -236,6 +254,7 @@ export default function EditProductPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 required
               />
+              <p className="help">Max 120 characters</p>
             </div>
 
             {/* Category */}
@@ -291,7 +310,7 @@ export default function EditProductPage() {
 
             {/* Images */}
             <div>
-              <label className="label">Add More Images</label>
+              <label className="label">Images</label>
 
               <label className="upload-box">
                 <input
@@ -304,8 +323,8 @@ export default function EditProductPage() {
 
                     const selected = Array.from(e.target.files);
 
-                    setNewImages((prev) => {
-                      const combined = [...prev, ...selected].slice(0, 5 - existingImages.length);
+                    setImages((prev) => {
+                      const combined = [...prev, ...selected].slice(0, 5);
                       return combined;
                     });
 
@@ -319,16 +338,15 @@ export default function EditProductPage() {
               </label>
 
               <p className="help">
-                Upload up to 5 images total. Currently have {existingImages.length} saved images.
+                Upload up to 5 images. First image will be used as cover.
               </p>
             </div>
           </section>
 
-          {allImages.length > 0 && (
+          {images.length > 0 && (
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-4">
-              {allImages.map((fileOrUrl, index) => {
-                const isExisting = index < existingImages.length;
-                const url = isExisting ? (fileOrUrl as string) : URL.createObjectURL(fileOrUrl as File);
+              {images.map((file, index) => {
+                const url = URL.createObjectURL(file);
 
                 return (
                   <div
@@ -337,18 +355,21 @@ export default function EditProductPage() {
             ${coverIndex === index ? "border-black" : "border-gray-200"}
           `}
                   >
+                    {/* IMAGE */}
                     <img
                       src={url}
                       alt={`preview-${index}`}
                       className="h-24 w-full object-cover"
                     />
 
+                    {/* COVER BADGE */}
                     {coverIndex === index && (
                       <span className="absolute top-1 left-1 text-[10px] bg-black text-white px-2 py-0.5 rounded-full">
                         Cover
                       </span>
                     )}
 
+                    {/* ACTIONS */}
                     <div className="absolute inset-x-0 bottom-0 flex justify-between bg-black/60 px-1 py-1">
                       <button
                         type="button"
@@ -361,18 +382,10 @@ export default function EditProductPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (isExisting) {
-                            setExistingImages((prev) =>
-                              prev.filter((_, i) => i !== index),
-                            );
-                          } else {
-                            const newIdx = index - existingImages.length;
-                            setNewImages((prev) =>
-                              prev.filter((_, i) => i !== newIdx),
-                            );
-                          }
+                          setImages((prev) =>
+                            prev.filter((_, i) => i !== index),
+                          );
                           if (coverIndex === index) setCoverIndex(0);
-                          else if (coverIndex > index) setCoverIndex(coverIndex - 1);
                         }}
                         className="text-[10px] text-red-300"
                       >
@@ -519,25 +532,27 @@ export default function EditProductPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={saving}
+              disabled={loading}
               className={`relative inline-flex items-center justify-center gap-2
       px-10 py-2.5 rounded-full text-sm font-semibold text-white
       transition-all duration-200
-      ${saving ? "opacity-60 cursor-not-allowed" : "hover:-translate-y-[1px]"}
+      ${loading ? "opacity-60 cursor-not-allowed" : "hover:-translate-y-[1px]"}
       bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
       shadow-[0_8px_20px_rgba(11,110,79,0.25)]
       hover:shadow-[0_12px_28px_rgba(10,76,138,0.35)]
     `}
             >
-              {saving && (
+              {loading && (
                 <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
               )}
-              <span>{saving ? "Updating..." : "Update Listing"}</span>
+
+              <span>{loading ? "Saving..." : "Create Listing"}</span>
             </button>
           </div>
         </form>
       </div>
 
+      {/* GLOBAL UI HELPERS */}
       <style jsx global>{`
         .input {
           width: 100%;

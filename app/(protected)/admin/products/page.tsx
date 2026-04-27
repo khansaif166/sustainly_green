@@ -193,13 +193,25 @@ export default function AdminProductsPage() {
   return (
     <main className="max-w-full mx-auto space-y-8">
       {/* HEADER */}
-      <section>
-        <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
-          Product Review
-        </h1>
-        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-          Review and approve vendor product listings
-        </p>
+      <section className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
+            Product Management
+          </h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+            Manage and review vendor product listings
+          </p>
+        </div>
+        <a
+          href="/admin/products/new"
+        className="inline-flex items-center justify-center
+            px-5 py-2.5 rounded-full
+            text-sm font-medium text-white!
+            bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
+            hover:opacity-90
+            disabled:opacity-50" >
+          + Add Product
+        </a>
       </section>
 
       {/* FILTER BAR */}
@@ -288,6 +300,12 @@ export default function AdminProductsPage() {
             </div>
 
             <div className="p-4 border-t flex flex-wrap gap-2">
+              <a
+                href={`/admin/products/${p.id}`}
+                className="px-3 py-1.5 rounded-full text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors"
+              >
+                Edit
+              </a>
               <button
                 onClick={() => toggleFeatured(p.id, !!p.featured)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border ${

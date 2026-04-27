@@ -130,7 +130,7 @@ export default function VendorDashboardPage() {
           text-[var(--color-ocean-blue)]
           border border-[var(--color-border)]
           hover:bg-[var(--color-ocean-blue)]
-          hover:text-white
+          hover:text-white!
           transition
         "
       >
@@ -176,7 +176,7 @@ export default function VendorDashboardPage() {
             inline-flex items-center gap-2
             px-5 py-2.5 rounded-full
             bg-[var(--color-primary-green)]
-            text-white text-sm font-medium
+            text-white! text-sm font-medium
             hover:opacity-90
             transition
           "

@@ -20,7 +20,7 @@ const AVAILABILITY = ["B2B", "B2C"];
 const PRICE_TYPES = ["Fixed Price", "Starts From", "Price on Request"];
 const SHIP_REGIONS = ["Local Only", "Countrywide", "Regional", "Worldwide"];
 
-export default function EditProductPage() {
+export default function AdminEditProductPage() {
   const { id } = useParams();
   const router = useRouter();
 
@@ -31,8 +31,11 @@ export default function EditProductPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
 
   /* ---------- FORM STATE ---------- */
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+
   const [listingType, setListingType] = useState<string>("");
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -63,15 +66,15 @@ export default function EditProductPage() {
       setUser(u);
 
       const snap = await getDoc(doc(db, "products", id as string));
-      if (!snap.exists()) return router.push("/vendor/products");
+      if (!snap.exists()) return router.push("/admin/products");
 
       const p = snap.data();
-      if (p.vendorId !== u.uid) return router.push("/vendor/products");
 
       setListingType(
         Array.isArray(p.listingType) ? p.listingType[0] : p.listingType || "",
       );
 
+      setSelectedVendorId(p.vendorId || "");
       setTitle(p.title || "");
       setCategoryId(p.categoryId || "");
       setSubCategoryId(p.subCategoryId || "");
@@ -83,18 +86,25 @@ export default function EditProductPage() {
       setCurrency(p.currency || "USD");
       setMoq(p.moq?.toString() || "");
       setDiscount(p.discount || "");
-      setSelectedTags(p.sustainabilityTags || []);
+      
+      // Support both old array formats and new ones
+      setSelectedTags(p.sustainabilityTagIds || p.sustainabilityTags || []);
+      
       setSustainabilityClaim(p.sustainabilityClaim || "");
       setShipRegions(p.shipRegions || []);
       setInStock(p.inStock ?? true);
 
-      const c = await getDocs(collection(db, "categories"));
-      const s = await getDocs(collection(db, "subcategories"));
-      const t = await getDocs(collection(db, "tags"));
+      const [c, s, t, v] = await Promise.all([
+        getDocs(collection(db, "categories")),
+        getDocs(collection(db, "subcategories")),
+        getDocs(collection(db, "tags")),
+        getDocs(collection(db, "vendors")),
+      ]);
 
       setCategories(c.docs.map((d) => ({ id: d.id, ...d.data() })));
       setSubCategories(s.docs.map((d) => ({ id: d.id, ...d.data() })));
       setTags(t.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setVendors(v.docs.map((d) => ({ id: d.id, ...d.data() })));
 
       setLoading(false);
     });
@@ -120,12 +130,17 @@ export default function EditProductPage() {
   /* ---------- SUBMIT ---------- */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!selectedVendorId) {
+      alert("Please select a vendor");
+      return;
+    }
+
     setSaving(true);
 
     try {
       const uploaded: string[] = [];
       for (const file of newImages) {
-        const path = `products/${user.uid}/${Date.now()}_${file.name}`;
+        const path = `products/${selectedVendorId}/${Date.now()}_${file.name}`;
         uploaded.push(await uploadFileWithProgress(file, path));
       }
 
@@ -145,7 +160,13 @@ export default function EditProductPage() {
         ...allImages.filter((_, i) => i !== coverIndex),
       ].filter(Boolean); // remove undefined if no images
 
+      const vendor = vendors.find((v) => v.id === selectedVendorId);
+      const vendorName = vendor?.companyName || "Unknown Vendor";
+
       await updateDoc(doc(db, "products", id as string), {
+        vendorId: selectedVendorId,
+        vendorName,
+
         listingType,
         title,
         description,
@@ -163,11 +184,10 @@ export default function EditProductPage() {
         sustainabilityClaim,
         shipRegions,
         inStock,
-        approved: false, // optional: require re-approval on edit?
         updatedAt: serverTimestamp(),
       });
 
-      router.push("/vendor/products");
+      router.push("/admin/products");
     } catch (err) {
       console.error(err);
       alert("Update failed");
@@ -196,14 +216,35 @@ export default function EditProductPage() {
       <div className="max-w-full mx-auto space-y-8">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
-            Edit Product / Service
+            Edit Product / Service (Admin)
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            Update your listing details.
+            Update listing details for a vendor.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+
+          <section className="bg-white rounded-2xl p-6 space-y-5">
+            <h2 className="section">Vendor Assignment</h2>
+            <div>
+              <label className="label">Select Vendor *</label>
+              <select
+                className="input"
+                value={selectedVendorId}
+                onChange={(e) => setSelectedVendorId(e.target.value)}
+                required
+              >
+                <option value="">Select a vendor</option>
+                {vendors.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.companyName || v.name || v.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </section>
+
           {/* BASIC INFO */}
           <section className="bg-white rounded-2xl p-6 space-y-5">
             <h2 className="section">Basic Listing Info</h2>
