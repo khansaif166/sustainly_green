@@ -9,6 +9,8 @@ import {
   orderBy,
   onSnapshot,
   Timestamp,
+  getDoc,
+  doc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -24,7 +26,7 @@ import {
   Cell,
 } from "recharts";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ClipboardList, AlertTriangle } from "lucide-react";
 
 /* ================= TYPES ================= */
 
@@ -44,14 +46,21 @@ export default function BuyerDashboardPage() {
   const router = useRouter();
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   /* ================= AUTH + REALTIME DATA ================= */
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (u) => {
+    const unsubAuth = onAuthStateChanged(auth, async (u) => {
       if (!u) {
         router.push("/login");
         return;
+      }
+
+      // Check if buyer has completed onboarding
+      const userSnap = await getDoc(doc(db, "users", u.uid));
+      if (userSnap.exists() && !userSnap.data().buyerProfileComplete) {
+        setNeedsOnboarding(true);
       }
 
       const q = query(
@@ -139,6 +148,32 @@ export default function BuyerDashboardPage() {
       </Link>
 
       <main className="space-y-8 mt-6">
+        {/* ================= ONBOARDING BANNER ================= */}
+        {needsOnboarding && (
+          <div className="rounded-3xl border border-amber-300 bg-amber-50 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-amber-900">
+                  Complete your Buyer Profile
+                </h3>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  Finish onboarding to unlock vendor discovery, send RFQs, and get matched with verified sustainable suppliers.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/buyer/onboarding"
+              className="inline-flex items-center gap-2 justify-center rounded-full bg-amber-500 text-white px-6 py-2.5 text-sm font-semibold hover:bg-amber-600 transition whitespace-nowrap"
+            >
+              <ClipboardList className="h-4 w-4" />
+              Complete Onboarding
+            </Link>
+          </div>
+        )}
+
         {/* ================= KPI ================= */}
         <section className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Kpi label="Total RFQs" value={total} />

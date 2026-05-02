@@ -18,6 +18,7 @@ import {
   X,
   Briefcase,
   Megaphone,
+  ShoppingCart,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -28,14 +29,15 @@ const nav = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Vendors", href: "/admin/vendors", icon: Building2 },
+  { name: "Buyers", href: "/admin/buyers", icon: ShoppingCart },
   { name: "Products", href: "/admin/products", icon: Package },
   { name: "Leads", href: "/admin/leads", icon: FileText },
   { name: "Categories", href: "/admin/categories", icon: Layers },
-   { name: "Blogs", href: "/admin/blogs", icon: FileText },
+  { name: "Blogs", href: "/admin/blogs", icon: FileText },
   { name: "Sub Categories", href: "/admin/subcategories", icon: ListTree },
   { name: "Tags", href: "/admin/tags", icon: Tag },
   { name: "Careers", href: "/admin/careers", icon: Briefcase },
-  {name: "Certifications", href: "/admin/certifications", icon: Users },
+  { name: "Certifications", href: "/admin/certifications", icon: Users },
   { name: "Job Applications", href: "/admin/job-applications", icon: FileText },
   { name: "Ads", href: "/admin/ads", icon: Megaphone },
   { name: "Reports", href: "/admin/reports", icon: BarChart3 },
