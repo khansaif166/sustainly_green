@@ -24,7 +24,7 @@ export const OnboardingForm = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const methods = useForm<OnboardingFormData>({
-    resolver: zodResolver(onboardingSchema),
+    resolver: zodResolver(onboardingSchema) as any,
     mode: "onChange",
     defaultValues: {
       subCategories: [],
@@ -32,6 +32,7 @@ export const OnboardingForm = () => {
       exportCapability: false,
       willingnessToOfferSamples: false,
       sdgAlignment: [],
+      declarationAgreed: false,
     }
   });
 

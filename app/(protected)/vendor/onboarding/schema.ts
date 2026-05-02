@@ -30,7 +30,7 @@ export const onboardingSchema = z.object({
   annualTurnover: z.string().min(1, "Annual turnover is required"),
   supplyCapacity: z.string().optional(),
   moq: z.string().optional(),
-  exportCapability: z.boolean().default(false),
+  exportCapability: z.boolean(),
   exportMarkets: z.string().optional(),
 
   // STEP 3: SUSTAINABILITY
@@ -55,7 +55,7 @@ export const onboardingSchema = z.object({
   awards: z.string().optional(),
   awardsFile: z.any().optional(),
   lookingForBuyersIn: z.string().optional(),
-  willingnessToOfferSamples: z.boolean().default(false),
+  willingnessToOfferSamples: z.boolean(),
   paymentTerms: z.string().optional(),
   language: z.string().optional(),
 
@@ -73,8 +73,8 @@ export const onboardingSchema = z.object({
   ghgScope3: z.string().optional(),
 
   // DECLARATION
-  declarationAgreed: z.literal(true, {
-    errorMap: () => ({ message: "You must agree to the declaration" }),
+  declarationAgreed: z.boolean().refine((val) => val === true, {
+    message: "You must agree to the declaration",
   }),
   declarationName: z.string().min(1, "Name is required"),
   declarationDate: z.string().min(1, "Date is required"),
