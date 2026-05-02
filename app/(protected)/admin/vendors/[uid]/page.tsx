@@ -1,436 +1,429 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { onboardingSchema, OnboardingFormData } from "../../../vendor/onboarding/schema";
+import { 
+  ArrowLeft, 
+  CheckCircle2, 
+  XCircle, 
+  Edit3, 
+  Save, 
+  X, 
+  ExternalLink,
+  ShieldCheck,
+  Building2,
+  User,
+  ShoppingBag,
+  Info
+} from "lucide-react";
+import { Input, Select, TextArea, MultiSelect, Toggle, FileUpload } from "../../../vendor/onboarding/_components/FormFields";
 
 export default function AdminVendorDetailsPage() {
   const router = useRouter();
   const { uid } = useParams();
 
-  const [vendorData, setVendorData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [vendorData, setVendorData] = useState<any>(null);
+
+  const methods = useForm<OnboardingFormData>({
+    resolver: zodResolver(onboardingSchema) as any,
+    mode: "onChange",
+  });
+
+  const { reset, handleSubmit, formState: { isDirty } } = methods;
 
   useEffect(() => {
     async function load() {
       if (!uid) return;
       const snap = await getDoc(doc(db, "vendors", uid as string));
       if (snap.exists()) {
-        setVendorData(snap.data());
+        const data = snap.data();
+        setVendorData(data);
+        reset(data as any);
       }
       setLoading(false);
     }
     load();
-  }, [uid]);
+  }, [uid, reset]);
 
-  async function handleApprove() {
-    setUpdating(true);
+  const handleApprove = async () => {
+    if (!uid) return;
+    setSubmitting(true);
     try {
       await updateDoc(doc(db, "vendors", uid as string), { approved: true });
       await updateDoc(doc(db, "users", uid as string), { vendorApproved: true });
       setVendorData((prev: any) => ({ ...prev, approved: true }));
-      alert("Vendor Approved successfully!");
     } catch (e) {
       alert("Error approving vendor");
     }
-    setUpdating(false);
-  }
+    setSubmitting(false);
+  };
 
-  async function handleReject() {
-    setUpdating(true);
+  const handleReject = async () => {
+    if (!uid) return;
+    setSubmitting(true);
     try {
       await updateDoc(doc(db, "vendors", uid as string), { approved: false });
       setVendorData((prev: any) => ({ ...prev, approved: false }));
-      alert("Vendor Rejected successfully!");
     } catch (e) {
       alert("Error rejecting vendor");
     }
-    setUpdating(false);
+    setSubmitting(false);
+  };
+
+  const onSubmit = async (data: OnboardingFormData) => {
+    if (!uid) return;
+    setSubmitting(true);
+    try {
+      const { certificateFile, awardsFile, ...cleanData } = data;
+      
+      await updateDoc(doc(db, "vendors", uid as string), cleanData as any);
+      setVendorData((prev: any) => ({ ...prev, ...cleanData }));
+      setIsEditing(false);
+      alert("Vendor profile updated successfully!");
+    } catch (e) {
+      console.error(e);
+      alert("Error updating vendor profile");
+    }
+    setSubmitting(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
+      </div>
+    );
   }
 
-  if (loading) return <div className="p-10 text-center">Loading Vendor Profile...</div>;
-  if (!vendorData) return <div className="p-10 text-center">Vendor not found.</div>;
+  if (!vendorData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <p className="text-gray-500 font-medium">Vendor profile not found.</p>
+        <button onClick={() => router.back()} className="mt-4 text-green-600 hover:underline">Go Back</button>
+      </div>
+    );
+  }
+
+  const SectionHeader = ({ icon: Icon, title, description }: any) => (
+    <div className="flex items-center gap-3 mb-6">
+      <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+        <Icon size={20} />
+      </div>
+      <div>
+        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        <p className="text-xs text-gray-500">{description}</p>
+      </div>
+    </div>
+  );
+
+  const DataItem = ({ label, value }: { label: string; value: any }) => (
+    <div className="space-y-1">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+      <p className="text-sm font-medium text-gray-900">{value || "—"}</p>
+    </div>
+  );
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-5xl bg-white shadow-xl">
+    <main className="min-h-screen bg-[#fafbfc] py-8 px-4 md:py-12">
+      <div className="w-full mx-auto space-y-8 px-4 md:px-8 lg:px-12">
         
-        {/* TOP HEADER */}
-        <div className="bg-[#1e7845] text-white p-6 text-center relative">
-          <button 
-            onClick={() => router.push("/admin/vendors")}
-            className="absolute left-6 top-6 text-sm underline hover:text-gray-200"
-          >
-            &larr; Back
-          </button>
-          <h1 className="text-3xl font-bold tracking-wide">SUSTAINLY ECOHUB | Vendor Business Profile</h1>
-          <p className="text-sm italic mt-2 text-green-100">
-            Admin Document Verification & Approval View
-          </p>
-        </div>
-
-        <div className="p-4 md:p-8 space-y-8">
-
-          {/* ADMIN ACTION PANEL TOP */}
-          <div className="flex flex-col md:flex-row items-center justify-between bg-gray-100 p-4 border border-gray-300 rounded-md">
-            <div>
-              <p className="font-semibold text-gray-800">Status: 
-                <span className={`ml-2 px-2 py-1 text-xs rounded-full ${vendorData.approved ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}`}>
-                  {vendorData.approved ? "APPROVED" : "PENDING"}
-                </span>
-              </p>
-              <p className="text-sm text-gray-600 mt-1">Review the business details and documents before approval.</p>
-            </div>
-            <div className="flex gap-2 mt-4 md:mt-0">
-              <button 
-                onClick={handleReject} disabled={updating}
-                className="px-6 py-2 border border-red-500 text-red-600 rounded-full font-medium hover:bg-red-50 transition"
-              >
-                Reject
-              </button>
-              {!vendorData.approved && (
-                <button 
-                  onClick={handleApprove} disabled={updating}
-                  className="px-6 py-2 bg-[#1e7845] text-white rounded-full font-medium hover:bg-[#165a34] transition shadow-md"
-                >
-                  Approve
-                </button>
-              )}
-            </div>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse border border-gray-300">
-              <tbody>
-                {/* SECTION A */}
-                <tr>
-                  <td colSpan={2} className="bg-[#1e7845] text-white font-bold px-4 py-2 uppercase">A. IDENTITY & LEGAL INFORMATION</td>
-                </tr>
-                <tr className="bg-[#666] text-white">
-                  <td className="w-[40%] px-4 py-2 font-medium border border-gray-300">Company / Brand Name</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900 font-semibold">{vendorData.companyName || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Company Registration Type</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.registrationType || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">CIN / Registration Number</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.cinRegistration || vendorData.registrationNo || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">GST Number</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.gstNumber || "-"}</td>
-                </tr>
-                <tr className="bg-[#666] text-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300">Year of Incorporation</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.yearOfIncorporation || vendorData.yearEstablished || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Registered Address</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.registeredAddress || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">City</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.city || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">State / Province</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.state || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">PIN / Postal Code</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.pinCode || "-"}</td>
-                </tr>
-                <tr className="bg-[#666] text-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300">Country</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.country || "-"}</td>
-                </tr>
-                
-                <tr>
-                  <td colSpan={2} className="bg-[#1e7845] text-white font-bold px-4 py-2 uppercase">A1. CONTACT INFORMATION</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Primary Contact Person Name</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.primaryContactName || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Designation / Role</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.designation || "-"}</td>
-                </tr>
-                <tr className="bg-[#666] text-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300">Business Email</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">
-                    <a href={`mailto:${vendorData.businessEmail}`} className="text-blue-600 underline">{vendorData.businessEmail || "-"}</a>
-                  </td>
-                </tr>
-                <tr className="bg-[#666] text-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300">WhatsApp / Mobile</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.whatsapp || vendorData.phone || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Alternate Phone</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.alternatePhone || "-"}</td>
-                </tr>
-
-                {/* SECTION B */}
-                <tr>
-                  <td colSpan={2} className="bg-[#1e7845] text-white font-bold px-4 py-2 mt-4 uppercase border-t-[16px] border-white">B. BUSINESS OVERVIEW</td>
-                </tr>
-                <tr className="bg-[#666] text-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300">Business Type</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.businessType || "-"}</td>
-                </tr>
-                <tr className="bg-[#666] text-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300">Primary Business Category</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.primaryCategory || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Sub Categories</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.subCategories || "-"}</td>
-                </tr>
-                <tr className="bg-[#666] text-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300">Company Short Description</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.shortDescription || vendorData.description || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Key Products / Services (Top 5)</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.keyProducts || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Target Industries / Buyers</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.targetIndustries || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Preferred Buyer Geography</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.preferredBuyerGeography || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">No. of Employees</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.noOfEmployees || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Annual Turnover Range (INR)</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.annualTurnover || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Supply / Production Capacity</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.supplyCapacity || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Minimum Order Quantity (MOQ)</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.moq || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Export Capability</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.exportCapability || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Export Markets</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.exportMarkets || "-"}</td>
-                </tr>
-
-                {/* SECTION C */}
-                <tr>
-                  <td colSpan={2} className="bg-[#1e7845] text-white font-bold px-4 py-2 mt-4 uppercase border-t-[16px] border-white">C. SUSTAINABILITY CREDENTIALS (Brown Lens Verification)</td>
-                </tr>
-                <tr className="bg-[#666] text-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300">Primary Sustainability Certification</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.primarySustainabilityCert || "-"}</td>
-                </tr>
-                <tr className="bg-[#666] text-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300">Issuing / Certifying Body</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.issuingBody || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Certificate Upload</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">
-                    {vendorData.certificateFileUrl ? (
-                      <a href={vendorData.certificateFileUrl} target="_blank" className="text-blue-600 underline font-medium">View Certificate Document</a>
-                    ) : (
-                      "No file uploaded"
-                    )}
-                  </td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Additional Certification 1</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.additionalCert1 || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Additional Certification 2</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.additionalCert2 || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Sustainability Practice Description</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900 whitespace-pre-wrap">{vendorData.sustainabilityPractice || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Recycled / Renewable Content %</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.recycledContent || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Product Carbon Footprint Data</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.carbonFootprint || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">EPR Registration (if applicable)</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.eprRegistration || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Social Compliance (SA8000 / SEDEX)</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.socialCompliance || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Net Zero / Carbon Neutral Commitment</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.netZeroCommitment || "-"}</td>
-                </tr>
-
-                {/* SECTION D */}
-                <tr>
-                  <td colSpan={2} className="bg-[#1e7845] text-white font-bold px-4 py-2 mt-4 uppercase border-t-[16px] border-white">D. MARKETPLACE LISTING PREFERENCES</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Listing Tier Subscription Preference</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.listingTier || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Case Studies / Testimonials?</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.caseStudies || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Awards & Recognitions</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.awards || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Awards & Recognitions IMAGE</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">
-                    {vendorData.awardsImageUrl ? (
-                      <a href={vendorData.awardsImageUrl} target="_blank" className="text-blue-600 underline font-medium">View Award Image</a>
-                    ) : (
-                      "No file uploaded"
-                    )}
-                  </td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Looking for Buyers In</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.lookingForBuyersIn || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Willing to Offer Product Samples?</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.willingnessToOfferSamples || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Payment Terms Accepted</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.paymentTerms || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Language of Communication</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.language || "-"}</td>
-                </tr>
-
-                {/* SECTION E */}
-                <tr>
-                  <td colSpan={2} className="bg-[#1e7845] text-white font-bold px-4 py-2 mt-4 uppercase border-t-[16px] border-white">E. ECO SCORE SELF-DECLARATION</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Product Lifecycle Stage Addressed</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.lifecycleStage || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Packaging — Recyclable / Compost?</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.packaging || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Energy Source for Manufacturing</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.energySource || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Water Recycling in Operations</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.waterRecycling || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Waste-to-Landfill Reduction Plan</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.wasteReduction || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">SDG Alignment</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.sdgAlignment || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Third-Party Audit Frequency</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.auditFrequency || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">Third Party Certification Body</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.certifyingBody || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">GHG Scope 1 Data Available?</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.ghgScope1 || "-"}</td>
-                </tr>
-                <tr className="bg-white">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">GHG Scope 2 Data Available?</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.ghgScope2 || "-"}</td>
-                </tr>
-                <tr className="bg-[#f5f5f5]">
-                  <td className="px-4 py-2 font-medium border border-gray-300 text-gray-800">GHG Scope 3 Data Available?</td>
-                  <td className="p-2 border border-gray-300 bg-white text-gray-900">{vendorData.ghgScope3 || "-"}</td>
-                </tr>
-
-                {/* SECTION F */}
-                <tr>
-                  <td colSpan={2} className="bg-[#1e7845] text-white font-bold px-4 py-2 mt-4 uppercase border-t-[16px] border-white">F. DECLARATION & SUBMISSION</td>
-                </tr>
-                <tr className="bg-green-50">
-                  <td colSpan={2} className="p-4 border border-gray-300 text-gray-800 text-sm">
-                    <p className="mb-4">
-                      I hereby declare that all information provided above is true and accurate. I authorise Sustainly Ecohub India Pvt Ltd to verify my sustainability credentials through the Brown Lens Framework and list my company on the Sustainly Green marketplace (www.sustainlygreen.com) subject to approval.
-                    </p>
-                    <div className="flex flex-wrap gap-4 mt-2">
-                      <div className="flex-1 min-w-[200px]">
-                        <p className="text-xs font-semibold mb-1">Authorised Signatory Name:</p>
-                        <p className="font-medium text-gray-900">{vendorData.declarationName || "—"}</p>
-                      </div>
-                      <div className="flex-1 min-w-[200px]">
-                        <p className="text-xs font-semibold mb-1">Signature:</p>
-                        <p className="font-medium text-gray-900 italic font-serif">{vendorData.declarationSignature || "—"}</p>
-                      </div>
-                      <div className="flex-1 min-w-[200px]">
-                        <p className="text-xs font-semibold mb-1">Date:</p>
-                        <p className="font-medium text-gray-900">{vendorData.declarationDate || "—"}</p>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* ADMIN ACTION PANEL BOTTOM */}
-          <div className="flex items-center justify-end gap-3 mt-8">
+        {/* Top Navigation & Status Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <button 
-              onClick={handleReject} disabled={updating}
-              className="px-8 py-3 border border-red-500 text-red-600 rounded-full font-medium hover:bg-red-50 transition"
+              onClick={() => router.push("/admin/vendors")}
+              className="p-2 hover:bg-white rounded-full transition-colors border border-transparent hover:border-gray-200"
             >
-              Reject Vendor
+              <ArrowLeft size={20} className="text-gray-600" />
             </button>
-            {!vendorData.approved && (
-              <button 
-                onClick={handleApprove} disabled={updating}
-                className="px-8 py-3 bg-[#1e7845] text-white rounded-full font-bold hover:bg-[#165a34] transition shadow-lg"
-              >
-                Approve Vendor
-              </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{vendorData.companyName}</h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                  vendorData.approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {vendorData.approved ? <CheckCircle2 size={12} /> : <Info size={12} />}
+                  {vendorData.approved ? 'Verified Vendor' : 'Pending Verification'}
+                </span>
+                <span className="text-xs text-gray-400">• Updated {vendorData.updatedAt?.seconds ? new Date(vendorData.updatedAt.seconds * 1000).toLocaleDateString() : '—'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {isEditing ? (
+              <>
+                <button 
+                  onClick={() => setIsEditing(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl font-medium transition-all"
+                >
+                  <X size={18} /> Cancel
+                </button>
+                <button 
+                  onClick={handleSubmit(onSubmit as any)}
+                  disabled={submitting}
+                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-700 transition-all disabled:opacity-50"
+                >
+                  {submitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size size={18} />}
+                  Save Changes
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all shadow-sm"
+                >
+                  <Edit3 size={18} /> Edit Profile
+                </button>
+                {!vendorData.approved && (
+                  <button 
+                    onClick={handleApprove}
+                    disabled={submitting}
+                    className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-700 transition-all disabled:opacity-50"
+                  >
+                    Approve Vendor
+                  </button>
+                )}
+                {vendorData.approved && (
+                  <button 
+                    onClick={handleReject}
+                    disabled={submitting}
+                    className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 bg-red-50 rounded-xl font-medium hover:bg-red-100 transition-all"
+                  >
+                    <XCircle size={18} /> Suspend Vendor
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
-        
-        <div className="bg-[#1e7845] text-white text-xs text-center py-2 mt-4">
-          www.sustainlygreen.com | Sustainly Ecohub India Pvt Ltd | Admin Review Mode
-        </div>
 
+        <FormProvider {...methods}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Left Column - Main Info */}
+            <div className="lg:col-span-2 space-y-8">
+              
+              {/* Identity Section */}
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                <SectionHeader 
+                  icon={User} 
+                  title="Identity & Legal" 
+                  description="Company registration and contact details" 
+                />
+                
+                {isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input name="companyName" label="Company Name *" />
+                    <Select name="registrationType" label="Registration Type *" options={[{label: "Pvt Ltd", value: "pvt-ltd"}, {label: "LLP", value: "llp"}]} />
+                    <Input name="cinRegistration" label="CIN Number *" />
+                    <Input name="gstNumber" label="GST Number *" />
+                    <Input name="businessEmail" label="Business Email *" />
+                    <Input name="whatsapp" label="WhatsApp/Mobile *" />
+                    <div className="md:col-span-2">
+                      <Input name="registeredAddress" label="Registered Address *" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
+                    <DataItem label="Company Name" value={vendorData.companyName} />
+                    <DataItem label="Registration Type" value={vendorData.registrationType} />
+                    <DataItem label="CIN Number" value={vendorData.cinRegistration} />
+                    <DataItem label="GST Number" value={vendorData.gstNumber} />
+                    <DataItem label="Incorporation Year" value={vendorData.yearOfIncorporation} />
+                    <DataItem label="Business Email" value={vendorData.businessEmail} />
+                    <DataItem label="Primary Contact" value={vendorData.primaryContactName} />
+                    <DataItem label="Designation" value={vendorData.designation} />
+                    <DataItem label="WhatsApp/Mobile" value={vendorData.whatsapp} />
+                    <div className="col-span-full">
+                      <DataItem label="Registered Address" value={`${vendorData.registeredAddress}, ${vendorData.city}, ${vendorData.state}, ${vendorData.pinCode}, ${vendorData.country}`} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Business Overview Section */}
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                <SectionHeader 
+                  icon={Building2} 
+                  title="Business Overview" 
+                  description="Operations, scale and market reach" 
+                />
+                
+                {isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Select name="businessType" label="Business Type *" options={[{label: "Manufacturer", value: "manufacturer"}, {label: "Trader", value: "trader"}]} />
+                    <Input name="primaryCategory" label="Primary Category *" />
+                    <div className="md:col-span-2">
+                      <TextArea name="shortDescription" label="Company Description *" rows={3} />
+                    </div>
+                    <MultiSelect name="keyProducts" label="Key Products" />
+                    <Input name="annualTurnover" label="Annual Turnover *" />
+                    <Input name="noOfEmployees" label="No. of Employees *" />
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
+                      <DataItem label="Business Type" value={vendorData.businessType} />
+                      <DataItem label="Primary Category" value={vendorData.primaryCategory} />
+                      <DataItem label="Annual Turnover" value={vendorData.annualTurnover} />
+                      <DataItem label="Employees" value={vendorData.noOfEmployees} />
+                      <DataItem label="Export Capability" value={vendorData.exportCapability ? 'Yes' : 'No'} />
+                      <DataItem label="Export Markets" value={vendorData.exportMarkets} />
+                    </div>
+                    <div className="pt-6 border-t border-gray-50">
+                      <DataItem label="Company Description" value={vendorData.shortDescription} />
+                    </div>
+                    <div className="pt-6 border-t border-gray-50">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Key Products / Services</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.isArray(vendorData.keyProducts) ? (
+                          vendorData.keyProducts.map((p: string) => (
+                            <span key={p} className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                              {p}
+                            </span>
+                          ))
+                        ) : vendorData.keyProducts ? (
+                          <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                            {vendorData.keyProducts}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs italic">No products listed</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sustainability Section */}
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                <SectionHeader 
+                  icon={ShieldCheck} 
+                  title="Sustainability Credentials" 
+                  description="Environmental compliance and certifications" 
+                />
+                
+                {isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input name="primarySustainabilityCert" label="Primary Certification *" />
+                    <Input name="issuingBody" label="Issuing Body *" />
+                    <div className="md:col-span-2">
+                      <TextArea name="sustainabilityPractice" label="Sustainability Description *" rows={3} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-green-50 rounded-2xl border border-green-100 gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-green-600 shadow-sm">
+                          <ShieldCheck size={20} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{vendorData.primarySustainabilityCert}</p>
+                          <p className="text-xs text-gray-500">Issued by {vendorData.issuingBody}</p>
+                        </div>
+                      </div>
+                      {vendorData.certificateFileUrl && (
+                        <a 
+                          href={vendorData.certificateFileUrl} 
+                          target="_blank" 
+                          className="flex items-center gap-2 px-4 py-2 bg-white text-green-600 text-sm font-bold rounded-xl border border-green-200 hover:bg-green-600 hover:text-white transition-all shadow-sm"
+                        >
+                          <ExternalLink size={16} /> View Certificate
+                        </a>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
+                      <DataItem label="Recycled Content %" value={vendorData.recycledContent} />
+                      <DataItem label="Carbon Footprint" value={vendorData.carbonFootprint} />
+                      <DataItem label="Social Compliance" value={vendorData.socialCompliance} />
+                    </div>
+                    <div className="pt-6 border-t border-gray-50">
+                      <DataItem label="Sustainability Practice" value={vendorData.sustainabilityPractice} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column - Sidebar Info */}
+            <div className="space-y-8">
+              
+              {/* Marketplace Preferences */}
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                <SectionHeader 
+                  icon={ShoppingBag} 
+                  title="Marketplace" 
+                  description="Preferences & listing" 
+                />
+                
+                <div className="space-y-6">
+                  <div className="p-4 bg-gray-50 rounded-2xl space-y-4">
+                    <DataItem label="Listing Tier" value={vendorData.listingTier} />
+                    <DataItem label="Language" value={vendorData.language} />
+                    <DataItem label="Payment Terms" value={vendorData.paymentTerms} />
+                  </div>
+                  
+                  {vendorData.awardsImageUrl && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Awards & Recognitions</p>
+                      <a href={vendorData.awardsImageUrl} target="_blank" className="block relative group overflow-hidden rounded-2xl border border-gray-200">
+                        <img src={vendorData.awardsImageUrl} alt="Award" className="w-full h-auto grayscale group-hover:grayscale-0 transition-all duration-500" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <ExternalLink className="text-white" />
+                        </div>
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Verification Checklist (Non-functional, for UI) */}
+              <div className="bg-gray-900 rounded-3xl p-8 text-white shadow-xl">
+                <h3 className="text-lg font-bold mb-4">Verification Checklist</h3>
+                <div className="space-y-4">
+                  {[
+                    { label: "Valid GST/CIN Registered", check: !!vendorData.gstNumber },
+                    { label: "Sustainability Certificate Provided", check: !!vendorData.certificateFileUrl },
+                    { label: "Contact Details Verified", check: !!vendorData.whatsapp },
+                    { label: "Eco-Score Evaluation", check: vendorData.approved },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${item.check ? 'bg-green-500' : 'bg-gray-700'}`}>
+                        <CheckCircle2 size={14} />
+                      </div>
+                      <span className={`text-sm ${item.check ? 'text-white' : 'text-gray-400'}`}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                {!vendorData.approved && (
+                  <div className="mt-8 pt-8 border-t border-gray-800">
+                    <p className="text-xs text-gray-400 mb-4">Once you approve, the vendor will be notified and their profile will be live on the marketplace.</p>
+                    <button 
+                      onClick={handleApprove}
+                      disabled={submitting}
+                      className="w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all active:scale-95"
+                    >
+                      Approve & Go Live
+                    </button>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </FormProvider>
       </div>
     </main>
   );

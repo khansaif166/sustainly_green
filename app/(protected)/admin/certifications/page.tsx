@@ -1,278 +1,64 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  orderBy,
-  query,
-} from "firebase/firestore";
+import React, { useState } from "react";
+import { Tabs } from "./_components/UI";
+import { RequestsTab } from "./_components/RequestsTab";
+import { MasterDataTab } from "./_components/MasterDataTab";
+import { Toaster } from "sonner";
+import { ShieldCheck, Database, Building2 } from "lucide-react";
 
-/* ================= TYPES ================= */
+export default function AdminCertificationsPage() {
+  const [activeTab, setActiveTab] = useState("my-certs");
 
-type CertificationLead = {
-  id: string;
-  companyName?: string;
-  email?: string;
-  phone?: string;
-  certificationName?: string;
-  contactPerson?: string;
-  designation?: string;
-  employees?: string;
-  locations?: string;
-  timeline?: string;
-  businessScope?: string;
-  previousCertification?: string;
-  message?: string;
-  status?: string;
-};
-
-/* ================= PAGE ================= */
-
-export default function AdminCertifications() {
-
-  const [data,setData] =
-    useState<CertificationLead[]>([]);
-
-  const [loading,setLoading] =
-    useState(true);
-
-  useEffect(()=>{
-    load();
-  },[]);
-
-  /* ================= LOAD ================= */
-
-  async function load(){
-
-    /* certification master */
-    const certSnap =
-      await getDocs(
-        collection(db,"certifications_master")
-      );
-
-    const certMap:any = {};
-
-    certSnap.docs.forEach(d=>{
-      certMap[d.id] = d.data().name;
-    });
-
-    /* requests */
-    const snap = await getDocs(
-      query(
-        collection(db,"certification_requests"),
-        orderBy("createdAt","desc")
-      )
-    );
-
-    setData(
-      snap.docs.map(d=>{
-        const r:any = d.data();
-
-        return{
-          id:d.id,
-          ...r,
-          certificationName:
-            certMap[r.certificationId] || "—",
-          status:r.status || "NEW"
-        };
-      })
-    );
-
-    setLoading(false);
-  }
-
-  /* ================= STATUS STYLE ================= */
-
-  function statusStyle(status:string){
-
-    if(status==="APPROVED")
-      return "bg-emerald-100 text-emerald-700";
-
-    if(status==="REJECTED")
-      return "bg-red-100 text-red-700";
-
-    return "bg-yellow-100 text-yellow-700";
-  }
-
-  /* ================= UI ================= */
+  const tabs = [
+    { id: "my-certs", label: "My Certifications", icon: ShieldCheck },
+    { id: "cert-master", label: "Certification Master", icon: Database },
+    { id: "cert-bodies", label: "Certifying Bodies", icon: Building2 },
+  ];
 
   return (
-    <div className="p-6 space-y-6">
+    <main className="min-h-screen bg-[#fafbfc] py-8 px-4 md:py-12">
+      <Toaster position="top-right" richColors />
+      
+      {/* Background Decor */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div className="absolute top-0 right-0 w-[50%] h-[50%] bg-green-50 rounded-full blur-3xl opacity-30" />
+        <div className="absolute bottom-0 left-0 w-[50%] h-[50%] bg-blue-50 rounded-full blur-3xl opacity-30" />
+      </div>
 
-      <h1 className="text-2xl font-semibold">
-        Certification Requests
-      </h1>
-
-      {/* GRID */}
-      <div className="
-        grid
-        gap-6
-        md:grid-cols-2
-        xl:grid-cols-3
-      ">
-
-        {loading && (
-          <div className="col-span-full text-center py-20 text-gray-500">
-            Loading certification requests...
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Certification Hub</h1>
+            <p className="text-sm text-gray-500">Manage sustainability credentials and verification master data.</p>
           </div>
-        )}
-
-        {!loading && data.map(r=>(
           
-          <div
-            key={r.id}
-            className="
-              bg-white
-              border border-[var(--color-border)]
-              rounded-3xl
-              shadow-sm
-              hover:shadow-md
-              transition
-              flex flex-col
-              justify-between
-            "
-          >
+          <Tabs 
+            tabs={tabs} 
+            activeTab={activeTab} 
+            onTabChange={setActiveTab} 
+          />
+        </div>
 
-            {/* ================= HEADER ================= */}
-            <div className="p-6 space-y-5">
+        {/* Tab Content */}
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {activeTab === "my-certs" && <RequestsTab />}
+          {activeTab === "cert-master" && (
+            <MasterDataTab collectionName="certificationsMaster" title="Certification" />
+          )}
+          {activeTab === "cert-bodies" && (
+            <MasterDataTab collectionName="certifyingBodies" title="Certifying Body" />
+          )}
+        </div>
 
-              <div className="flex justify-between items-start">
-
-                <div>
-                  <p className="text-lg font-semibold">
-                    {r.companyName}
-                  </p>
-
-                  <p className="text-sm text-gray-500">
-                    {r.email}
-                  </p>
-
-                  <p className="text-xs text-gray-400">
-                    {r.phone || "—"}
-                  </p>
-                </div>
-
-                <span
-                  className={`
-                    px-3 py-1
-                    rounded-full
-                    text-xs
-                    font-semibold
-                    ${statusStyle(r.status!)}
-                  `}
-                >
-                  {r.status}
-                </span>
-
-              </div>
-
-              {/* CERTIFICATION */}
-              <span className="
-                inline-block
-                px-3 py-1
-                rounded-full
-                text-xs
-                font-medium
-                bg-blue-100
-                text-blue-700
-              ">
-                {r.certificationName}
-              </span>
-
-
-              {/* ================= INFO GRID ================= */}
-              <div className="
-                grid
-                grid-cols-2
-                gap-4
-                text-sm
-              ">
-                <Info label="Contact" value={r.contactPerson}/>
-                <Info label="Designation" value={r.designation}/>
-                <Info label="Employees" value={r.employees}/>
-                <Info label="Locations" value={r.locations}/>
-                <Info label="Timeline" value={r.timeline}/>
-                <Info label="Previous Cert." value={r.previousCertification}/>
-              </div>
-
-              {/* BUSINESS */}
-              <Block
-                title="Business Scope"
-                value={r.businessScope}
-              />
-
-              {/* NOTES */}
-              <Block
-                title="Additional Notes"
-                value={r.message}
-              />
-
-            </div>
-
-          </div>
-
-        ))}
-
+        {/* Footer info */}
+        <div className="text-center pt-12 border-t border-gray-100/50">
+          <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">
+            Sustainly Ecohub • Admin Control Panel
+          </p>
+        </div>
       </div>
-
-    </div>
-  );
-}
-
-/* ================= COMPONENTS ================= */
-
-function Info({
-  label,
-  value
-}:{
-  label:string;
-  value?:string;
-}){
-
-  return(
-    <div className="
-      bg-gray-50
-      rounded-xl
-      p-3
-    ">
-      <p className="text-xs text-gray-500">
-        {label}
-      </p>
-
-      <p className="font-medium">
-        {value || "—"}
-      </p>
-    </div>
-  );
-}
-
-function Block({
-  title,
-  value
-}:{
-  title:string;
-  value?:string;
-}){
-
-  if(!value) return null;
-
-  return(
-    <div>
-      <p className="text-xs text-gray-500 mb-1">
-        {title}
-      </p>
-
-      <div className="
-        bg-gray-50
-        rounded-xl
-        p-3
-        text-sm
-        text-gray-700
-      ">
-        {value}
-      </div>
-    </div>
+    </main>
   );
 }

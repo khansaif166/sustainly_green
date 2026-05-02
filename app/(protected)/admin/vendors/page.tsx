@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   CheckCircle,
@@ -9,40 +9,43 @@ import {
   ExternalLink,
   Search,
   Filter,
+  Trash2,
 } from "lucide-react";
 
 /* ================= TYPES ================= */
 
 type Vendor = {
+  website: string | undefined;
   uid: string;
-
   companyName: string;
-  registrationNo?: string;
-  businessType: string;
+  registrationType?: string;
+  cinRegistration?: string;
+  gstNumber?: string;
+  yearOfIncorporation?: string;
+  
+  businessType?: string;
   primaryCategory?: string;
-
+  subCategories?: string[];
+  
   country: string;
   city: string;
+  state?: string;
+  pinCode?: string;
 
   businessEmail?: string;
-  phone?: string;
+  whatsapp?: string;
+  primaryContactName?: string;
+  designation?: string;
 
-  hasCertifications?: boolean;
-  certifications?: string[];
-  certificateFiles?: string[];
+  primarySustainabilityCert?: string;
+  issuingBody?: string;
+  certificateFileUrl?: string;
 
-  description?: string;
-  yearEstablished?: string;
-  website?: string;
-
-  socialLinks?: {
-    linkedin?: string;
-    instagram?: string;
-    twitter?: string;
-  };
+  shortDescription?: string;
+  annualTurnover?: string;
+  noOfEmployees?: string;
 
   logoUrl?: string;
-
   approved: boolean;
 };
 
@@ -78,6 +81,13 @@ export default function AdminVendorsPage() {
   async function rejectVendor(uid: string) {
     await updateDoc(doc(db, "vendors", uid), { approved: false });
     fetchVendors();
+  }
+
+  async function deleteVendor(uid: string) {
+    if (confirm("Are you sure you want to delete this vendor? This will remove their business profile completely.")) {
+      await deleteDoc(doc(db, "vendors", uid));
+      fetchVendors();
+    }
   }
 
   /* ================= FILTER ================= */
@@ -226,45 +236,39 @@ export default function AdminVendorsPage() {
                 <b>Category:</b> {v.primaryCategory || "—"}
               </p>
               <p>
-                <b>Established:</b> {v.yearEstablished || "—"}
+                <b>Established:</b> {v.yearOfIncorporation || "—"}
               </p>
               <p>
-                <b>Reg. No:</b> {v.registrationNo || "—"}
+                <b>CIN:</b> {v.cinRegistration || "—"}
               </p>
               <p>
-                <b>Phone:</b> {v.phone || "—"}
+                <b>GST:</b> {v.gstNumber || "—"}
+              </p>
+              <p>
+                <b>Contact:</b> {v.whatsapp || "—"}
+              </p>
+              <p>
+                <b>Turnover:</b> {v.annualTurnover || "—"}
               </p>
 
-              {/* Certifications */}
-              {v.hasCertifications && v.certifications?.length ? (
-                <div>
-                  <p className="font-medium text-xs mb-1">Certifications</p>
-                  <div className="flex flex-wrap gap-2">
-                    {v.certifications?.map((c, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700"
+              {/* Sustainability Cert */}
+              {v.primarySustainabilityCert ? (
+                <div className="pt-2 border-t border-gray-50">
+                  <p className="font-medium text-xs mb-1 text-gray-900">Sustainability Certificate</p>
+                  <div className="flex flex-col gap-2">
+                    <span className="px-2 py-1 text-xs rounded-lg bg-green-50 text-green-700 border border-green-100 self-start">
+                      {v.primarySustainabilityCert}
+                    </span>
+                    {v.certificateFileUrl && (
+                      <a
+                        href={v.certificateFileUrl}
+                        target="_blank"
+                        className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                       >
-                        {c}
-                      </span>
-                    ))}
+                        <ExternalLink size={12} /> View Document
+                      </a>
+                    )}
                   </div>
-                </div>
-              ) : null}
-
-              {/* Certificate files */}
-              {v.certificateFiles?.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {v.certificateFiles.map((file, i) => (
-                    <a
-                      key={i}
-                      href={file}
-                      target="_blank"
-                      className="text-xs text-[var(--color-ocean-blue)] underline"
-                    >
-                      View Certificate {i + 1}
-                    </a>
-                  ))}
                 </div>
               ) : null}
 
@@ -278,7 +282,7 @@ export default function AdminVendorsPage() {
                 </a>
               )}
 
-              {v.description && <p className="line-clamp-3">{v.description}</p>}
+              {v.shortDescription && <p className="line-clamp-3 italic text-xs">{v.shortDescription}</p>}
             </div>
 
             {/* ACTIONS */}
@@ -322,6 +326,19 @@ export default function AdminVendorsPage() {
               >
                 <XCircle className="h-4 w-4" />
                 Reject
+              </button>
+
+              <button
+                onClick={() => deleteVendor(v.uid)}
+                className="
+                  inline-flex items-center justify-center
+                  w-10 h-10 rounded-full
+                  bg-red-50 text-red-600 hover:bg-red-100
+                  transition-colors border border-red-100
+                "
+                title="Delete Vendor"
+              >
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           </div>
