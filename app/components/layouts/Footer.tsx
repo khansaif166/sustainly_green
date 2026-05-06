@@ -11,7 +11,7 @@ export default function Footer() {
             India's first verified B2B marketplace for sustainable sourcing — connecting ESG-certified vendors with corporate buyers under a zero-greenwashing standard.
           </p>
           <div className="footer-badges">
-            <span className="fbadge">Brown Lens</span>
+            <span className="fbadge">Green Lens</span>
             <span className="fbadge">B2B Only</span>
             <span className="fbadge">DPDP Compliant</span>
           </div>
@@ -38,7 +38,7 @@ export default function Footer() {
           <h5>For Vendors</h5>
           <Link href="/register?role=VENDOR">List Your Business</Link>
           <Link href="/pricing">Pricing Plans</Link>
-          <Link href="/brown-lens">Brown Lens Process</Link>
+          <Link href="/Green-lens">Green Lens Process</Link>
           <Link href="/eco-score">Eco Score Guide</Link>
           <Link href="/help">Vendor FAQ</Link>
         </div>
@@ -47,7 +47,7 @@ export default function Footer() {
         <div className="footer-col">
           <h5>Platform</h5>
           <Link href="/about">About Us</Link>
-          <Link href="/brown-lens">Brown Lens</Link>
+          <Link href="/Green-lens">Green Lens</Link>
           <Link href="/blogs">Blog</Link>
           <Link href="/careers">Careers</Link>
           <Link href="/contact">Contact Us</Link>

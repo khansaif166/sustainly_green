@@ -42,8 +42,7 @@ type Vendor = {
   certificateFileUrl?: string;
 
   shortDescription?: string;
-  annualTurnover?: string;
-  noOfEmployees?: string;
+
 
   logoUrl?: string;
   approved: boolean;
@@ -246,9 +245,6 @@ export default function AdminVendorsPage() {
               </p>
               <p>
                 <b>Contact:</b> {v.whatsapp || "—"}
-              </p>
-              <p>
-                <b>Turnover:</b> {v.annualTurnover || "—"}
               </p>
 
               {/* Sustainability Cert */}

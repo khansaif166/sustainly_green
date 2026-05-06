@@ -33,6 +33,7 @@ export const OnboardingForm = () => {
       willingnessToOfferSamples: false,
       sdgAlignment: [],
       declarationAgreed: false,
+      logoFile: null,
     }
   });
 
@@ -68,7 +69,7 @@ export const OnboardingForm = () => {
     } else if (step === 2) {
       fieldsToValidate = [
         "businessType", "primaryCategory", "shortDescription", 
-        "keyProducts", "noOfEmployees", "annualTurnover"
+        "keyProducts"
       ];
     } else if (step === 3) {
       fieldsToValidate = [
@@ -85,8 +86,14 @@ export const OnboardingForm = () => {
     setSubmitting(true);
 
     try {
+      let logoUrl = "";
       let certUrl = "";
       let awardsUrl = "";
+
+      if (data.logoFile instanceof File) {
+        const path = `vendors/${user.uid}/logos/${Date.now()}_${data.logoFile.name}`;
+        logoUrl = await uploadFileWithProgress(data.logoFile, path);
+      }
 
       if (data.certificateFile instanceof File) {
         const path = `vendors/${user.uid}/certs/${Date.now()}_${data.certificateFile.name}`;
@@ -98,11 +105,12 @@ export const OnboardingForm = () => {
         awardsUrl = await uploadFileWithProgress(data.awardsFile, path);
       }
 
-      const { certificateFile, awardsFile, ...cleanData } = data;
+      const { logoFile, certificateFile, awardsFile, ...cleanData } = data;
 
       const payload = {
         uid: user.uid,
         ...cleanData,
+        ...(logoUrl && { logoUrl }),
         ...(certUrl && { certificateFileUrl: certUrl }),
         ...(awardsUrl && { awardsImageUrl: awardsUrl }),
         approved: false,

@@ -743,7 +743,7 @@ html, body {
 .cm { color: rgba(255,255,255,0.3); font-size: 13px; }
 
 /* ═══════════════════════════════════════
-   BROWN LENS
+   Green LENS
 ═══════════════════════════════════════ */
 .bl-sec { background: var(--off); }
 .bl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }

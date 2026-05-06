@@ -70,7 +70,7 @@ type Vendor = {
   category?: string;
   ecoScore?: number;
   ecoTier?: string; // platinum | gold | silver | bronze
-  brownLensScore?: number; // out of 5
+  GreenLensScore?: number; // out of 5
   certifications?: string[];
   location?: string;
   logoText?: string;
@@ -467,7 +467,7 @@ export default function HomePage() {
       category: "Renewable Energy · Solar EPC & Systems",
       ecoScore: 94,
       ecoTier: "platinum",
-      brownLensScore: 5,
+      GreenLensScore: 5,
       certifications: ["ISO 14001", "BEE Certified", "MNRE Approved"],
       location: "Chennai, TN",
       logoText: "SE",
@@ -478,7 +478,7 @@ export default function HomePage() {
       category: "Sustainable Packaging · Recycled Materials",
       ecoScore: 81,
       ecoTier: "gold",
-      brownLensScore: 4,
+      GreenLensScore: 4,
       certifications: ["EPR Compliant", "FSC Certified", "GRS Certified"],
       location: "Pune, MH",
       logoText: "GP",
@@ -489,7 +489,7 @@ export default function HomePage() {
       category: "Water Management · ETP & STP Systems",
       ecoScore: 78,
       ecoTier: "gold",
-      brownLensScore: 4,
+      GreenLensScore: 4,
       certifications: ["ISO 9001", "CPCB Approved", "NABL Tested"],
       location: "Bengaluru, KA",
       logoText: "AE",
@@ -520,7 +520,7 @@ export default function HomePage() {
   {
     num: "02",
     icon: <HiBeaker size={22} />,
-    title: "Brown Lens review",
+    title: "Green Lens review",
     desc: "Our team verifies your sustainability claims across all 5 criteria before your listing goes live.",
   },
   {
@@ -575,7 +575,7 @@ const howCertSteps = [
     num: "02",
     icon: <HiLink size={22} />,
     title: "Integrate standards",
-    desc: "Your certification criteria are mapped and embedded into our Brown Lens verification framework.",
+    desc: "Your certification criteria are mapped and embedded into our Green Lens verification framework.",
   },
   {
     num: "03",
@@ -1170,7 +1170,7 @@ const howCertSteps = [
                   strokeLinejoin="round"
                 />
               </svg>
-              <b>Brown Lens Verified</b> — Anti-Greenwashing Standard
+              <b>Green Lens Verified</b> — Anti-Greenwashing Standard
             </>,
             <>
               <svg viewBox="0 0 14 14" fill="none">
@@ -1332,7 +1332,7 @@ const howCertSteps = [
                 Top-rated <b>verified suppliers</b>
               </h2>
               <p className="sec-sub">
-                Hand-picked vendors who passed all 5 Brown Lens criteria. Ready
+                Hand-picked vendors who passed all 5 Green Lens criteria. Ready
                 for corporate RFQs.
               </p>
             </div>
@@ -1524,14 +1524,14 @@ const howCertSteps = [
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════ BROWN LENS ═══════════════════════════════════════ */}
+      {/* ═══════════════════════════════════════ Green LENS ═══════════════════════════════════════ */}
       <section className="sec bl-sec">
         <div className="container">
           <div className="sec-head-row">
             <div>
               <div className="sec-eye">Proprietary Standard</div>
               <h2 className="sec-h">
-                The <b>Brown Lens</b> Framework
+                The <b>Green Lens</b> Framework
               </h2>
               <p className="sec-sub">
                 5 criteria. Pass all or don't list. The only anti-greenwashing
@@ -1574,11 +1574,11 @@ const howCertSteps = [
             </div>
             <div>
               <div className="bl-panel">
-                <div className="bl-panel-badge">🔬 Brown Lens Verified</div>
+                <div className="bl-panel-badge">🔬 Green Lens Verified</div>
                 <h3>Built to end greenwashing in B2B procurement</h3>
                 <p>
                   Most platforms accept anyone who claims to be sustainable.
-                  Brown Lens was built to change that — named after the
+                  Green Lens was built to change that — named after the
                   principle of seeing through the green surface to what's
                   actually underneath.
                 </p>
@@ -1586,8 +1586,8 @@ const howCertSteps = [
                   Pass all 4 criteria, get verified. Fail even one — you
                   don't list. No exceptions. No workarounds.
                 </p>
-                <Link href="/brown-lens" className="bl-cta">
-                  <span>Apply for Brown Lens Verification</span>
+                <Link href="/Green-lens" className="bl-cta">
+                  <span>Apply for Green Lens Verification</span>
                   <span className="bl-cta-arr">→</span>
                 </Link>
               </div>
@@ -1615,7 +1615,7 @@ const howCertSteps = [
                 role: "Head of Procurement, Tata Projects",
                 type: "Buyer",
                 quote:
-                  "Reduced our sustainable sourcing research time by 60%. The Brown Lens verification means we don't have to do our own due diligence on every claim.",
+                  "Reduced our sustainable sourcing research time by 60%. The Green Lens verification means we don't have to do our own due diligence on every claim.",
               },
               {
                 initials: "PM",
@@ -1719,7 +1719,7 @@ const howCertSteps = [
                 feats: [
                   "Unlimited product listings",
                   "Sustainly Verified Seal",
-                  "Brown Lens Review",
+                  "Green Lens Review",
                   "6 images per listing",
                   "Video upload per listing",
                   "Featured listings",
@@ -1746,7 +1746,7 @@ const howCertSteps = [
                 feats: [
                   "Unlimited product listings",
                   "Sustainly Verified Seal",
-                  "Brown Lens Review",
+                  "Green Lens Review",
                   "10 images per listing",
                   "Unlimited video uploads",
                   "Featured listings",

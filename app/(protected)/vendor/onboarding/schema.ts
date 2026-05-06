@@ -3,6 +3,7 @@ import { z } from "zod";
 export const onboardingSchema = z.object({
   // STEP 1: IDENTITY & CONTACT
   companyName: z.string().min(1, "Company Name is required"),
+  logoFile: z.any().optional(),
   registrationType: z.string().min(1, "Registration Type is required"),
   cinRegistration: z.string().min(1, "CIN is required"),
   gstNumber: z.string().min(1, "GST is required"),
@@ -26,8 +27,6 @@ export const onboardingSchema = z.object({
   keyProducts: z.array(z.string()).max(5, "Max 5 key products"),
   targetIndustries: z.string().optional(),
   preferredBuyerGeography: z.string().optional(),
-  noOfEmployees: z.string().min(1, "Number of employees is required"),
-  annualTurnover: z.string().min(1, "Annual turnover is required"),
   supplyCapacity: z.string().optional(),
   moq: z.string().optional(),
   exportCapability: z.boolean(),

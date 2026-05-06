@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Edit3, Save, X, Building2, BarChart3,
-  Leaf, ShoppingBag, CheckCircle2, Clock, ChevronDown,
-  ChevronUp, User, AlertTriangle,
+  ChevronUp, ChevronDown, User, AlertTriangle, Upload, Image as ImageIcon,
+  ArrowLeft, BarChart3, Leaf, ShoppingBag, Clock, CheckCircle2, Save, Edit3, X, Building2
 } from "lucide-react";
+import { uploadFileWithProgress } from "@/lib/storage";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function clean<T extends object>(obj: T): Partial<T> {
@@ -124,6 +124,100 @@ function BoolBadge({ value }: { value: boolean }) {
   );
 }
 
+function BoolField({ label, value, editing, onChange }: {
+  label: string; value: boolean; editing: boolean; onChange?: (v: boolean) => void;
+}) {
+  if (!editing) {
+    return (
+      <div className="space-y-0.5">
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+        <BoolBadge value={value} />
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-1">
+      <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={() => onChange?.(true)} className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition ${value ? "bg-green-100 text-green-700 border border-green-200" : "bg-gray-50 text-gray-500 hover:bg-gray-100 border border-transparent"}`}>Yes</button>
+        <button type="button" onClick={() => onChange?.(false)} className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition ${!value ? "bg-gray-200 text-gray-700 border border-gray-300" : "bg-gray-50 text-gray-500 hover:bg-gray-100 border border-transparent"}`}>No</button>
+      </div>
+    </div>
+  );
+}
+
+function TagsField({ label, items = [], max = 10, editing, onChange, placeholder = "Type and press enter...", options }: {
+  label: string; items?: string[]; max?: number; editing: boolean; onChange?: (v: string[]) => void; placeholder?: string; options?: {label: string, value: string}[];
+}) {
+  const [inputValue, setInputValue] = useState("");
+  
+  if (!editing) {
+    const safeItems = Array.isArray(items) ? items : items ? [String(items)] : [];
+    return (
+      <div className="space-y-0.5">
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+        <Tags items={safeItems} />
+      </div>
+    );
+  }
+  
+  const safeItems = Array.isArray(items) ? items : items ? [String(items)] : [];
+
+  const handleAdd = (val: string) => {
+    const trimmed = val.trim();
+    if (trimmed && !safeItems.includes(trimmed) && safeItems.length < max) {
+      onChange?.([...safeItems, trimmed]);
+      setInputValue("");
+    }
+  };
+  
+  const handleRemove = (tag: string) => {
+    onChange?.(safeItems.filter(t => t !== tag));
+  };
+  
+  return (
+    <div className="space-y-1">
+      <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{label} (Max {max})</label>
+      <div className="min-h-[45px] flex flex-wrap gap-2 p-2 bg-white border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-green-500/20 focus-within:border-green-500 transition-all">
+        {safeItems.map(t => (
+          <span key={t} className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-lg border border-green-100">
+            {options ? (options.find(o => o.value === t)?.label || t) : t}
+            <button type="button" onClick={() => handleRemove(t)} className="hover:text-green-900"><X size={12} /></button>
+          </span>
+        ))}
+        {safeItems.length < max && (
+          options ? (
+            <select
+              value=""
+              onChange={(e) => handleAdd(e.target.value)}
+              className="flex-1 outline-none text-sm text-gray-900 min-w-[100px] bg-transparent appearance-none cursor-pointer"
+            >
+              <option value="" disabled>{placeholder}</option>
+              {options.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          ) : (
+            <input 
+              type="text" 
+              value={inputValue} 
+              onChange={e => setInputValue(e.target.value)} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAdd(inputValue);
+                }
+              }} 
+              placeholder={safeItems.length === 0 ? placeholder : ""}
+              className="flex-1 outline-none text-sm text-gray-900 min-w-[100px]" 
+            />
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function VendorProfilePage() {
   const router = useRouter();
@@ -132,8 +226,21 @@ export default function VendorProfilePage() {
   const [editing, setEditing] = useState(false);
   const [vendorId, setVendorId] = useState("");
   const [approved, setApproved] = useState(false);
-  const [data, setData] = useState<any>({});
-  const [draft, setDraft] = useState<any>({});
+  const [data, setData] = useState<any>(null);
+  const [draft, setDraft] = useState<any>(null);
+  const [cats, setCats] = useState<any[]>([]);
+  const [subCats, setSubCats] = useState<any[]>([]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    async function fetchCats() {
+      const cSnap = await getDocs(collection(db, "categories"));
+      const sSnap = await getDocs(collection(db, "subcategories"));
+      setCats(cSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setSubCats(sSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }
+    fetchCats();
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -153,19 +260,26 @@ export default function VendorProfilePage() {
   }, [router]);
 
   // flat setter — handles both top-level and any field path
-  const set = (key: string, value: string) =>
+  const set = (key: string, value: any) =>
     setDraft((prev: any) => ({ ...prev, [key]: value }));
 
-  const f = (key: string): string =>
+  const f = (key: string): any =>
     (editing ? draft : data)?.[key] ?? "";
 
   const handleSave = async () => {
     if (!vendorId) return;
     setSaving(true);
     try {
-      const payload = clean({ ...draft, updatedAt: serverTimestamp() });
+      let logoUrl = draft.logoUrl || "";
+      if (logoFile) {
+        const path = `vendors/${vendorId}/logos/${Date.now()}_${logoFile.name}`;
+        logoUrl = await uploadFileWithProgress(logoFile, path);
+      }
+
+      const payload = clean({ ...draft, logoUrl, updatedAt: serverTimestamp() });
       await setDoc(doc(db, "vendors", vendorId), payload, { merge: true });
-      setData(draft);
+      setData({ ...draft, logoUrl });
+      setLogoFile(null);
       setEditing(false);
     } catch (err) {
       console.error(err);
@@ -175,7 +289,7 @@ export default function VendorProfilePage() {
     }
   };
 
-  const handleCancel = () => { setDraft(data); setEditing(false); };
+  const handleCancel = () => { setDraft(data); setLogoFile(null); setEditing(false); };
 
   if (loading) {
     return (
@@ -218,8 +332,20 @@ export default function VendorProfilePage() {
       {/* Header card */}
       <div className="rounded-3xl bg-white border border-gray-100 shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center">
-            <Building2 className="h-7 w-7 text-green-600" />
+          <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center overflow-hidden border border-gray-100 shadow-sm relative group">
+            {logoFile ? (
+              <img src={URL.createObjectURL(logoFile)} alt="New Logo" className="w-full h-full object-cover" />
+            ) : data.logoUrl ? (
+              <img src={data.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <Building2 className="h-8 w-8 text-green-600" />
+            )}
+            {editing && (
+              <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <Upload size={20} className="text-white" />
+                <input type="file" className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && setLogoFile(e.target.files[0])} />
+              </label>
+            )}
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">{data.companyName || "Vendor Profile"}</h1>
@@ -293,9 +419,7 @@ export default function VendorProfilePage() {
       <Section title="Business Overview" icon={BarChart3} color="bg-purple-50 text-purple-600">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <Field label="Business Type" value={f("businessType")} editing={editing} onChange={v => set("businessType", v)} options={BIZ_TYPES} />
-          <Field label="Primary Category" value={f("primaryCategory")} editing={editing} onChange={v => set("primaryCategory", v)} />
-          <Field label="No. of Employees" value={f("noOfEmployees")} editing={editing} onChange={v => set("noOfEmployees", v)} />
-          <Field label="Annual Turnover" value={f("annualTurnover")} editing={editing} onChange={v => set("annualTurnover", v)} />
+          <Field label="Primary Category" value={f("primaryCategory")} editing={editing} onChange={v => set("primaryCategory", v)} options={cats.map(c => ({ label: c.name, value: c.name }))} />
           <Field label="Supply Capacity" value={f("supplyCapacity")} editing={editing} onChange={v => set("supplyCapacity", v)} />
           <Field label="MOQ" value={f("moq")} editing={editing} onChange={v => set("moq", v)} />
           <Field label="Target Industries" value={f("targetIndustries")} editing={editing} onChange={v => set("targetIndustries", v)} />
@@ -304,19 +428,30 @@ export default function VendorProfilePage() {
         </div>
 
         <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Sub-Categories</p>
-            <Tags items={data.subCategories} />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Key Products</p>
-            <Tags items={data.keyProducts} />
-          </div>
+          <TagsField 
+            label="Sub-Categories" 
+            items={f("subCategories") || []} 
+            max={3}
+            editing={editing} 
+            onChange={v => set("subCategories", v)} 
+            placeholder="Select a sub-category..."
+            options={subCats.filter(s => {
+              const selectedCat = cats.find(c => c.name === f("primaryCategory"));
+              return selectedCat ? s.categoryId === selectedCat.id : true;
+            }).map(s => ({ label: s.name, value: s.name }))}
+          />
+          <TagsField 
+            label="Key Products" 
+            items={f("keyProducts") || []} 
+            max={5}
+            editing={editing} 
+            onChange={v => set("keyProducts", v)} 
+            placeholder="Type and press Enter..."
+          />
         </div>
 
         <div className="mt-4">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Export Capability</p>
-          <BoolBadge value={!!data.exportCapability} />
+          <BoolField label="Export Capability" value={!!f("exportCapability")} editing={editing} onChange={v => set("exportCapability", v)} />
         </div>
 
         <div className="mt-5 pt-5 border-t border-gray-100">
@@ -352,8 +487,7 @@ export default function VendorProfilePage() {
           <Field label="Awards & Recognitions" value={f("awards")} editing={editing} onChange={v => set("awards", v)} />
         </div>
         <div className="mt-4">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Willing to Offer Samples</p>
-          <BoolBadge value={!!data.willingnessToOfferSamples} />
+          <BoolField label="Willing to Offer Samples" value={!!f("willingnessToOfferSamples")} editing={editing} onChange={v => set("willingnessToOfferSamples", v)} />
         </div>
       </Section>
 
@@ -372,13 +506,12 @@ export default function VendorProfilePage() {
           <Field label="GHG Scope 3 (tCO₂e)" value={f("ghgScope3")} editing={editing} onChange={v => set("ghgScope3", v)} />
         </div>
         <div className="mt-4">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">SDG Alignment</p>
-          <Tags items={data.sdgAlignment} />
+          <TagsField label="SDG Alignment" items={f("sdgAlignment") || []} editing={editing} onChange={v => set("sdgAlignment", v)} />
         </div>
       </Section>
 
       {/* Declaration summary */}
-      {data.declarationName && (
+      {data?.declarationName && (
         <div className="rounded-2xl bg-gray-50 border border-gray-100 p-5 flex flex-wrap gap-6">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <User size={15} className="text-green-600" />

@@ -195,7 +195,7 @@ export default function Header() {
   return (
     <>
       <div className="ann">
-        🌿 <b>Brown Lens Verification is live.</b> India's first
+        🌿 <b>Green Lens Verification is live.</b> India's first
         anti-greenwashing standard for B2B procurement.
         <Link href="#">See how it works →</Link>
       </div>
@@ -277,8 +277,8 @@ export default function Header() {
             <Link href="/categories" className="nav-link">
               Categories
             </Link>
-            <Link href="/brown-lens" className="nav-link">
-              Brown Lens
+            <Link href="/Green-lens" className="nav-link">
+              Green Lens
             </Link>
             <Link href="/pricing" className="nav-link">
               Pricing

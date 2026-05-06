@@ -60,30 +60,6 @@ export const Step2Business = () => {
           placeholder="e.g. FMCG, IT, Hospitality" 
         />
 
-        <Select 
-          name="noOfEmployees" 
-          label="No. of Employees *" 
-          options={[
-            { label: "1-10", value: "1-10" },
-            { label: "11-50", value: "11-50" },
-            { label: "51-200", value: "51-200" },
-            { label: "201-500", value: "201-500" },
-            { label: "500+", value: "500+" },
-          ]} 
-        />
-
-        <Select 
-          name="annualTurnover" 
-          label="Annual Turnover Range (INR) *" 
-          options={[
-            { label: "< 1 Cr", value: "<1cr" },
-            { label: "1 - 5 Cr", value: "1-5cr" },
-            { label: "5 - 25 Cr", value: "5-25cr" },
-            { label: "25 - 100 Cr", value: "25-100cr" },
-            { label: "100 Cr +", value: "100cr+" },
-          ]} 
-        />
-
         <Input name="supplyCapacity" label="Supply Capacity" placeholder="e.g. 5,000 units/month" />
         <Input name="moq" label="Minimum Order Quantity (MOQ)" placeholder="e.g. 100 units" />
 

@@ -35,9 +35,9 @@ export const Step3Sustainability = () => {
       <div className="flex items-start gap-4 p-4 bg-orange-50 border border-orange-100 rounded-2xl">
         <div className="mt-1 text-orange-500"><Info size={20} /></div>
         <div>
-          <h4 className="text-sm font-bold text-orange-900">Brown Lens Verification</h4>
+          <h4 className="text-sm font-bold text-orange-900">Green Lens Verification</h4>
           <p className="text-xs text-orange-700 mt-1 leading-relaxed">
-            All certifications will be verified by our Brown Lens Framework. Providing accurate data speeds up your profile approval process.
+            All certifications will be verified by our Green Lens Framework. Providing accurate data speeds up your profile approval process.
           </p>
         </div>
       </div>

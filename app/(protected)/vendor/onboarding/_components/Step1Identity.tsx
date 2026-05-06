@@ -1,10 +1,15 @@
 "use client";
 
 import React from "react";
-import { Input, Select } from "./FormFields";
-import { Building, Hash, Calendar, MapPin, Mail, Phone, User as UserIcon, Briefcase } from "lucide-react";
+import { Input, Select, FileUpload } from "./FormFields";
+import { useFormContext } from "react-hook-form";
+import { Building, Hash, Calendar, MapPin, Mail, Phone, User as UserIcon, Briefcase, Image } from "lucide-react";
 
 export const Step1Identity = () => {
+  const { watch } = useFormContext();
+  const currentLogoUrl = watch("logoUrl");
+  const newLogoFile = watch("logoFile");
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -13,6 +18,15 @@ export const Step1Identity = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="md:col-span-2">
+          <FileUpload name="logoFile" label="Company Logo" />
+          {currentLogoUrl && !newLogoFile && (
+            <div className="mt-2 flex items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100 w-fit">
+              <img src={currentLogoUrl} className="w-8 h-8 rounded object-cover border border-gray-200" alt="Current Logo" />
+              <span className="text-xs text-gray-500 font-medium italic">Current Logo</span>
+            </div>
+          )}
+        </div>
         <Input 
           name="companyName" 
           label="Company / Brand Name *" 

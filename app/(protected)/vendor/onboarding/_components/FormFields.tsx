@@ -146,7 +146,17 @@ export const FileUpload: React.FC<{ name: string; label: string }> = ({ name, la
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f) setValue(name, f);
+    if (f) {
+      setValue(name, f, { shouldDirty: true, shouldValidate: true });
+    }
+  };
+
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setValue(name, null, { shouldDirty: true, shouldValidate: true });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -159,17 +169,31 @@ export const FileUpload: React.FC<{ name: string; label: string }> = ({ name, la
         <input type="file" ref={fileInputRef} onChange={handleFile} className="hidden" />
         {file ? (
           <>
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-              <Check size={20} />
+            <div className="flex items-center gap-4 w-full px-4">
+              {file instanceof File && file.type.startsWith('image/') ? (
+                <div className="w-12 h-12 rounded-lg border border-gray-100 overflow-hidden shrink-0 shadow-sm">
+                  <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+                  <Check size={24} />
+                </div>
+              )}
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {file instanceof File ? file.name : "File Selected"}
+                </p>
+                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mt-0.5">Ready to upload</p>
+              </div>
+              <button 
+                type="button" 
+                onClick={handleRemove}
+                className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                title="Remove file"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <p className="text-sm font-medium text-green-700">{file.name}</p>
-            <button 
-              type="button" 
-              onClick={(e) => { e.stopPropagation(); setValue(name, null); }}
-              className="text-xs text-red-500 hover:underline"
-            >
-              Remove
-            </button>
           </>
         ) : (
           <>

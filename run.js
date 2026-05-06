@@ -529,7 +529,7 @@ button{font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;border:none;}
 .cm{color:rgba(255,255,255,0.3);font-size:13px;}
 
 /* ═══════════════════════════════════════
-   BROWN LENS — feature highlight
+   Green LENS — feature highlight
 ═══════════════════════════════════════ */
 .bl-sec{background:var(--off);}
 .bl-grid{

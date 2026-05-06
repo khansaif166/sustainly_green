@@ -68,9 +68,10 @@ type Vendor = {
   location?: string;
   ecoScore?: number;
   ecoTier?: string;
-  brownLensScore?: number;
+  GreenLensScore?: number;
   certifications?: string[];
   logoText?: string;
+  logoUrl?: string;
 };
 
 type Category = {
@@ -591,7 +592,11 @@ export default function BrowsePage() {
       <Link href={`/find-vendors/${v.id}`} className="browse-vendor-card">
         <div className="bvc-top">
           <div className="bvc-logo">
-            {v.logoText || (v.companyName || "V").slice(0, 2).toUpperCase()}
+            {v.logoUrl ? (
+              <img src={v.logoUrl} alt={v.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              v.logoText || (v.companyName || "V").slice(0, 2).toUpperCase()
+            )}
           </div>
           <div className="bvc-badges">
             {v.ecoTier && (
@@ -605,10 +610,10 @@ export default function BrowsePage() {
                 {v.ecoTier.toUpperCase()}
               </span>
             )}
-            {v.brownLensScore && (
+            {v.GreenLensScore && (
               <span className="bvc-bl">
                 <HiOutlineShieldCheck size={11} />
-                BL {v.brownLensScore}/5
+                BL {v.GreenLensScore}/5
               </span>
             )}
           </div>
@@ -662,7 +667,11 @@ export default function BrowsePage() {
     ) : (
       <Link href={`/find-vendors/${v.id}`} className="browse-product-row">
         <div className="bvc-logo" style={{ flexShrink: 0, width: 52, height: 52, fontSize: 16 }}>
-          {v.logoText || (v.companyName || "V").slice(0, 2).toUpperCase()}
+          {v.logoUrl ? (
+            <img src={v.logoUrl} alt={v.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            v.logoText || (v.companyName || "V").slice(0, 2).toUpperCase()
+          )}
         </div>
         <div className="bpr-body">
           <h3 className="bpc-title" style={{ fontSize: 14 }}>

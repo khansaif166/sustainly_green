@@ -3,10 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm, FormProvider } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { onboardingSchema, OnboardingFormData } from "../../../vendor/onboarding/schema";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { uploadFileWithProgress } from "@/lib/storage";
+import { OnboardingFormData } from "../../../vendor/onboarding/schema";
 import { 
   ArrowLeft, 
   CheckCircle2, 
@@ -33,11 +33,10 @@ export default function AdminVendorDetailsPage() {
   const [vendorData, setVendorData] = useState<any>(null);
 
   const methods = useForm<OnboardingFormData>({
-    resolver: zodResolver(onboardingSchema) as any,
     mode: "onChange",
   });
 
-  const { reset, handleSubmit, formState: { isDirty } } = methods;
+  const { reset, handleSubmit } = methods;
 
   useEffect(() => {
     async function load() {
@@ -82,10 +81,55 @@ export default function AdminVendorDetailsPage() {
     if (!uid) return;
     setSubmitting(true);
     try {
-      const { certificateFile, awardsFile, ...cleanData } = data;
+      let logoUrl = "";
+      let certUrl = "";
+      let awardsUrl = "";
+
+      if (data.logoFile instanceof File) {
+        const path = `vendors/${uid}/logos/${Date.now()}_${data.logoFile.name}`;
+        logoUrl = await uploadFileWithProgress(data.logoFile, path);
+      }
+
+      if (data.certificateFile instanceof File) {
+        const path = `vendors/${uid}/certs/${Date.now()}_${data.certificateFile.name}`;
+        certUrl = await uploadFileWithProgress(data.certificateFile, path);
+      }
       
-      await updateDoc(doc(db, "vendors", uid as string), cleanData as any);
-      setVendorData((prev: any) => ({ ...prev, ...cleanData }));
+      if (data.awardsFile instanceof File) {
+        const path = `vendors/${uid}/awards/${Date.now()}_${data.awardsFile.name}`;
+        awardsUrl = await uploadFileWithProgress(data.awardsFile, path);
+      }
+
+      const { logoFile, certificateFile, awardsFile, ...cleanData } = data;
+      
+      const payload: any = {
+        ...cleanData,
+        updatedAt: serverTimestamp(),
+      };
+      
+      // Handle Logo
+      if (logoUrl) {
+        payload.logoUrl = logoUrl;
+      } else if (data.logoFile === null) {
+        payload.logoUrl = ""; // Delete logo
+      }
+
+      // Handle Certificate
+      if (certUrl) {
+        payload.certificateFileUrl = certUrl;
+      } else if (data.certificateFile === null) {
+        payload.certificateFileUrl = ""; // Delete certificate
+      }
+
+      // Handle Awards
+      if (awardsUrl) {
+        payload.awardsImageUrl = awardsUrl;
+      } else if (data.awardsFile === null) {
+        payload.awardsImageUrl = ""; // Delete awards
+      }
+
+      await updateDoc(doc(db, "vendors", uid as string), payload);
+      setVendorData((prev: any) => ({ ...prev, ...payload }));
       setIsEditing(false);
       alert("Vendor profile updated successfully!");
     } catch (e) {
@@ -144,16 +188,25 @@ export default function AdminVendorDetailsPage() {
             >
               <ArrowLeft size={20} className="text-gray-600" />
             </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{vendorData.companyName}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                  vendorData.approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {vendorData.approved ? <CheckCircle2 size={12} /> : <Info size={12} />}
-                  {vendorData.approved ? 'Verified Vendor' : 'Pending Verification'}
-                </span>
-                <span className="text-xs text-gray-400">• Updated {vendorData.updatedAt?.seconds ? new Date(vendorData.updatedAt.seconds * 1000).toLocaleDateString() : '—'}</span>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex items-center justify-center overflow-hidden shadow-sm">
+                {vendorData.logoUrl ? (
+                  <img src={vendorData.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <Building2 className="text-green-600" size={32} />
+                )}
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{vendorData.companyName}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    vendorData.approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {vendorData.approved ? <CheckCircle2 size={12} /> : <Info size={12} />}
+                    {vendorData.approved ? 'Verified Vendor' : 'Pending Verification'}
+                  </span>
+                  <span className="text-xs text-gray-400">• Updated {vendorData.updatedAt?.seconds ? new Date(vendorData.updatedAt.seconds * 1000).toLocaleDateString() : '—'}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -223,14 +276,32 @@ export default function AdminVendorDetailsPage() {
                 
                 {isEditing ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2 space-y-4">
+                      <div>
+                        <FileUpload name="logoFile" label="Company Logo" />
+                        {vendorData.logoUrl && !methods.watch("logoFile") && (
+                          <div className="mt-2 flex items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100 w-fit">
+                            <img src={vendorData.logoUrl} className="w-8 h-8 rounded object-cover border border-gray-200" alt="Current" />
+                            <span className="text-xs text-gray-500 font-medium italic">Current Logo</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <Input name="companyName" label="Company Name *" />
-                    <Select name="registrationType" label="Registration Type *" options={[{label: "Pvt Ltd", value: "pvt-ltd"}, {label: "LLP", value: "llp"}]} />
+                    <Select name="registrationType" label="Registration Type *" options={[{label: "Pvt Ltd", value: "pvt-ltd"}, {label: "LLP", value: "llp"}, {label: "Sole Proprietorship", value: "sole-proprietorship"}]} />
                     <Input name="cinRegistration" label="CIN Number *" />
                     <Input name="gstNumber" label="GST Number *" />
+                    <Input name="yearOfIncorporation" label="Year of Incorporation *" />
                     <Input name="businessEmail" label="Business Email *" />
                     <Input name="whatsapp" label="WhatsApp/Mobile *" />
-                    <div className="md:col-span-2">
+                    <Input name="primaryContactName" label="Primary Contact Name *" />
+                    <Input name="designation" label="Designation *" />
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
                       <Input name="registeredAddress" label="Registered Address *" />
+                      <Input name="city" label="City *" />
+                      <Input name="state" label="State *" />
+                      <Input name="pinCode" label="PIN Code *" />
+                      <Input name="country" label="Country *" />
                     </div>
                   </div>
                 ) : (
@@ -264,19 +335,20 @@ export default function AdminVendorDetailsPage() {
                     <Select name="businessType" label="Business Type *" options={[{label: "Manufacturer", value: "manufacturer"}, {label: "Trader", value: "trader"}]} />
                     <Input name="primaryCategory" label="Primary Category *" />
                     <div className="md:col-span-2">
+                      <MultiSelect name="subCategories" label="Sub-Categories" max={3} />
+                    </div>
+                    <div className="md:col-span-2">
                       <TextArea name="shortDescription" label="Company Description *" rows={3} />
                     </div>
-                    <MultiSelect name="keyProducts" label="Key Products" />
-                    <Input name="annualTurnover" label="Annual Turnover *" />
-                    <Input name="noOfEmployees" label="No. of Employees *" />
+                    <MultiSelect name="keyProducts" label="Key Products" max={5} />
+                    <Toggle name="exportCapability" label="Export Capability" />
+                    <Input name="exportMarkets" label="Export Markets" />
                   </div>
                 ) : (
                   <div className="space-y-8">
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
                       <DataItem label="Business Type" value={vendorData.businessType} />
                       <DataItem label="Primary Category" value={vendorData.primaryCategory} />
-                      <DataItem label="Annual Turnover" value={vendorData.annualTurnover} />
-                      <DataItem label="Employees" value={vendorData.noOfEmployees} />
                       <DataItem label="Export Capability" value={vendorData.exportCapability ? 'Yes' : 'No'} />
                       <DataItem label="Export Markets" value={vendorData.exportMarkets} />
                     </div>
@@ -317,9 +389,23 @@ export default function AdminVendorDetailsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Input name="primarySustainabilityCert" label="Primary Certification *" />
                     <Input name="issuingBody" label="Issuing Body *" />
+                    <div className="md:col-span-2 space-y-4">
+                      <div>
+                        <FileUpload name="certificateFile" label="Sustainability Certificate (Update)" />
+                        {vendorData.certificateFileUrl && !methods.watch("certificateFile") && (
+                          <div className="mt-2 flex items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100 w-fit">
+                            <ShieldCheck size={16} className="text-green-600" />
+                            <span className="text-xs text-gray-500 font-medium italic truncate max-w-[200px]">Current Certificate</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <div className="md:col-span-2">
                       <TextArea name="sustainabilityPractice" label="Sustainability Description *" rows={3} />
                     </div>
+                    <Input name="recycledContent" label="Recycled Content %" />
+                    <Input name="carbonFootprint" label="Carbon Footprint" />
+                    <Input name="socialCompliance" label="Social Compliance" />
                   </div>
                 ) : (
                   <div className="space-y-8">
@@ -377,7 +463,7 @@ export default function AdminVendorDetailsPage() {
                   {vendorData.awardsImageUrl && (
                     <div className="space-y-3">
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Awards & Recognitions</p>
-                      <a href={vendorData.awardsImageUrl} target="_blank" className="block relative group overflow-hidden rounded-2xl border border-gray-200">
+                      <a href={vendorData.awardsImageUrl} target="_blank" className="block relative group overflow-hidden rounded-2xl border border-gray-100">
                         <img src={vendorData.awardsImageUrl} alt="Award" className="w-full h-auto grayscale group-hover:grayscale-0 transition-all duration-500" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <ExternalLink className="text-white" />
