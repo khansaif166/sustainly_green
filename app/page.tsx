@@ -1,2000 +1,2331 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
+import { useEffect, useState } from "react";
+import { db, isFirebaseConfigured } from "@/lib/firebase";
 import {
   collection,
   getDocs,
-  orderBy,
+  limit,
   query,
   where,
-  limit,
-  getDoc,
-  doc,
-  addDoc,
-  serverTimestamp,
 } from "firebase/firestore";
-import Header from "./components/Header";
 import Footer from "./components/layouts/Footer";
 import {
-  HiBuildingOffice2,
-  HiMagnifyingGlass,
-  HiClipboardDocumentList,
-  HiCheckBadge,
-  HiPencilSquare,
-  HiBeaker,
-  HiTrophy,
-  HiUserGroup,
-  HiEnvelope,
-  HiLink,
-  HiTag,
-  HiChartBar
-} from "react-icons/hi2";
-import {
-  FiSearch,
-  FiPackage,
-  FiUsers,
-  FiTool,
-  FiChevronDown,
-  FiArrowRight,
-  FiX,
-  FiTrendingUp,
-  FiStar,
-} from "react-icons/fi";
-import {
-  HiOutlineSparkles,
-  HiOutlineShieldCheck,
-  HiOutlineClock,
-} from "react-icons/hi2";
-import { MdOutlineEnergySavingsLeaf } from "react-icons/md";
+  ArrowRight,
+  BadgeCheck,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleHelp,
+  Globe,
+  Leaf,
+  Menu,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Tractor,
+  UserRound,
+  Zap,
+} from "lucide-react";
 
-/* ---------------- TYPES ---------------- */
-type Product = {
-  id: string;
-  title: string;
-  description: string;
-  images?: string[];
-};
-
-type Category = {
+type CategoryItem = {
   id: string;
   name: string;
-  imageUrl?: string;
+  icon: string;
 };
 
-type Vendor = {
+type ProductCard = {
   id: string;
-  companyName: string;
-  category?: string;
-  ecoScore?: number;
-  ecoTier?: string; // platinum | gold | silver | bronze
-  GreenLensScore?: number; // out of 5
-  certifications?: string[];
-  location?: string;
-  logoText?: string;
+  title: string;
+  price: string;
+  unit: string;
+  vendor: string;
+  image?: string;
 };
 
-/* ---- SMART SEARCH TYPES ---- */
-type SearchResult = {
+type SupplierCard = {
   id: string;
-  type: "product" | "vendor" | "service";
-  label: string;
-  sub?: string;
-  href: string;
+  name: string;
+  country: string;
+  rating: string;
+  mark: string;
 };
 
-const POPULAR_SEARCHES = [
-  { label: "Solar EPC", href: "/browse?q=solar+epc", type: "product" as const },
+const sidebarCategories: CategoryItem[] = [
+  { id: "renewable-energy", name: "Renewable Energy", icon: "sun" },
+  { id: "energy-efficiency", name: "Energy Efficiency", icon: "zap" },
+  { id: "water-wastewater", name: "Water & Wastewater", icon: "drop" },
+  { id: "waste-management", name: "Waste Management", icon: "recycle" },
+  { id: "green-building", name: "Green Building", icon: "building" },
+  { id: "sustainable-materials", name: "Sustainable Materials", icon: "hex" },
+  { id: "eco-packaging", name: "Eco Packaging", icon: "box" },
+  { id: "electric-mobility", name: "Electric Mobility", icon: "truck" },
+  { id: "agriculture-organic", name: "Agriculture & Organic", icon: "sprout" },
+  { id: "environmental-monitoring", name: "Environmental Monitoring", icon: "chart" },
+];
+
+const quickActions = [
   {
-    label: "EPR Compliance",
-    href: "/browse?q=epr+compliance&type=Service",
-    type: "service" as const,
+    title: "Post Requirement",
+    text: "Share your need and get quotes from verified suppliers.",
   },
   {
-    label: "Recycled Packaging",
-    href: "/browse?q=recycled+packaging",
-    type: "product" as const,
+    title: "Request a Quote",
+    text: "Compare offers and choose the best deal.",
   },
   {
-    label: "EV Charging Infrastructure",
-    href: "/browse?q=ev+charging",
-    type: "product" as const,
+    title: "List Your Business",
+    text: "Showcase your products and grow your reach.",
   },
   {
-    label: "Water Treatment",
-    href: "/browse?q=water+treatment&type=Service",
-    type: "service" as const,
-  },
-  {
-    label: "Carbon Credits",
-    href: "/browse?q=carbon+credits",
-    type: "product" as const,
-  },
-  {
-    label: "ESG Consulting",
-    href: "/browse?q=esg+consulting&type=Service",
-    type: "service" as const,
-  },
-  {
-    label: "ISO 14001 Vendors",
-    href: "/browse?q=iso+14001&type=Vendor",
-    type: "vendor" as const,
+    title: "Supplier Verification",
+    text: "Build trust with verified business badge.",
   },
 ];
 
+const topTabs = [
+  "Products",
+  "Suppliers",
+  "Deals",
+  "Green Directory",
+  "Certifications",
+  "Services",
+];
+
+const searchTags = [
+  "Solar Panels",
+  "Lithium Battery",
+  "LED High Bay Light",
+  "Rainwater Harvesting",
+  "Compost Machine",
+  "Bamboo Products",
+  "Recycled Plastic",
+  "Heat Pump",
+  "EV Charger",
+  "Water Purifier",
+];
+
+const trustItems = [
+  "Verified Suppliers",
+  "Quality Assured Products",
+  "Secure Transactions",
+  "Timely Delivery",
+  "Dedicated Support",
+];
+
+const certificationMarks = [
+  "ISO 14001",
+  "ISO 9001",
+  "CE",
+  "RoHS",
+  "Global Recycled Standard",
+];
+
+const staticProducts: ProductCard[] = [
+  {
+    id: "mono-perc-solar-module",
+    title: "Mono PERC Solar Module 550W",
+    price: "$0.28",
+    unit: "Watt",
+    vendor: "SunPeak Energy",
+  },
+  {
+    id: "solar-led-street-light",
+    title: "Solar LED Street Light 100W",
+    price: "$82.00",
+    unit: "Piece",
+    vendor: "BrightLite Solutions",
+  },
+  {
+    id: "on-grid-solar-inverter",
+    title: "On-Grid Solar Inverter 10kW",
+    price: "$680.00",
+    unit: "Unit",
+    vendor: "VoltEdge Power",
+  },
+  {
+    id: "biogas-plant-25m3",
+    title: "Biogas Plant 25m3",
+    price: "$4,250.00",
+    unit: "Unit",
+    vendor: "GreenGas Systems",
+  },
+];
+
+const staticFeaturedProducts: ProductCard[] = [
+  {
+    id: "evaporative-air-cooler",
+    title: "Evaporative Air Cooler 15000 CMH",
+    price: "$320.00",
+    unit: "Unit",
+    vendor: "CoolBreeze Tech",
+  },
+  {
+    id: "recycled-paper-board",
+    title: "Recycled Paper Board 1.5mm",
+    price: "$0.68",
+    unit: "Sq.ft.",
+    vendor: "EcoPulp Industries",
+  },
+  {
+    id: "rainwater-harvesting-tank",
+    title: "Rainwater Harvesting Tank 1000 Ltr",
+    price: "$95.00",
+    unit: "Unit",
+    vendor: "AquaSave Solutions",
+  },
+  {
+    id: "ac-ev-charger",
+    title: "AC EV Charger 7.4kW Type 2",
+    price: "$410.00",
+    unit: "Unit",
+    vendor: "ChargeGreen",
+  },
+  {
+    id: "organic-waste-composter",
+    title: "Organic Waste Composter 200kg/day",
+    price: "$1,280.00",
+    unit: "Unit",
+    vendor: "CompoTech",
+  },
+  {
+    id: "stainless-water-purifier",
+    title: "Stainless Steel Water Purifier 25 LPH",
+    price: "$210.00",
+    unit: "Unit",
+    vendor: "PureFlow Systems",
+  },
+];
+
+const staticSuppliers: SupplierCard[] = [
+  { id: "ecovolt", name: "EcoVolt Solutions", country: "India", rating: "4.8", mark: "EV" },
+  { id: "greenbuild", name: "GreenBuild Exim", country: "Germany", rating: "4.7", mark: "GB" },
+  { id: "purewater", name: "PureWater Tech", country: "India", rating: "4.9", mark: "PW" },
+  { id: "sustainpack", name: "SustainPack Ltd.", country: "United Kingdom", rating: "4.6", mark: "SP" },
+];
+
+function iconForCategory(icon: string) {
+  const commonProps = { size: 16, strokeWidth: 1.75 };
+
+  switch (icon) {
+    case "sun":
+      return <Zap {...commonProps} />;
+    case "drop":
+      return <Leaf {...commonProps} />;
+    case "recycle":
+      return <ShieldCheck {...commonProps} />;
+    case "building":
+      return <ShoppingBag {...commonProps} />;
+    case "hex":
+      return <BadgeCheck {...commonProps} />;
+    case "box":
+      return <ShoppingBag {...commonProps} />;
+    case "truck":
+      return <ArrowRight {...commonProps} />;
+    case "sprout":
+      return <Tractor {...commonProps} />;
+    case "chart":
+      return <CircleHelp {...commonProps} />;
+    default:
+      return <Zap {...commonProps} />;
+  }
+}
+
+function productHref(id: string) {
+  return `/products/${id}`;
+}
+
 export default function HomePage() {
   const router = useRouter();
+  const [searchText, setSearchText] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryItem[]>(sidebarCategories);
+  const [bestSellers, setBestSellers] = useState<ProductCard[]>(staticProducts);
+  const [featuredProducts, setFeaturedProducts] = useState<ProductCard[]>(staticFeaturedProducts);
+  const [featuredSuppliers, setFeaturedSuppliers] = useState<SupplierCard[]>(staticSuppliers);
 
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
-  const [services, setServices] = useState<Product[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  const [loadingVendors, setLoadingVendors] = useState(true);
-  const [loadingServices, setLoadingServices] = useState(true);
-  const [blogs, setBlogs] = useState<any[]>([]);
-  const [loadingBlogs, setLoadingBlogs] = useState(true);
-
-  const [openGlobalRFQ, setOpenGlobalRFQ] = useState(false);
-  const [rfqName, setRfqName] = useState("");
-  const [rfqEmail, setRfqEmail] = useState("");
-  const [rfqCategory, setRfqCategory] = useState("");
-  const [rfqSubCategory, setRfqSubCategory] = useState("");
-  const [rfqQuantity, setRfqQuantity] = useState("");
-  const [rfqMessage, setRfqMessage] = useState("");
-  const [rfqLoading, setRfqLoading] = useState(false);
-
-  // Tab states
-  const [howTab, setHowTab] = useState<"buyer" | "vendor" | "cert">("buyer");
-  const [activeVendorFilter, setActiveVendorFilter] = useState("All Vendors");
-
-  // Smart Search state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchType, setSearchType] = useState("all");
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [typeDropOpen, setTypeDropOpen] = useState(false);
-
-  // Close on outside click
   useEffect(() => {
-    function onOutside(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setSearchFocused(false);
-      }
-    }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, []);
-
-  // Live search
-  const runSearch = useCallback(async (q: string, stype: string) => {
-    if (!q.trim()) {
-      setSearchResults([]);
-      setSearchLoading(false);
+    if (!isFirebaseConfigured) {
       return;
     }
-    setSearchLoading(true);
-    try {
-      const results: SearchResult[] = [];
-      const ql = q.toLowerCase();
 
-      // Search products
-      if (stype === "all" || stype === "product") {
-        const snap = await getDocs(
+    async function loadHomepageData() {
+      try {
+        const categorySnap = await getDocs(
+          query(collection(db, "categories"), where("active", "==", true), limit(10)),
+        );
+
+        if (!categorySnap.empty) {
+          setCategoryOptions(
+            categorySnap.docs.map((item, index) => ({
+              id: item.id,
+              name: String(item.data().name || `Category ${index + 1}`),
+              icon: sidebarCategories[index % sidebarCategories.length]?.icon || "sun",
+            })),
+          );
+        }
+      } catch {}
+
+      try {
+        const productSnap = await getDocs(
           query(
             collection(db, "products"),
             where("approved", "==", true),
             where("listingType", "==", "Product"),
-            orderBy("title"),
-            limit(20),
+            limit(6),
           ),
         );
-        snap.docs.forEach((d) => {
-          const data = d.data() as any;
-          if ((data.title || "").toLowerCase().includes(ql)) {
-            results.push({
-              id: d.id,
-              type: "product",
-              label: data.title,
-              sub: data.categoryId,
-              href: `/products/${d.id}`,
-            });
-          }
-        });
-      }
 
-      // Search services
-      if (stype === "all" || stype === "service") {
-        const snap = await getDocs(
-          query(
-            collection(db, "products"),
-            where("approved", "==", true),
-            where("listingType", "==", "Service"),
-            orderBy("title"),
-            limit(20),
-          ),
+        if (!productSnap.empty) {
+          const products = productSnap.docs.map((item, index) => {
+            const data = item.data();
+            return {
+              id: item.id,
+              title: String(data.title || `Product ${index + 1}`),
+              price: `$${Number(data.price || (index + 1) * 120).toFixed(2)}`,
+              unit: String(data.unit || "Unit"),
+              vendor: String(data.vendorName || data.companyName || "Verified Supplier"),
+              image:
+                typeof data.images?.[0] === "string" && data.images[0].startsWith("/")
+                  ? data.images[0]
+                  : undefined,
+            };
+          });
+
+          setBestSellers(products.slice(0, 4));
+          setFeaturedProducts(products.slice(0, 6));
+        }
+      } catch {}
+
+      try {
+        const vendorSnap = await getDocs(
+          query(collection(db, "vendors"), where("approved", "==", true), limit(4)),
         );
-        snap.docs.forEach((d) => {
-          const data = d.data() as any;
-          if ((data.title || "").toLowerCase().includes(ql)) {
-            results.push({
-              id: d.id,
-              type: "service",
-              label: data.title,
-              sub: "Service",
-              href: `/products/${d.id}`,
-            });
-          }
-        });
-      }
 
-      // Search vendors
-      if (stype === "all" || stype === "vendor") {
-        const snap = await getDocs(
-          query(
-            collection(db, "vendors"),
-            where("approved", "==", true),
-            limit(30),
-          ),
-        );
-        snap.docs.forEach((d) => {
-          const data = d.data() as any;
-          if (
-            (data.companyName || "").toLowerCase().includes(ql) ||
-            (data.category || "").toLowerCase().includes(ql)
-          ) {
-            results.push({
-              id: d.id,
-              type: "vendor",
-              label: data.companyName,
-              sub: data.category,
-              href: `/find-vendors/${d.id}`,
-            });
-          }
-        });
-      }
-
-      setSearchResults(results.slice(0, 8));
-    } catch (e) {
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
+        if (!vendorSnap.empty) {
+          setFeaturedSuppliers(
+            vendorSnap.docs.map((item, index) => {
+              const data = item.data();
+              const companyName = String(data.companyName || `Supplier ${index + 1}`);
+              return {
+                id: item.id,
+                name: companyName,
+                country: String(data.country || data.location || "India"),
+                rating: String(data.GreenLensScore || data.rating || 4.8),
+                mark: companyName
+                  .split(" ")
+                  .slice(0, 2)
+                  .map((part) => part.charAt(0))
+                  .join("")
+                  .toUpperCase(),
+              };
+            }),
+          );
+        }
+      } catch {}
     }
+
+    void loadHomepageData();
   }, []);
 
-  function handleSearchInput(val: string) {
-    setSearchQuery(val);
-    if (searchDebounce.current) clearTimeout(searchDebounce.current);
-    if (!val.trim()) {
-      setSearchResults([]);
-      return;
+  function runSearch() {
+    const params = new URLSearchParams();
+
+    if (searchText.trim()) {
+      params.set("q", searchText.trim());
     }
-    setSearchLoading(true);
-    searchDebounce.current = setTimeout(() => runSearch(val, searchType), 380);
+
+    if (selectedCategory) {
+      params.set("category", selectedCategory);
+    }
+
+    router.push(`/browse${params.toString() ? `?${params.toString()}` : ""}`);
   }
-
-  function doSearch() {
-    if (!searchQuery.trim()) {
-      router.push("/browse");
-      return;
-    }
-    const typeParam =
-      searchType === "all"
-        ? ""
-        : searchType === "vendor"
-          ? "&type=Vendor"
-          : searchType === "service"
-            ? "&type=Service"
-            : "&type=Product";
-    router.push(`/browse?q=${encodeURIComponent(searchQuery)}${typeParam}`);
-    setSearchFocused(false);
-  }
-
-  /* ---------------- LOAD DATA ---------------- */
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const q = query(
-          collection(db, "categories"),
-          where("active", "==", true),
-        );
-        const snap = await getDocs(q);
-        setCategories(
-          snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })),
-        );
-      } catch (err) {
-        console.error("HOME_CATEGORIES_ERROR", err);
-      } finally {
-        setLoadingCategories(false);
-      }
-    }
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    async function fetchVendors() {
-      try {
-        const q = query(
-          collection(db, "vendors"),
-          where("approved", "==", true),
-          limit(6),
-        );
-        const snap = await getDocs(q);
-        setVendors(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
-      } catch (err) {
-        console.error("HOME_VENDORS_ERROR", err);
-      } finally {
-        setLoadingVendors(false);
-      }
-    }
-    fetchVendors();
-  }, []);
-
-  useEffect(() => {
-    async function fetchAllProducts() {
-      try {
-        const q = query(
-          collection(db, "products"),
-          where("approved", "==", true),
-          where("listingType", "==", "Product"),
-          orderBy("createdAt", "desc"),
-          limit(8),
-        );
-        const snap = await getDocs(q);
-        setAllProducts(
-          snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })),
-        );
-      } catch (err) {
-        console.error("HOME_ALL_PRODUCTS_ERROR", err);
-      } finally {
-        setLoadingProducts(false);
-      }
-    }
-    fetchAllProducts();
-  }, []);
-
-  useEffect(() => {
-    async function fetchServices() {
-      try {
-        const q = query(
-          collection(db, "products"),
-          where("approved", "==", true),
-          where("listingType", "==", "Service"),
-          orderBy("createdAt", "desc"),
-          limit(8),
-        );
-        const snap = await getDocs(q);
-        setServices(
-          snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })),
-        );
-      } catch (err) {
-        setServices([]);
-      } finally {
-        setLoadingServices(false);
-      }
-    }
-    fetchServices();
-  }, []);
-
-  useEffect(() => {
-    async function fetchBlogs() {
-      try {
-        const q = query(
-          collection(db, "blogs"),
-          orderBy("createdAt", "desc"),
-          limit(3),
-        );
-        const snap = await getDocs(q);
-        setBlogs(
-          snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })),
-        );
-      } catch (err) {
-        console.error("HOME_BLOGS_ERROR", err);
-      } finally {
-        setLoadingBlogs(false);
-      }
-    }
-    fetchBlogs();
-  }, []);
-
-  useEffect(() => {
-    const LAST_SHOWN_KEY = "globalRFQ_lastShown";
-    const TWELVE_HOURS = 12 * 60 * 60 * 1000;
-    const lastShown = localStorage.getItem(LAST_SHOWN_KEY);
-    const now = Date.now();
-    if (!lastShown || now - Number(lastShown) > TWELVE_HOURS) {
-      const timer = setTimeout(() => {
-        setOpenGlobalRFQ(true);
-        localStorage.setItem(LAST_SHOWN_KEY, now.toString());
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  async function submitGlobalRFQ() {
-    if (!rfqName || !rfqEmail || !rfqCategory) {
-      alert("Please fill required fields");
-      return;
-    }
-    setRfqLoading(true);
-    await addDoc(collection(db, "rfqs"), {
-      type: "GLOBAL",
-      name: rfqName,
-      email: rfqEmail,
-      category: rfqCategory,
-      subcategory: rfqSubCategory,
-      quantity: rfqQuantity,
-      message: rfqMessage,
-      status: "OPEN",
-      createdAt: serverTimestamp(),
-    });
-    setRfqLoading(false);
-    setOpenGlobalRFQ(false);
-    setRfqName("");
-    setRfqEmail("");
-    setRfqCategory("");
-    setRfqSubCategory("");
-    setRfqQuantity("");
-    setRfqMessage("");
-  }
-
-  function getEcoBadgeClass(tier?: string) {
-    switch (tier?.toLowerCase()) {
-      case "platinum":
-        return "eco-badge eco-plat";
-      case "gold":
-        return "eco-badge eco-gold";
-      case "silver":
-        return "eco-badge eco-silver";
-      case "bronze":
-        return "eco-badge eco-bronze";
-      default:
-        return "eco-badge eco-silver";
-    }
-  }
-
-  const staticVendors: Vendor[] = [
-    {
-      id: "1",
-      companyName: "SolarEdge Technologies India",
-      category: "Renewable Energy · Solar EPC & Systems",
-      ecoScore: 94,
-      ecoTier: "platinum",
-      GreenLensScore: 5,
-      certifications: ["ISO 14001", "BEE Certified", "MNRE Approved"],
-      location: "Chennai, TN",
-      logoText: "SE",
-    },
-    {
-      id: "2",
-      companyName: "GreenPack Solutions Pvt Ltd",
-      category: "Sustainable Packaging · Recycled Materials",
-      ecoScore: 81,
-      ecoTier: "gold",
-      GreenLensScore: 4,
-      certifications: ["EPR Compliant", "FSC Certified", "GRS Certified"],
-      location: "Pune, MH",
-      logoText: "GP",
-    },
-    {
-      id: "3",
-      companyName: "Aqua Enviro Systems",
-      category: "Water Management · ETP & STP Systems",
-      ecoScore: 78,
-      ecoTier: "gold",
-      GreenLensScore: 4,
-      certifications: ["ISO 9001", "CPCB Approved", "NABL Tested"],
-      location: "Bengaluru, KA",
-      logoText: "AE",
-    },
-  ];
-
-  const displayVendors =
-    vendors.length > 0 ? vendors.slice(0, 3) : staticVendors;
-
-  const vendorFilters = [
-    "All Vendors",
-    "Platinum",
-    "Gold",
-    "Tamil Nadu",
-    "Maharashtra",
-    "Renewable Energy",
-    "Packaging",
-    "EPR Compliant",
-  ];
-
-  const howVendorSteps = [
-  {
-    num: "01",
-    icon: <HiPencilSquare size={22} />,
-    title: "Submit your profile",
-    desc: "Register your business, upload certifications, and describe your sustainable products or services.",
-  },
-  {
-    num: "02",
-    icon: <HiBeaker size={22} />,
-    title: "Green Lens review",
-    desc: "Our team verifies your sustainability claims across all 5 criteria before your listing goes live.",
-  },
-  {
-    num: "03",
-    icon: <HiTrophy size={22} />,
-    title: "Receive Eco Score",
-    desc: "Get a Bronze, Silver, Gold, or Platinum Eco Score badge that builds instant buyer trust.",
-  },
-  {
-    num: "04",
-    icon: <HiUserGroup size={22} />,
-    title: "Connect & convert",
-    desc: "Receive RFQs from corporate buyers, respond to inquiries, and grow your B2B enterprise pipeline.",
-  },
-];
-
-const howBuyerSteps = [
-  {
-    num: "01",
-    icon: <HiBuildingOffice2 size={22} />,
-    title: "Register your company",
-    desc: "Create a verified corporate buyer account with your GST details and procurement categories.",
-  },
-  {
-    num: "02",
-    icon: <HiMagnifyingGlass size={22} />,
-    title: "Search & filter vendors",
-    desc: "Browse by category, Eco Score tier, certification, location, and minimum order quantity.",
-  },
-  {
-    num: "03",
-    icon: <HiClipboardDocumentList size={22} />,
-    title: "Raise an RFQ",
-    desc: "Send a Request for Quotation directly to one or multiple verified vendors simultaneously.",
-  },
-  {
-    num: "04",
-    icon: <HiCheckBadge size={22} />,
-    title: "Verify & close",
-    desc: "Review compliance docs, compare quotes, and finalise procurement with full BRSR-ready documentation.",
-  },
-];
-
-const howCertSteps = [
-  {
-    num: "01",
-    icon: <HiEnvelope size={22} />,
-    title: "Apply for partnership",
-    desc: "Submit your certification framework, accreditation documents, and partner application for review.",
-  },
-  {
-    num: "02",
-    icon: <HiLink size={22} />,
-    title: "Integrate standards",
-    desc: "Your certification criteria are mapped and embedded into our Green Lens verification framework.",
-  },
-  {
-    num: "03",
-    icon: <HiTag size={22} />,
-    title: "Co-brand on badges",
-    desc: "Your logo appears on the Eco Score badges of all vendors certified under your framework.",
-  },
-  {
-    num: "04",
-    icon: <HiChartBar size={22} />,
-    title: "Expand your reach",
-    desc: "Access our 500+ corporate buyer network and scale your certification program's visibility across India.",
-  },
-];
-
-  const activeHowSteps =
-    howTab === "buyer"
-      ? howBuyerSteps
-      : howTab === "vendor"
-        ? howVendorSteps
-        : howCertSteps;
-
-  const staticCategories = [
-    { id: "s1", name: "Renewable Energy", count: "84 vendors", icon: "☀️" },
-    {
-      id: "s2",
-      name: "Sustainable Packaging",
-      count: "67 vendors",
-      icon: "📦",
-    },
-    { id: "s3", name: "Green Mobility", count: "42 vendors", icon: "🚗" },
-    { id: "s4", name: "Water Management", count: "38 vendors", icon: "💧" },
-    { id: "s5", name: "Waste Management", count: "55 vendors", icon: "♻️" },
-    { id: "s6", name: "Sustainable Textiles", count: "49 vendors", icon: "👕" },
-    { id: "s7", name: "Green Construction", count: "31 vendors", icon: "🏗️" },
-    { id: "s8", name: "Agri & Food", count: "44 vendors", icon: "🌾" },
-  ];
-
-  const staticCategories2 = [
-    { id: "s9", name: "Energy Storage", count: "27 vendors", icon: "🔋" },
-    { id: "s10", name: "Carbon Credits", count: "19 vendors", icon: "🌡️" },
-    { id: "s11", name: "Clean Manufacturing", count: "36 vendors", icon: "🏭" },
-    { id: "s12", name: "Energy Efficiency", count: "41 vendors", icon: "💡" },
-    { id: "s13", name: "Green Chemicals", count: "22 vendors", icon: "🧪" },
-    { id: "s14", name: "ESG Consulting", count: "33 vendors", icon: "📊" },
-  ];
-
-  const displayCategoriesRow1 =
-    categories.length > 0
-      ? categories
-          .slice(0, 8)
-          .map((c) => ({
-            id: c.id,
-            name: c.name,
-            count: "",
-            icon: "🌿",
-            imageUrl: c.imageUrl,
-          }))
-      : staticCategories;
-
-  const displayCategoriesRow2 =
-    categories.length > 8
-      ? categories
-          .slice(8, 14)
-          .map((c) => ({
-            id: c.id,
-            name: c.name,
-            count: "",
-            icon: "🌿",
-            imageUrl: c.imageUrl,
-          }))
-      : staticCategories2;
 
   return (
-    <main style={{ background: "var(--white)" }}>
-      <Header />
-
-      {/* ═══════════════════════════════════════ HERO ═══════════════════════════════════════ */}
-      <section className="hero">
-        <div className="hero-blob blob1" />
-        <div className="hero-blob blob2" />
-        <div className="hero-blob blob3" />
-        <div className="hero-grid" />
-
-        <div className="hero-content">
-          <div className="hero-eyebrow">
-            <div className="hero-eyebrow-dot" />
-            India's First Verified B2B Sustainable Marketplace
-          </div>
-
-          <h1 className="hero-h1">
-            <span className="green">Source verified.</span>
-            <br />
-            Sell sustainably.
-            <br />
-            <span className="italic">Grow responsibly.</span>
-          </h1>
-
-          <p className="hero-sub">
-            Connecting <b>corporate procurement teams</b> with{" "}
-            <b>ESG-verified vendors</b> — every sourcing decision backed by
-            proof, not promises.
-          </p>
-
-          {/* ===== SMART SEARCH BAR ===== */}
-          <style>{`
-            .smart-search-wrap { position: relative; width: 750px; z-index: 40; }
-            .smart-search-bar {
-              display: flex;
-              align-items: center;
-              background: rgba(255,255,255,0.07);
-              border: 1.5px solid rgba(255,255,255,0.14);
-              border-radius: 16px;
-              overflow: visible;
-              backdrop-filter: blur(16px);
-              transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-            }
-            .smart-search-bar:focus-within {
-              border-color: var(--g, #1db954);
-              background: rgba(255,255,255,0.1);
-              box-shadow: 0 0 0 4px rgba(29,185,84,0.12);
-            }
-            .ss-type-select {
-              display: flex;
-              align-items: center;
-              gap: 5px;
-              padding: 0 14px 0 16px;
-              height: 52px;
-              border-right: 1px solid rgba(255,255,255,0.1);
-              cursor: pointer;
-              flex-shrink: 0;
-              position: relative;
-            }
-            .ss-type-label {
-              font-size: 13px;
-              font-weight: 600;
-              color: rgba(255,255,255,0.75);
-              white-space: nowrap;
-              user-select: none;
-            }
-            .ss-type-chevron { color: rgba(255,255,255,0.4); flex-shrink: 0; }
-            .ss-type-dropdown {
-              position: absolute;
-              top: calc(100% + 10px);
-              left: 0;
-              background: #1a2e1f;
-              border: 1px solid rgba(255,255,255,0.12);
-              border-radius: 12px;
-              overflow: hidden;
-              min-width: 160px;
-              box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-              z-index: 50;
-            }
-            .ss-type-opt {
-              display: flex;
-              align-items: center;
-              gap: 9px;
-              padding: 10px 16px;
-              cursor: pointer;
-              font-size: 13px;
-              font-weight: 500;
-              color: rgba(255,255,255,0.7);
-              border: none;
-              background: none;
-              width: 100%;
-              font-family: inherit;
-              transition: background 0.12s, color 0.12s;
-            }
-            .ss-type-opt:hover { background: rgba(255,255,255,0.07); color: #fff; }
-            .ss-type-opt.active { background: rgba(29,185,84,0.15); color: var(--g, #1db954); font-weight: 700; }
-            .ss-input-wrap { flex: 1; position: relative; }
-            .ss-input {
-              width: 100%;
-              height: 52px;
-              background: none;
-              border: none;
-              outline: none;
-              color: #fff;
-              font-size: 15px;
-              font-family: inherit;
-              padding: 0 12px;
-            }
-            .ss-input::placeholder { color: rgba(255,255,255,0.35); }
-            .ss-clear {
-              width: 26px; height: 26px;
-              border-radius: 7px;
-              background: rgba(255,255,255,0.08);
-              border: none; cursor: pointer;
-              display: flex; align-items: center; justify-content: center;
-              color: rgba(255,255,255,0.5);
-              margin-right: 8px;
-              flex-shrink: 0;
-              transition: background 0.15s;
-            }
-            .ss-clear:hover { background: rgba(255,255,255,0.16); color: #fff; }
-            .ss-search-btn {
-              height: 52px;
-              padding: 0 22px;
-              background: var(--g, #1db954);
-              border: none;
-              border-radius: 0 14px 14px 0;
-              color: #fff;
-              font-size: 14px;
-              font-weight: 700;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-              font-family: inherit;
-              flex-shrink: 0;
-              transition: background 0.15s;
-            }
-            .ss-search-btn:hover { background: var(--g2, #16a34a); }
-
-            /* Dropdown panel */
-            .ss-dropdown {
-              position: absolute;
-              top: calc(100% + 10px);
-              left: 0;
-              right: 0;
-              background: #fff;
-              border: 1px solid rgba(0,0,0,0.09);
-              border-radius: 16px;
-              overflow: hidden;
-              box-shadow: 0 16px 50px rgba(0,0,0,0.18);
-              z-index: 50;
-            }
-            .ss-drop-head {
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              padding: 12px 16px 8px;
-              font-size: 11px;
-              font-weight: 700;
-              color: #888;
-              letter-spacing: 0.05em;
-              text-transform: uppercase;
-              border-bottom: 1px solid rgba(0,0,0,0.05);
-            }
-            .ss-drop-item {
-              display: flex;
-              align-items: center;
-              gap: 12px;
-              padding: 11px 16px;
-              text-decoration: none;
-              transition: background 0.12s;
-              cursor: pointer;
-              border: none;
-              background: none;
-              width: 100%;
-              font-family: inherit;
-              text-align: left;
-            }
-            .ss-drop-item:hover { background: rgba(0,0,0,0.03); }
-            .ss-item-icon {
-              width: 32px; height: 32px;
-              border-radius: 8px;
-              display: flex; align-items: center; justify-content: center;
-              flex-shrink: 0;
-              font-size: 13px;
-            }
-            .ss-item-icon.product { background: rgba(59,130,246,0.1); color: #3b82f6; }
-            .ss-item-icon.vendor { background: rgba(29,185,84,0.1); color: var(--g, #1db954); }
-            .ss-item-icon.service { background: rgba(168,85,247,0.1); color: #a855f7; }
-            .ss-item-label {
-              font-size: 13.5px;
-              font-weight: 600;
-              color: var(--text, #111);
-              flex: 1;
-            }
-            .ss-item-sub {
-              font-size: 11px;
-              color: #888;
-            }
-            .ss-item-type-badge {
-              font-size: 10px;
-              font-weight: 700;
-              padding: 2px 7px;
-              border-radius: 50px;
-              letter-spacing: 0.04em;
-              text-transform: uppercase;
-            }
-            .ss-item-type-badge.product { background: rgba(59,130,246,0.1); color: #3b82f6; }
-            .ss-item-type-badge.vendor { background: rgba(29,185,84,0.1); color: var(--g2, #16a34a); }
-            .ss-item-type-badge.service { background: rgba(168,85,247,0.1); color: #a855f7; }
-            .ss-popular-grid {
-              display: flex;
-              flex-wrap: wrap;
-              gap: 8px;
-              padding: 12px 16px 14px;
-            }
-            .ss-popular-pill {
-              display: inline-flex;
-              align-items: center;
-              gap: 5px;
-              padding: 5px 12px;
-              border-radius: 50px;
-              font-size: 12px;
-              font-weight: 600;
-              color: var(--text2, #555);
-              background: rgba(0,0,0,0.05);
-              text-decoration: none;
-              border: none;
-              cursor: pointer;
-              font-family: inherit;
-              transition: background 0.12s, color 0.12s;
-            }
-            .ss-popular-pill:hover { background: rgba(29,185,84,0.1); color: var(--g2, #16a34a); }
-            .ss-loading {
-              padding: 16px;
-              text-align: center;
-              font-size: 13px;
-              color: #888;
-            }
-            .ss-no-results {
-              padding: 16px;
-              text-align: center;
-              font-size: 13px;
-              color: #888;
-            }
-            .ss-see-all {
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 6px;
-              padding: 11px;
-              font-size: 13px;
-              font-weight: 700;
-              color: var(--g2, #16a34a);
-              border-top: 1px solid rgba(0,0,0,0.06);
-              text-decoration: none;
-              cursor: pointer;
-              border: none;
-              background: none;
-              font-family: inherit;
-              width: 100%;
-              transition: background 0.12s;
-            }
-            .ss-see-all:hover { background: rgba(29,185,84,0.05); }
-          `}</style>
-
-          {(() => {
-            const typeOpts = [
-              {
-                val: "all",
-                label: "All Categories",
-                icon: <HiOutlineSparkles size={14} />,
-              },
-              {
-                val: "product",
-                label: "Products",
-                icon: <FiPackage size={14} />,
-              },
-              { val: "vendor", label: "Vendors", icon: <FiUsers size={14} /> },
-              { val: "service", label: "Services", icon: <FiTool size={14} /> },
-            ];
-            const selectedType =
-              typeOpts.find((t) => t.val === searchType) || typeOpts[0];
-
-            return (
-              <div className="smart-search-wrap" ref={searchRef}>
-                <div className="smart-search-bar">
-                  {/* Type selector */}
-                  <div
-                    className="ss-type-select"
-                    onClick={() => setTypeDropOpen((o) => !o)}
-                  >
-                    {selectedType.icon}
-                    <span className="ss-type-label">{selectedType.label}</span>
-                    <FiChevronDown size={12} className="ss-type-chevron" />
-                    {typeDropOpen && (
-                      <div className="ss-type-dropdown">
-                        {typeOpts.map((opt) => (
-                          <button
-                            key={opt.val}
-                            className={`ss-type-opt${searchType === opt.val ? " active" : ""}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSearchType(opt.val);
-                              setTypeDropOpen(false);
-                              if (searchQuery) runSearch(searchQuery, opt.val);
-                            }}
-                          >
-                            {opt.icon} {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Input */}
-                  <div className="ss-input-wrap">
-                    <input
-                      className="ss-input"
-                      type="text"
-                      placeholder={
-                        searchType === "vendor"
-                          ? "Search vendors by name, category, location…"
-                          : searchType === "service"
-                            ? "Search services like ESG consulting, EPR…"
-                            : searchType === "product"
-                              ? "Search products like solar panels, packaging…"
-                              : "Search vendors, products, services, certifications…"
-                      }
-                      value={searchQuery}
-                      onChange={(e) => handleSearchInput(e.target.value)}
-                      onFocus={() => setSearchFocused(true)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") doSearch();
-                      }}
-                      autoComplete="off"
-                    />
-                  </div>
-
-                  {/* Clear */}
-                  {searchQuery && (
-                    <button
-                      className="ss-clear"
-                      onClick={() => {
-                        setSearchQuery("");
-                        setSearchResults([]);
-                      }}
-                    >
-                      <FiX size={12} />
-                    </button>
-                  )}
-
-                  {/* Search button */}
-                  <button className="ss-search-btn" onClick={doSearch}>
-                    <FiSearch size={14} />
-                    Search
-                  </button>
-                </div>
-
-                {/* Dropdown panel */}
-                {searchFocused && (
-                  <div className="ss-dropdown">
-                    {searchLoading && (
-                      <div className="ss-loading">Searching…</div>
-                    )}
-
-                    {!searchLoading &&
-                      searchQuery.trim() &&
-                      searchResults.length > 0 && (
-                        <>
-                          <div className="ss-drop-head">
-                            <FiSearch size={11} /> Results
-                          </div>
-                          {searchResults.map((r) => (
-                            <Link
-                              key={r.id}
-                              href={r.href}
-                              className="ss-drop-item"
-                              onClick={() => setSearchFocused(false)}
-                            >
-                              <div className={`ss-item-icon ${r.type}`}>
-                                {r.type === "vendor" ? (
-                                  <FiUsers size={14} />
-                                ) : r.type === "service" ? (
-                                  <FiTool size={14} />
-                                ) : (
-                                  <FiPackage size={14} />
-                                )}
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div className="ss-item-label">{r.label}</div>
-                                {r.sub && (
-                                  <div className="ss-item-sub">{r.sub}</div>
-                                )}
-                              </div>
-                              <span className={`ss-item-type-badge ${r.type}`}>
-                                {r.type}
-                              </span>
-                            </Link>
-                          ))}
-                          <button className="ss-see-all" onClick={doSearch}>
-                            See all results for &ldquo;{searchQuery}&rdquo;{" "}
-                            <FiArrowRight size={13} />
-                          </button>
-                        </>
-                      )}
-
-                    {!searchLoading &&
-                      searchQuery.trim() &&
-                      searchResults.length === 0 && (
-                        <div className="ss-no-results">
-                          No results found.{" "}
-                          <Link
-                            href={`/browse?q=${encodeURIComponent(searchQuery)}`}
-                            style={{ color: "var(--g2)" }}
-                            onClick={() => setSearchFocused(false)}
-                          >
-                            Browse all →
-                          </Link>
-                        </div>
-                      )}
-
-                    {!searchLoading && !searchQuery.trim() && (
-                      <>
-                        <div className="ss-drop-head">
-                          <FiTrendingUp size={11} /> Popular Searches
-                        </div>
-                        <div className="ss-popular-grid">
-                          {POPULAR_SEARCHES.map((p) => (
-                            <Link
-                              key={p.label}
-                              href={p.href}
-                              className="ss-popular-pill"
-                              onClick={() => setSearchFocused(false)}
-                            >
-                              {p.type === "vendor" ? (
-                                <FiUsers size={11} />
-                              ) : p.type === "service" ? (
-                                <FiTool size={11} />
-                              ) : (
-                                <FiPackage size={11} />
-                              )}
-                              {p.label}
-                            </Link>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          <div className="hero-cta-row">
-            <Link href="/register?role=BUYER" className="hcta hcta-buyer">
-              {" "}
-              I'm a Buyer — Start Sourcing
-            </Link>
-            <Link href="/register?role=VENDOR" className="hcta hcta-vendor">
-              {" "}
-              I'm a Vendor — Get Listed
-            </Link>
-          </div>
-        </div>
-
-        <div className="hero-stats">
-          {/* <div className="hstat">
-            <div className="hstat-num">
-              450<span>+</span>
-            </div>
-            <div className="hstat-lbl">Verified Vendors</div>
-          </div> */}
-          <div className="hstat">
-            <div className="hstat-num">
-              16<span>+</span>
-            </div>
-            <div className="hstat-lbl">Categories</div>
-          </div>
-          {/* <div className="hstat">
-            <div className="hstat-num">
-              500<span>+</span>
-            </div>
-            <div className="hstat-lbl">Corporate Buyers</div>
-          </div> */}
-          <div className="hstat">
-            <div className="hstat-num">5</div>
-            <div className="hstat-lbl">Verification Criteria</div>
-          </div>
-          <div className="hstat">
-            <div className="hstat-num" style={{ color: "var(--g)" }}>
-              0
-            </div>
-            <div className="hstat-lbl">Greenwashing Tolerated</div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════ TRUST MARQUEE ═══════════════════════════════════════ */}
-      <div className="marquee-wrap">
-        <div className="marquee-track">
-          {[
-            <>
-              <svg viewBox="0 0 14 14" fill="none">
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="6"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                />
-                <polyline
-                  points="4,7 6,9 10,5"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <b>Green Lens Verified</b> — Anti-Greenwashing Standard
-            </>,
-            <>
-              <svg viewBox="0 0 14 14" fill="none">
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="6"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                />
-                <polyline
-                  points="4,7 6,9 10,5"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              ISO 14001 · GRS · FSC · BEE · CPCB Accepted
-            </>,
-            <>
-              <svg viewBox="0 0 14 14" fill="none">
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="6"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                />
-                <polyline
-                  points="4,7 6,9 10,5"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <b>BRSR-Ready</b> Compliance Reports
-            </>,
-            <>
-              <svg viewBox="0 0 14 14" fill="none">
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="6"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                />
-                <polyline
-                  points="4,7 6,9 10,5"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <b>EPR Compliance</b> Vendors Available
-            </>,
-            <>
-              <svg viewBox="0 0 14 14" fill="none">
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="6"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                />
-                <polyline
-                  points="4,7 6,9 10,5"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              RFQ System · Bulk Inquiry · Direct Connect
-            </>,
-            <>
-              <svg viewBox="0 0 14 14" fill="none">
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="6"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                />
-                <polyline
-                  points="4,7 6,9 10,5"
-                  stroke="#1DB954"
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <b>India HQ</b> — Chennai, Tamil Nadu
-            </>,
-          ].flatMap((item, i) => [
-            <div key={`a-${i}`} className="mitem">
-              {item}
-            </div>,
-            <div key={`b-${i}`} className="mitem">
-              {item}
-            </div>,
-          ])}
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════ CATEGORIES ═══════════════════════════════════════ */}
-      <section className="sec cat-sec">
-        <div className="container">
-          <div className="sec-head-row">
-            <div>
-              <div className="sec-eye">Browse Platform</div>
-              <h2 className="sec-h">
-                All <b>Categories</b>
-              </h2>
-              <p className="sec-sub">
-                Every category is verified, compliance-ready, and built
-                exclusively for corporate B2B procurement.
-              </p>
-            </div>
-            <Link href="/categories" className="link-all">
-              View all categories →
-            </Link>
-          </div>
-
-          <div className="cat-grid">
-            {[...displayCategoriesRow1, ...displayCategoriesRow2]
-              .slice(0, 12)
-              .map((c: any) => (
-                <div
-                  key={c.id}
-                  className="cat-card"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => router.push(`/browse?category=${c.id}`)}
-                >
-                  <div className="cat-icon">
-                    {c.imageUrl ? (
-                      <img src={c.imageUrl} alt={c.name} />
-                    ) : (
-                      c.icon
-                    )}
-                  </div>
-                  <div className="cat-name">{c.name}</div>
-                  {c.count && <div className="cat-count">{c.count}</div>}
-                </div>
-              ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════ VERIFIED VENDORS ═══════════════════════════════════════ */}
-      <section className="sec vendors-sec">
-        <div className="container">
-          <div className="sec-head-row">
-            <div>
-              <div className="sec-eye">Vendor Spotlight</div>
-              <h2 className="sec-h">
-                Top-rated <b>verified suppliers</b>
-              </h2>
-              <p className="sec-sub">
-                Hand-picked vendors who passed all 5 Green Lens criteria. Ready
-                for corporate RFQs.
-              </p>
-            </div>
-            <Link href="/browse?type=vendor" className="link-all">
-              Browse all vendors →
-            </Link>
-          </div>
-
-          <div className="vendor-grid">
-            {displayVendors.slice(0, 4).map((v) => (
-              <div key={v.id} className="vc">
-                <div className="vc-top">
-                  <div className="vc-logo">
-                    {v.logoText ||
-                      (v.companyName || "").slice(0, 2).toUpperCase()}
-                  </div>
-                </div>
-                <div className="vc-body">
-                  <div className="vc-name">{v.companyName}</div>
-                  <div className="vc-loc" style={{ marginTop: '8px' }}>
-                    <svg viewBox="0 0 12 14" fill="none">
-                      <path
-                        d="M6 1C3.79 1 2 2.79 2 5C2 8.5 6 13 6 13C6 13 10 8.5 10 5C10 2.79 8.21 1 6 1Z"
-                        stroke="currentColor"
-                        strokeWidth={1.3}
-                      />
-                      <circle
-                        cx="6"
-                        cy="5"
-                        r="1.5"
-                        stroke="currentColor"
-                        strokeWidth={1.3}
-                      />
-                    </svg>
-                    {v.location || "India"}
-                  </div>
-                </div>
-                <div className="vc-footer">
-                  <button
-                    className="btn-rfq"
-                    onClick={() => router.push(`/vendor/${v.id}`)}
-                  >
-                    Send RFQ
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════ HOW IT WORKS ═══════════════════════════════════════ */}
-      <section className="sec how-sec">
-        <div className="container">
-          <div className="sec-head-row">
-            <div>
-              <div className="sec-eye">Platform Workflow</div>
-              <h2 className="sec-h">
-                How <b>Sustainly Green</b> works
-              </h2>
-              <p className="sec-sub">
-                Structured sustainable procurement for Indian corporates — verified suppliers, BRSR-aligned data, zero greenwashing risk.
-              </p>
-            </div>
-          </div>
-
-          <div className="how-tabs-wrap">
-            {(["buyer", "vendor", "cert"] as const).map((tab) => (
-              <button
-                key={tab}
-                className={`htab${howTab === tab ? " on" : ""}`}
-                onClick={() => setHowTab(tab)}
-              >
-                {tab === "buyer"
-                  ? "For Buyers"
-                  : tab === "vendor"
-                    ? "For Vendors"
-                    : "For Cert Bodies"}
+    <main className="market-home">
+      <div className="market-shell">
+        <header className="market-header">
+          <div className="utility-bar">
+            <div className="utility-spacer" />
+            <div className="utility-links">
+              <Link href="/buyer/dashboard">Buyer</Link>
+              <Link href="/vendor/dashboard">Supplier</Link>
+              <Link href="/blogs">Resources</Link>
+              <button type="button" className="utility-link globe-link">
+                <Globe size={14} />
+                EN
+                <ChevronDown size={14} />
               </button>
-            ))}
+            </div>
           </div>
 
-          <div className="how-steps">
-            {activeHowSteps.map((step, i) => (
-              <div
-                key={step.num}
-                className={`how-step${i === 0 ? " active" : ""}`}
+          <div className="header-main">
+            <Link href="/" className="brand-lockup" aria-label="SustainlyGreen home">
+              <Image src="/log.webp" alt="SustainlyGreen" width={270} height={70} priority />
+            </Link>
+
+            <div className="search-bar">
+              <Search size={18} />
+              <input
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    runSearch();
+                  }
+                }}
+                placeholder="Search eco-friendly products, suppliers, categories..."
+              />
+              <select
+                value={selectedCategory}
+                onChange={(event) => setSelectedCategory(event.target.value)}
+                aria-label="Search category"
               >
-                <div className="how-num">{step.num}</div>
-                <div className="how-icon">{step.icon}</div>
-                <div className="how-title">{step.title}</div>
-                <div className="how-desc">{step.desc}</div>
-                {i < 3 && <div className="how-step-arrow">→</div>}
+                <option value="">All Categories</option>
+                {categoryOptions.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="search-button" onClick={runSearch}>
+                <Search size={18} />
+              </button>
+            </div>
+
+            <div className="account-actions">
+              <Link href="/login" className="sign-in-link">
+                <UserRound size={18} />
+                Sign In
+              </Link>
+              <Link href="/register?role=BUYER" className="join-button">
+                Join Free
+              </Link>
+              <button
+                type="button"
+                className="mobile-menu-toggle"
+                onClick={() => setMobileMenuOpen((value) => !value)}
+                aria-label="Toggle menu"
+              >
+                <Menu size={20} />
+              </button>
+            </div>
+          </div>
+
+          <div className={`menu-row ${mobileMenuOpen ? "menu-row-open" : ""}`}>
+            <button type="button" className="menu-categories-button">
+              <Menu size={16} />
+              Categories
+            </button>
+            <nav className="menu-tabs" aria-label="Primary">
+              {topTabs.map((tab) => (
+                <Link
+                  key={tab}
+                  href={tab === "Suppliers" ? "/browse?type=vendor" : "/browse"}
+                  className="menu-tab"
+                >
+                  {tab}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </header>
+
+        <section className="hero-composition">
+          <aside className="sidebar-card">
+            <div className="sidebar-list">
+              {categoryOptions.map((category) => (
+                <Link key={category.id} href={`/browse?category=${category.id}`} className="sidebar-link">
+                  <span className="sidebar-icon">{iconForCategory(category.icon)}</span>
+                  <span className="sidebar-label">{category.name}</span>
+                </Link>
+              ))}
+              <Link href="/categories" className="sidebar-link all-link">
+                <span className="sidebar-icon">{iconForCategory("sun")}</span>
+                <span className="sidebar-label">All Categories</span>
+                <span className="sidebar-arrow">
+                  <ArrowRight size={14} />
+                </span>
+              </Link>
+            </div>
+
+            <div className="sidebar-cta">
+              <p className="sidebar-cta-label">New to SustainlyGreen?</p>
+              <p>Join our network of sustainable businesses worldwide.</p>
+              <Link href="/register?role=VENDOR" className="sidebar-cta-button">
+                Join Free
+              </Link>
+            </div>
+          </aside>
+
+          <div className="hero-stack">
+            <div className="hero-banner">
+              <div className="hero-copy">
+                <p className="hero-kicker">Powering a</p>
+                <h1>Sustainable Future</h1>
+                <p className="hero-text">
+                  Discover verified eco-friendly products and connect with trusted green suppliers.
+                </p>
+                <div className="hero-buttons">
+                  <Link href="/browse" className="primary-hero-button">
+                    Explore Products
+                  </Link>
+                  <Link href="/browse?type=vendor" className="secondary-hero-button">
+                    Find Suppliers
+                  </Link>
+                </div>
               </div>
+
+              <div className="hero-visual" aria-hidden="true">
+                <div className="hero-arc" />
+                <div className="hero-leaf hero-leaf-top" />
+                <div className="hero-leaf hero-leaf-side" />
+                <div className="hero-windmill" />
+                <div className="hero-energy-unit">
+                  <div className="hero-energy-label">ENERGY STORAGE</div>
+                </div>
+                <div className="hero-solar-row">
+                  <div className="hero-solar-panel" />
+                  <div className="hero-solar-panel panel-tilt" />
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <aside className="ad-card">
+            <div className="ad-badge">
+              <Leaf size={22} />
+            </div>
+            <h3>Advertise Here</h3>
+            <p>Reach 50k+ buyers every month</p>
+            <Link href="/contact" className="ad-button">
+              Learn More
+            </Link>
+            <div className="ad-dots">
+              <span className="ad-dot ad-dot-active" />
+              <span className="ad-dot" />
+              <span className="ad-dot" />
+            </div>
+          </aside>
+
+          <div className="quick-action-grid">
+            {quickActions.map((item) => (
+              <Link
+                key={item.title}
+                href={item.title === "List Your Business" ? "/register?role=VENDOR" : "/browse"}
+                className={`quick-action-card${item.title === "Supplier Verification" ? " verification-card" : ""}`}
+              >
+                <div className="quick-action-icon">
+                  <BadgeCheck size={20} />
+                </div>
+                <div className="quick-action-copy">
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </div>
+                <ArrowRight size={16} />
+              </Link>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ═══════════════════════════════════════ WHY US ═══════════════════════════════════════ */}
-      <section className="why-sec">
-        <div className="why-blob wb1" />
-        <div className="why-blob wb2" />
-        <div className="container">
-          <div className="why-inner">
-            <div className="why-left">
-              <div className="sec-eye">Our Competitive Edge</div>
-              <h2 className="sec-h" style={{ color: "#fff" }}>
-                The <b style={{ color: "var(--g)" }}>Verified Sustainable Sourcing Gap</b> We Solve
-              </h2>
-              <p className="sec-sub">
-                Sustainly Green is the only verified sustainable sourcing platform that combines audited vendor discovery, BRSR-aligned data, and direct RFQ — built exclusively for India's corporate procurement teams.
-              </p>
-              <div className="why-feats">
-                <div className="wf">
-                  <div className="wf-icon">🔬</div>
-                  <div>
-                    <div className="wf-title">
-                      Anti-Greenwashing Gate
-                    </div>
-                    <div className="wf-desc">
-                      Every vendor clears a 5-criterion pass/fail verification.
-                      No unverified claims reach buyers.
-                    </div>
-                  </div>
-                </div>
-                <div className="wf">
-                  <div className="wf-icon">🏅</div>
-                  <div>
-                    <div className="wf-title">
-                      Certification Supports System
-                    </div>
-                    <div className="wf-desc">
-                      When you are compliant, you are 100% verified and trusted.
-                    </div>
-                  </div>
-                </div>
-                <div className="wf">
-                  <div className="wf-icon">🤝</div>
-                  <div>
-                    <div className="wf-title">Three-sided marketplace</div>
-                    <div className="wf-desc">
-                      Buyers, verified vendors, and certification bodies on one
-                      connected platform. A first in India.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="compare-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Feature</th>
-                    <th className="hl">Sustainly Green</th>
-                    <th>Others</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    ["B2B Marketplace", "✓", "✓"],
-                    ["Sustainability-only", "✓", "✗"],
-                    ["Anti-greenwashing check", "✓", "✗"],
-                    ["RFQ & bulk inquiry", "✓", "✓"],
-                    ["India-first platform", "✓", "✓"],
-                    ["BRSR reporting support", "✓", "✗"],
-                  ].map(([feat, us, Others]) => (
-                    <tr key={feat}>
-                      <td>{feat}</td>
-                      <td className="hl cy">{us}</td>
-                      <td
-                        className={
-                          Others === "✓"
-                            ? "cy"
-                            : Others === "✗"
-                              ? "cn"
-                              : "cm"
-                        }
-                      >
-                        {Others}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <section className="section-block">
+          <div className="section-head">
+            <h2>Shop by Category</h2>
+            <Link href="/categories">View all categories</Link>
           </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════ Green LENS ═══════════════════════════════════════ */}
-      <section className="sec bl-sec">
-        <div className="container">
-          <div className="sec-head-row">
-            <div>
-              <div className="sec-eye">Proprietary Standard</div>
-              <h2 className="sec-h">
-                The <b>Green Lens</b> Framework
-              </h2>
-              <p className="sec-sub">
-                5 criteria. Pass all or don't list. The only anti-greenwashing
-                gate for B2B sustainable procurement in India.
-              </p>
-            </div>
+          <div className="category-strip">
+            {categoryOptions.map((category) => (
+              <Link key={category.id} href={`/browse?category=${category.id}`} className="category-pill-card">
+                <span className="category-pill-icon">{iconForCategory(category.icon)}</span>
+                <span>{category.name}</span>
+              </Link>
+            ))}
           </div>
-          <div className="bl-grid">
-            <div className="bl-criteria">
-              {[
-                {
-                  n: 1,
-                  title: "Environmental Certification",
-                  desc: "Valid third-party cert (ISO 14001, GRS, FSC, BEE, CPCB or equivalent) must be current and verifiable.",
-                },
-                {
-                  n: 2,
-                  title: "Sustainability Claims Verification",
-                  desc: "All marketing claims cross-checked against actual certificates, lab reports, or audit documentation.",
-                },
-                {
-                  n: 3,
-                  title: "Business Legitimacy Check",
-                  desc: "MCA registration, GST filing status, and director profile verified to confirm entity credibility.",
-                },
-                {
-                  n: 4,
-                  title: "Supply Chain Transparency",
-                  desc: "Vendor must disclose material or service origin and demonstrate responsible sourcing practices.",
-                },
-              ].map((c) => (
-                <div key={c.n} className="blc">
-                  <div className="blc-num">{c.n}</div>
-                  <div>
-                    <h5>{c.title}</h5>
-                    <p>{c.desc}</p>
+        </section>
+
+        <section className="split-section">
+          <div className="split-panel">
+            <div className="section-head">
+              <h2>Best Sellers</h2>
+              <Link href="/browse">View all</Link>
+            </div>
+            <div className="card-grid four-up">
+              {bestSellers.map((product, index) => (
+                <Link key={product.id} href={productHref(product.id)} className="product-card">
+                  <div className={`product-media media-${index % 4}`}>
+                    {product.image ? (
+                      <Image src={product.image} alt={product.title} width={140} height={140} />
+                    ) : (
+                      <div className="product-placeholder" />
+                    )}
                   </div>
-                </div>
+                  <div className="product-info">
+                    <h3>{product.title}</h3>
+                    <p className="product-price">
+                      {product.price} <span>/ {product.unit}</span>
+                    </p>
+                    <p className="product-vendor">By: {product.vendor}</p>
+                    <p className="verified-label">Verified Supplier</p>
+                  </div>
+                </Link>
               ))}
             </div>
-            <div>
-              <div className="bl-panel">
-                <div className="bl-panel-badge">🔬 Green Lens Verified</div>
-                <h3>Built to end greenwashing in B2B procurement</h3>
-                <p>
-                  Most platforms accept anyone who claims to be sustainable.
-                  Green Lens was built to change that — named after the
-                  principle of seeing through the green surface to what's
-                  actually underneath.
-                </p>
-                <p>
-                  Pass all 4 criteria, get verified. Fail even one — you
-                  don't list. No exceptions. No workarounds.
-                </p>
-                <Link href="/Green-lens" className="bl-cta">
-                  <span>Apply for Green Lens Verification</span>
-                  <span className="bl-cta-arr">→</span>
-                </Link>
-              </div>
-            </div>
+            <button type="button" className="carousel-arrow carousel-arrow-left" aria-label="Previous best sellers">
+              <ChevronLeft size={18} />
+            </button>
+            <button type="button" className="carousel-arrow carousel-arrow-right" aria-label="Next best sellers">
+              <ChevronRight size={18} />
+            </button>
           </div>
-        </div>
-      </section>
 
-      {/* ═══════════════════════════════════════ TESTIMONIALS ═══════════════════════════════════════ */}
-      <section className="sec testi-sec">
-        <div className="container">
-          <div className="sec-head-row">
-            <div>
-              <div className="sec-eye">Social Proof</div>
-              <h2 className="sec-h">
-                Trusted across <b>India</b>
-              </h2>
+          <div className="split-panel">
+            <div className="section-head">
+              <h2>Featured Suppliers</h2>
+              <Link href="/browse?type=vendor">View all</Link>
             </div>
-          </div>
-          <div className="testi-grid">
-            {[
-              {
-                initials: "RS",
-                name: "Rohit Sharma",
-                role: "Head of Procurement, Tata Projects",
-                type: "Buyer",
-                quote:
-                  "Reduced our sustainable sourcing research time by 60%. The Green Lens verification means we don't have to do our own due diligence on every claim.",
-              },
-              {
-                initials: "PM",
-                name: "Priya Menon",
-                role: "Founder, GreenPack Solutions",
-                type: "Vendor",
-                quote:
-                  "Our Eco Score badge became a competitive differentiator in enterprise pitches. Buyers trust it because it's independently verified, not self-declared.",
-              },
-              {
-                initials: "AK",
-                name: "Amit Krishnan",
-                role: "ESG Manager, Mahindra Group",
-                type: "Buyer",
-                quote:
-                  "Finally a platform built for B2B ESG procurement. The RFQ system and compliance documentation is exactly what our team needed for BRSR reporting.",
-              },
-            ].map((t) => (
-              <div key={t.name} className="tc">
-                <div className="tc-stars">★★★★★</div>
-                <p className="tc-quote">{t.quote}</p>
-                <div className="tc-person">
-                  <div className="tc-av">{t.initials}</div>
-                  <div>
-                    <div className="tc-name">{t.name}</div>
-                    <div className="tc-role">{t.role}</div>
+            <div className="card-grid four-up">
+              {featuredSuppliers.map((supplier, index) => (
+                <Link key={supplier.id} href={`/find-vendors/${supplier.id}`} className="supplier-card">
+                  <div className={`supplier-mark mark-${index % 4}`}>{supplier.mark}</div>
+                  <h3>{supplier.name}</h3>
+                  <p className="supplier-country">{supplier.country}</p>
+                  <p className="verified-label">Verified Supplier</p>
+                  <div className="supplier-rating">
+                    <span>{supplier.rating}</span>
+                    <span className="stars">★★★★★</span>
                   </div>
-                  <span
-                    className={`tc-type ${t.type === "Buyer" ? "tc-buyer" : "tc-vendor"}`}
-                  >
-                    {t.type}
-                  </span>
-                </div>
+                </Link>
+              ))}
+            </div>
+            <button type="button" className="carousel-arrow carousel-arrow-right" aria-label="Next suppliers">
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </section>
+
+        <section className="section-block compact-gap">
+          <div className="section-head left-heavy">
+            <h2>Popular Searches</h2>
+          </div>
+          <div className="tag-row">
+            {searchTags.map((tag) => (
+              <Link key={tag} href={`/browse?q=${encodeURIComponent(tag)}`} className="tag-chip">
+                <Search size={13} />
+                {tag}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="trust-band">
+          <div className="trust-head">
+            <h2>Trusted, Verified &amp; Certified</h2>
+          </div>
+          <div className="trust-points">
+            {trustItems.map((item) => (
+              <div key={item} className="trust-point">
+                <ShieldCheck size={16} />
+                <span>{item}</span>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════ PRICING ═══════════════════════════════════════ */}
-      <section className="sec price-sec">
-        <div className="container">
-          <div className="sec-eye">Vendor Plans</div>
-          <h2 className="sec-h">
-            <b>Pricing</b>
-          </h2>
-          <p className="sec-sub" style={{ marginBottom: 0 }}>
-            Transparent, flexible plans for every stage of growth.
-          </p>
-
-          <div className="price-grid" style={{ marginTop: 40 }}>
-            {[
-              {
-                tier: "Free",
-                name: "Free",
-                desc: "For vendors starting their sustainable journey.",
-                price: "₹0",
-                period: "forever free",
-                pop: false,
-                feats: [
-                  "Unlimited product listings",
-                  "Business Verification",
-                  "Vendor profile page",
-                  "Dashboard analytics",
-                  "Export reports",
-                  "1 RFQ response per month",
-                  "Self-declared certification",
-                ],
-                btnClass: "pc-btn-out",
-                btnText: "Get Started Free",
-                href: "/register?role=VENDOR&plan=free",
-              },
-              {
-                tier: "Starter",
-                name: "Starter",
-                desc: "For growing vendors expanding their reach.",
-                price: "₹999",
-                period: "per month / ₹9,990 per year",
-                pop: false,
-                feats: [
-                  "Unlimited product listings",
-                  "Business Verification",
-                  "Vendor profile page",
-                  "Dashboard analytics",
-                  "Export reports",
-                  "5 RFQ responses per month",
-                  "Self-declared certification",
-                  "24 hrs response time SLA",
-                ],
-                btnClass: "pc-btn-out",
-                btnText: "Start Starter Plan",
-                href: "/pricing",
-              },
-              {
-                tier: "Grow",
-                name: "Grow",
-                desc: "For vendors seeking market leadership.",
-                price: "₹1,999",
-                period: "per month / ₹19,990 per year",
-                pop: true,
-                feats: [
-                  "Unlimited product listings",
-                  "Sustainly Verified Seal",
-                  "Green Lens Review",
-                  "6 images per listing",
-                  "Video upload per listing",
-                  "Featured listings",
-                  "5 certifications upload",
-                  "Sustainly verified certification",
-                  "Basic carbon footprint support",
-                  "20 RFQ responses per month",
-                  "Custom vendor URL",
-                  "Company story section",
-                  "12 hrs response time SLA",
-                  "Priority onboarding support",
-                ],
-                btnClass: "pc-btn-solid",
-                btnText: "Get Grow Plan",
-                href: "/pricing",
-              },
-              {
-                tier: "Enterprise",
-                name: "Enterprise",
-                desc: "For large organizations with premium needs.",
-                price: "₹3,499",
-                period: "per month / ₹34,999 per year",
-                pop: false,
-                feats: [
-                  "Unlimited product listings",
-                  "Sustainly Verified Seal",
-                  "Green Lens Review",
-                  "10 images per listing",
-                  "Unlimited video uploads",
-                  "Featured listings",
-                  "Unlimited certification upload",
-                  "Sustainly verified certification",
-                  "Advanced carbon footprint support",
-                  "Unlimited RFQ responses",
-                  "Custom vendor URL",
-                  "Company story section",
-                  "2 hrs response time SLA",
-                  "Complete certification support",
-                  "Dedicated account manager",
-                  "Priority onboarding support",
-                ],
-                btnClass: "pc-btn-out",
-                btnText: "Contact Sales",
-                href: "/contact",
-              },
-            ].map((plan) => (
-              <div key={plan.name} className={`pc${plan.pop ? " pop" : ""}`}>
-                {plan.pop && <div className="pop-label">Most Popular</div>}
-                <div className="pc-tier">{plan.tier}</div>
-                <div className="pc-name">{plan.name}</div>
-                <div className="pc-desc">{plan.desc}</div>
-                <div className="pc-price">{plan.price}</div>
-                <div className="pc-period">{plan.period}</div>
-                <ul className="pc-feats">
-                  {plan.feats.map((f) => (
-                    <li key={f}>{f}</li>
-                  ))}
-                </ul>
-                <Link href={plan.href} className={`pc-btn ${plan.btnClass}`}>
-                  {plan.btnText}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════ FINAL CTA ═══════════════════════════════════════ */}
-      <section className="fcta-sec">
-        <div className="fcta-blob1" />
-        <div className="fcta-blob2" />
-        <div className="fcta-inner">
-          <div className="fcta-top">
-            <h2 className="fcta-h">
-              Ready to build a<br />
-              <span className="green">verified</span> supply chain?
-            </h2>
-            <p className="fcta-sub">
-              Join India's only marketplace where every supplier is verified,
-              every claim is checked, and every deal is backed by proof.
-            </p>
-          </div>
-          <div className="fcta-cards">
-            <div className="fcta-card">
-              {/* <div className="fcta-card-icon">🏢</div> */}
-              <h3>Start sourcing sustainably</h3>
-              <p>
-                Access verified vendors across multiple categories. Raise RFQs,
-                and meet your ESG procurement targets — all
-                in one platform.
-              </p>
-              <Link href="/register?role=BUYER" className="fcta-card-btn">
-                Register as a Buyer →
-              </Link>
-            </div>
-            <div className="fcta-card">
-              {/* <div className="fcta-card-icon">🌿</div> */}
-              <h3>Grow your B2B pipeline</h3>
-              <p>
-                Get verified, and connect
-                directly with corporate procurement teams who are actively
-                sourcing sustainable solutions.
-              </p>
-              <Link href="/register?role=VENDOR" className="fcta-card-btn dark">
-                Onboard as a Vendor →
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════ LATEST BLOGS ═══════════════════════════════════════ */}
-      {blogs.length > 0 && (
-        <section className="sec" style={{ background: "var(--off)" }}>
-          <div className="container">
-            <div className="sec-head-row">
-              <div>
-                <div className="sec-eye">Insights</div>
-                <h2 className="sec-h">
-                  Latest from our <b>Blog</b>
-                </h2>
-              </div>
-              <Link href="/blogs" className="link-all">
-                View all →
-              </Link>
-            </div>
-            <div className="testi-grid">
-              {blogs.map((blog) => (
-                <Link
-                  key={blog.id}
-                  href={`/blogs/${blog.id}`}
-                  className="tc"
-                  style={{ textDecoration: "none" }}
-                >
-                  {blog.image && (
-                    <div
-                      style={{
-                        height: 160,
-                        borderRadius: 12,
-                        overflow: "hidden",
-                        marginBottom: 8,
-                      }}
-                    >
-                      <img
-                        src={blog.image}
-                        alt={blog.title}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    </div>
-                  )}
-                  <div className="tc-name" style={{ fontSize: 16 }}>
-                    {blog.title}
-                  </div>
-                  <p
-                    className="tc-role"
-                    style={{ fontSize: 13, lineHeight: 1.6 }}
-                  >
-                    {blog.content?.replace(/<[^>]+>/g, "").slice(0, 120)}...
-                  </p>
-                  <span
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: "var(--g2)",
-                    }}
-                  >
-                    Read More →
-                  </span>
-                </Link>
+          <div className="trust-certifications">
+            <p>Our Certifications</p>
+            <div className="certification-list">
+              {certificationMarks.map((item) => (
+                <span key={item} className="certification-badge">
+                  {item}
+                </span>
               ))}
             </div>
           </div>
         </section>
-      )}
+
+        <section className="section-block featured-products-section">
+          <div className="section-head">
+            <h2>Featured Products</h2>
+            <Link href="/browse">View all products</Link>
+          </div>
+          <div className="card-grid six-up">
+            {featuredProducts.map((product, index) => (
+              <Link key={product.id} href={productHref(product.id)} className="product-card compact-product-card">
+                <div className={`product-media media-${index % 4}`}>
+                  {product.image ? (
+                    <Image src={product.image} alt={product.title} width={130} height={130} />
+                  ) : (
+                    <div className="product-placeholder" />
+                  )}
+                </div>
+                <div className="product-info">
+                  <h3>{product.title}</h3>
+                  <p className="product-price">
+                    {product.price} <span>/ {product.unit}</span>
+                  </p>
+                  <p className="product-vendor">By: {product.vendor}</p>
+                  <p className="verified-label">Verified Supplier</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </div>
 
       <Footer />
 
-      {/* ═══════════════════════════════════════ GLOBAL RFQ MODAL ═══════════════════════════════════════ */}
-      {openGlobalRFQ && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setOpenGlobalRFQ(false)}
-          />
-          <div className="relative w-full max-w-xl rounded-3xl bg-white shadow-[0_25px_80px_rgba(0,0,0,0.25)] p-8 space-y-6">
-            <button
-              onClick={() => setOpenGlobalRFQ(false)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700"
-            >
-              ✕
-            </button>
-            <div>
-              <h2
-                className="text-2xl font-semibold"
-                style={{ color: "var(--text)" }}
-              >
-                Tell Us What You Need
-              </h2>
-              <p className="text-sm mt-1" style={{ color: "var(--text3)" }}>
-                Receive quotes from verified sustainable vendors.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <input
-                placeholder="Full Name *"
-                value={rfqName}
-                onChange={(e) => setRfqName(e.target.value)}
-                className="rfq-input"
-              />
-              <input
-                placeholder="Email *"
-                value={rfqEmail}
-                onChange={(e) => setRfqEmail(e.target.value)}
-                className="rfq-input"
-              />
-              <select
-                value={rfqCategory}
-                onChange={(e) => setRfqCategory(e.target.value)}
-                className="rfq-input"
-              >
-                <option value="">Select Category *</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                placeholder="Subcategory"
-                value={rfqSubCategory}
-                onChange={(e) => setRfqSubCategory(e.target.value)}
-                className="rfq-input"
-              />
-              <input
-                placeholder="Quantity"
-                value={rfqQuantity}
-                onChange={(e) => setRfqQuantity(e.target.value)}
-                className="rfq-input"
-              />
-              <textarea
-                placeholder="Additional details"
-                value={rfqMessage}
-                onChange={(e) => setRfqMessage(e.target.value)}
-                className="rfq-input h-24 resize-none"
-              />
-            </div>
-            <button
-              onClick={submitGlobalRFQ}
-              style={{
-                background: "var(--g)",
-                color: "#fff",
-                width: "100%",
-                padding: "13px",
-                borderRadius: 50,
-                fontWeight: 700,
-                fontSize: 15,
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              {rfqLoading ? "Submitting..." : "Submit Requirement"}
-            </button>
-            <p
-              className="text-xs text-center"
-              style={{ color: "var(--text3)" }}
-            >
-              Your request will be shared only with verified vendors.
-            </p>
-          </div>
-        </div>
-      )}
+      <style>{`
+        .market-home {
+          background: #fcfdfb;
+          color: #10241b;
+          width: 100%;
+        }
+
+        .market-shell {
+          width: 100%;
+          max-width: none;
+          margin: 0;
+          padding: 0 0 48px;
+        }
+
+        .market-header {
+          background: #fff;
+          border-bottom: 1px solid #e4ece6;
+          border-left: 0;
+          border-right: 0;
+          border-top: 0;
+          border-radius: 0;
+          box-shadow: 0 10px 24px rgba(17, 48, 33, 0.04);
+          padding: 14px 24px 0;
+          margin-bottom: 18px;
+        }
+
+        .utility-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 13px;
+          color: #466354;
+          margin-bottom: 12px;
+        }
+
+        .utility-links {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          margin-left: auto;
+        }
+
+        .utility-links a,
+        .utility-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          color: #466354;
+          background: transparent;
+          font-size: 13px;
+          padding: 6px 10px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition:
+            color 170ms ease,
+            background-color 170ms ease,
+            box-shadow 170ms ease,
+            transform 170ms ease;
+        }
+
+        .utility-links a:hover,
+        .utility-link:hover {
+          color: #fff;
+          background: #287e40;
+          box-shadow: 0 6px 14px rgba(31, 111, 53, 0.18);
+          transform: translateY(-2px);
+        }
+
+        .utility-links a:active,
+        .utility-link:active {
+          transform: translateY(0) scale(0.97);
+        }
+
+        .utility-links a:focus-visible,
+        .utility-link:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 2px;
+        }
+
+        .header-main {
+          display: grid;
+          grid-template-columns: auto minmax(320px, 1fr) auto;
+          align-items: center;
+          gap: 22px;
+          padding-bottom: 14px;
+        }
+
+        .brand-lockup img {
+          height: auto;
+          width: 230px;
+        }
+
+        .search-bar {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto auto;
+          align-items: center;
+          border: 1px solid #d8e4dc;
+          border-radius: 14px;
+          overflow: hidden;
+          min-height: 48px;
+          background: #fff;
+        }
+
+        .search-bar svg {
+          margin-left: 16px;
+          color: #6e8578;
+        }
+
+        .search-bar input,
+        .search-bar select {
+          border: 0;
+          background: transparent;
+          outline: 0;
+          font: inherit;
+          color: #1a3427;
+          min-width: 0;
+        }
+
+        .search-bar input {
+          padding: 0 14px;
+        }
+
+        .search-bar select {
+          border-left: 1px solid #e1e8e3;
+          padding: 0 16px;
+          min-height: 48px;
+          color: #2e4a3b;
+        }
+
+        .search-button {
+          min-width: 52px;
+          min-height: 48px;
+          background: linear-gradient(180deg, #2e8f45, #206f35);
+          color: #fff;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .search-button svg {
+          margin-left: 0;
+          color: currentColor;
+        }
+
+        .search-button:hover {
+          filter: brightness(0.9);
+          box-shadow: 0 6px 14px rgba(31, 111, 53, 0.24);
+        }
+
+        .account-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .sign-in-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 12px;
+          border-radius: 10px;
+          color: #183426;
+          font-weight: 500;
+        }
+
+        .join-button {
+          border: 1px solid #abc0b1;
+          padding: 11px 18px;
+          border-radius: 12px;
+          font-weight: 600;
+          color: #204230;
+          background: #fff;
+        }
+
+        .sign-in-link,
+        .join-button,
+        .primary-hero-button,
+        .secondary-hero-button,
+        .sidebar-cta-button,
+        .ad-button,
+        .search-button {
+          cursor: pointer;
+          transition:
+            color 170ms ease,
+            background-color 170ms ease,
+            border-color 170ms ease,
+            box-shadow 170ms ease,
+            transform 170ms ease,
+            filter 170ms ease;
+        }
+
+        .sign-in-link:hover {
+          color: #176d35;
+          background: #eef7f0;
+          transform: translateY(-1px);
+        }
+
+        .join-button:hover {
+          color: #fff;
+          background: #247d3c;
+          border-color: #247d3c;
+          box-shadow: 0 8px 18px rgba(31, 111, 53, 0.2);
+          transform: translateY(-2px);
+        }
+
+        .sign-in-link:focus-visible,
+        .join-button:focus-visible,
+        .primary-hero-button:focus-visible,
+        .secondary-hero-button:focus-visible,
+        .sidebar-cta-button:focus-visible,
+        .ad-button:focus-visible,
+        .search-button:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 3px;
+        }
+
+        .sign-in-link:active,
+        .join-button:active,
+        .primary-hero-button:active,
+        .secondary-hero-button:active,
+        .sidebar-cta-button:active,
+        .ad-button:active,
+        .search-button:active {
+          transform: translateY(0) scale(0.98);
+        }
+
+        .mobile-menu-toggle {
+          display: none;
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          background: #eef5f0;
+          color: #173326;
+        }
+
+        .menu-row {
+          display: flex;
+          align-items: stretch;
+          gap: 0;
+          border-top: 1px solid #edf2ee;
+          border-bottom: 1px solid #e5ede7;
+          padding: 8px 0 0;
+        }
+
+        .menu-categories-button {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          height: 52px;
+          padding: 0 18px;
+          border-radius: 0;
+          background: #f0f6f1;
+          border: 1px solid #e0ebe3;
+          font-weight: 600;
+          color: #173326;
+          width: 250px;
+          min-width: 250px;
+          font-size: 13px;
+          line-height: 1;
+          justify-content: flex-start;
+        }
+
+        .menu-tabs {
+          display: flex;
+          align-items: center;
+          gap: 2px;
+          flex-wrap: wrap;
+          min-height: 52px;
+          padding-left: 14px;
+        }
+
+        .menu-tab {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          height: 52px;
+          padding: 0 14px;
+          font-size: 12px;
+          font-weight: 600;
+          line-height: 1;
+          letter-spacing: 0.01em;
+          color: #244536;
+          border-radius: 0;
+          transition: color 160ms ease, background-color 160ms ease;
+        }
+
+        .menu-tab:hover {
+          color: #176d35;
+          background: #f5f9f6;
+        }
+
+        .menu-tab::after {
+          content: "";
+          position: absolute;
+          right: 14px;
+          bottom: 0;
+          left: 14px;
+          height: 2px;
+          background: #2d8746;
+          transform: scaleX(0);
+          transform-origin: center;
+          transition: transform 160ms ease;
+        }
+
+        .menu-tab:hover::after,
+        .menu-tab:focus-visible::after {
+          transform: scaleX(1);
+        }
+
+        .hero-composition {
+          display: grid;
+          grid-template-columns: 250px minmax(0, 1fr) 190px;
+          grid-template-rows: auto 112px;
+          column-gap: 16px;
+          row-gap: 14px;
+          align-items: start;
+          padding: 0 24px;
+          margin-top: 0;
+        }
+
+        .sidebar-card,
+        .ad-card,
+        .hero-banner,
+        .quick-action-card,
+        .category-pill-card,
+        .product-card,
+        .supplier-card,
+        .trust-band,
+        .split-panel {
+          background: #fff;
+          border: 1px solid #e5ede7;
+          box-shadow: 0 10px 24px rgba(18, 46, 32, 0.05);
+        }
+
+        .sidebar-card {
+          border-radius: 0;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          margin-top: 0;
+          box-shadow: none;
+          align-self: stretch;
+          grid-column: 1;
+          grid-row: 1 / 3;
+          height: auto;
+        }
+
+        .sidebar-list {
+          display: flex;
+          flex-direction: column;
+          flex: 1 1 auto;
+          justify-content: space-evenly;
+          gap: 2px;
+          min-height: 0;
+          padding: 8px 0;
+        }
+
+        .sidebar-link {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 4px 20px;
+          min-height: 0;
+          flex: 1 1 0;
+          font-size: 11px;
+          line-height: 1.35;
+          color: #274839;
+          border-bottom: 0;
+          cursor: pointer;
+          transition:
+            color 170ms ease,
+            background-color 170ms ease,
+            box-shadow 170ms ease,
+            transform 170ms ease;
+        }
+
+        .sidebar-link:hover {
+          color: #176d35;
+          background: #edf7ef;
+          box-shadow: inset 3px 0 0 #2b7a40;
+          transform: translateX(3px);
+        }
+
+        .sidebar-link:hover .sidebar-icon {
+          color: #1f7b3a;
+          transform: translateY(1px) scale(1.12);
+        }
+
+        .sidebar-link:active {
+          background: #e4f1e7;
+          transform: translateX(1px) scale(0.99);
+        }
+
+        .sidebar-link:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: -3px;
+        }
+
+        .all-link {
+          font-weight: 600;
+        }
+
+        .sidebar-arrow {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 auto;
+          margin-left: auto;
+        }
+
+        .sidebar-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 18px;
+          color: #537464;
+          width: 18px;
+          height: 18px;
+          transform: translateY(1px);
+          transition: color 170ms ease, transform 170ms ease;
+        }
+
+        .sidebar-icon svg {
+          display: block;
+          width: 14px;
+          height: 14px;
+          stroke-width: 1.6;
+        }
+
+        .sidebar-label {
+          display: inline-flex;
+          align-items: center;
+          min-height: 18px;
+          line-height: 1.15;
+        }
+
+        .sidebar-cta {
+          background: linear-gradient(180deg, #eef6ef, #f7fbf8);
+          padding: 14px 18px;
+          border-top: 1px solid #e3ece5;
+          display: grid;
+          gap: 10px;
+          color: #355545;
+          font-size: 11px;
+          line-height: 1.45;
+          min-height: 126px;
+          flex: 0 0 126px;
+          align-content: start;
+        }
+
+        .sidebar-cta-label {
+          font-weight: 700;
+          color: #173326;
+          font-size: 11px;
+        }
+
+        .sidebar-cta .sidebar-cta-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 145px;
+          max-width: 100%;
+          min-height: 34px;
+          margin-top: 6px;
+          padding: 8px 18px;
+          border-radius: 6px;
+          background: linear-gradient(180deg, #2a8a43, #1f6f35);
+          color: #fff;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .sidebar-cta .sidebar-cta-button:hover {
+          filter: brightness(0.9);
+          box-shadow: 0 8px 16px rgba(31, 111, 53, 0.24);
+          transform: translateY(-2px);
+        }
+
+        .hero-stack {
+          display: block;
+          grid-column: 2;
+          grid-row: 1;
+          height: auto;
+          margin-top: 16px;
+        }
+
+        .hero-banner {
+          border-radius: 22px;
+          padding: 28px 30px 22px;
+          background: linear-gradient(135deg, #f5fbf6 0%, #edf7ef 45%, #f8fcf9 100%);
+          display: grid;
+          grid-template-columns: minmax(300px, 420px) minmax(260px, 1fr);
+          gap: 14px;
+          overflow: hidden;
+          min-height: 300px;
+        }
+
+        .hero-copy {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 10px;
+        }
+
+        .hero-kicker {
+          font-size: 15px;
+          font-weight: 700;
+          color: #2d7e43;
+          margin: 0;
+        }
+
+        .hero-copy h1 {
+          font-size: clamp(2.9rem, 4vw, 4.2rem);
+          line-height: 0.95;
+          letter-spacing: -0.05em;
+          margin: 0;
+        }
+
+        .hero-text {
+          max-width: 390px;
+          color: #456353;
+          font-size: 16px;
+          line-height: 1.45;
+          margin: 0;
+        }
+
+        .hero-buttons {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-top: 8px;
+        }
+
+        .primary-hero-button,
+        .secondary-hero-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 154px;
+          min-height: 46px;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 14px;
+        }
+
+        .primary-hero-button {
+          background: linear-gradient(180deg, #31984c, #206f35);
+          color: #fff;
+        }
+
+        .secondary-hero-button {
+          border: 1px solid #adc2b2;
+          color: #1f3b2d;
+          background: rgba(255, 255, 255, 0.75);
+        }
+
+        .primary-hero-button:hover {
+          filter: brightness(0.9);
+          box-shadow: 0 10px 20px rgba(31, 111, 53, 0.24);
+          transform: translateY(-2px);
+        }
+
+        .secondary-hero-button:hover {
+          color: #fff;
+          background: #247d3c;
+          border-color: #247d3c;
+          box-shadow: 0 10px 20px rgba(31, 111, 53, 0.18);
+          transform: translateY(-2px);
+        }
+
+        .hero-visual {
+          position: relative;
+          min-height: 220px;
+        }
+
+        .hero-arc {
+          position: absolute;
+          inset: 8px 42px 42px 54px;
+          border: 10px solid #48b159;
+          border-right-color: transparent;
+          border-bottom-color: transparent;
+          border-radius: 999px;
+          transform: rotate(11deg);
+          opacity: 0.9;
+        }
+
+        .hero-leaf {
+          position: absolute;
+          width: 28px;
+          height: 18px;
+          border-radius: 50% 0 50% 50%;
+          background: linear-gradient(135deg, #66c25f, #2b9542);
+          transform: rotate(-24deg);
+        }
+
+        .hero-leaf-top {
+          top: 28px;
+          right: 58px;
+        }
+
+        .hero-leaf-side {
+          top: 102px;
+          left: 34px;
+        }
+
+        .hero-windmill {
+          position: absolute;
+          top: 12px;
+          left: 102px;
+          width: 2px;
+          height: 108px;
+          background: #b4beb7;
+        }
+
+        .hero-windmill::before,
+        .hero-windmill::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 12px;
+          width: 1px;
+          height: 50px;
+          background: #b4beb7;
+          transform-origin: bottom center;
+        }
+
+        .hero-windmill::before {
+          transform: translateX(-50%) rotate(54deg);
+        }
+
+        .hero-windmill::after {
+          transform: translateX(-50%) rotate(-54deg);
+        }
+
+        .hero-energy-unit {
+          position: absolute;
+          right: 34px;
+          bottom: 18px;
+          width: 190px;
+          height: 142px;
+          border-radius: 16px;
+          background: linear-gradient(145deg, #ffffff, #edf3ef);
+          border: 1px solid #d7e3da;
+          box-shadow: 0 18px 34px rgba(39, 69, 50, 0.12);
+        }
+
+        .hero-energy-unit::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 0 auto;
+          width: 8px;
+          border-radius: 0 16px 16px 0;
+          background: linear-gradient(180deg, #27863f, #19642c);
+        }
+
+        .hero-energy-label {
+          position: absolute;
+          top: 32px;
+          left: 28px;
+          max-width: 72px;
+          font-size: 14px;
+          line-height: 1.15;
+          letter-spacing: 0.08em;
+          color: #233c2f;
+        }
+
+        .hero-solar-row {
+          position: absolute;
+          left: 56px;
+          bottom: 12px;
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+        }
+
+        .hero-solar-panel {
+          width: 112px;
+          height: 84px;
+          border-radius: 10px;
+          background:
+            linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+            linear-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+            linear-gradient(180deg, #304f79, #15243d);
+          background-size: 18px 18px, 18px 18px, 100% 100%;
+          transform: skew(-14deg);
+          box-shadow: 0 16px 26px rgba(14, 34, 54, 0.22);
+        }
+
+        .panel-tilt {
+          width: 138px;
+          height: 92px;
+          transform: skew(-14deg) translateY(2px);
+        }
+
+        .ad-card {
+          grid-column: 3;
+          grid-row: 1;
+          border-radius: 22px;
+          padding: 28px 16px 22px;
+          display: grid;
+          gap: 14px;
+          justify-items: center;
+          text-align: center;
+          background: linear-gradient(180deg, #f3faf5, #fdfefe);
+          height: 300px;
+          min-height: 0;
+          align-content: center;
+          margin-top: 16px;
+        }
+
+        .ad-badge {
+          width: 58px;
+          height: 58px;
+          border-radius: 999px;
+          background: #f0f6f1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #2b7440;
+        }
+
+        .ad-card h3,
+        .quick-action-copy h3,
+        .product-info h3,
+        .supplier-card h3,
+        .section-head h2,
+        .trust-head h2 {
+          margin: 0;
+        }
+
+        .ad-card p,
+        .quick-action-copy p,
+        .product-vendor,
+        .supplier-country {
+          margin: 0;
+          color: #536e61;
+        }
+
+        .ad-card h3 {
+          font-size: 16px;
+        }
+
+        .ad-card p {
+          font-size: 13px;
+          line-height: 1.45;
+          max-width: 130px;
+        }
+
+        .ad-button {
+          border: 1px solid #b4c6ba;
+          border-radius: 10px;
+          padding: 10px 16px;
+          font-weight: 600;
+          color: #173326;
+          background: #fff;
+        }
+
+        .ad-button:hover {
+          color: #fff;
+          background: #247d3c;
+          border-color: #247d3c;
+          box-shadow: 0 8px 16px rgba(31, 111, 53, 0.18);
+          transform: translateY(-2px);
+        }
+
+        .ad-dots {
+          display: flex;
+          gap: 8px;
+        }
+
+        .ad-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 999px;
+          background: #ccd9d0;
+        }
+
+        .ad-dot-active {
+          background: #2b7a40;
+        }
+
+        .quick-action-grid {
+          display: grid;
+          grid-column: 2 / 4;
+          grid-row: 2;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .quick-action-card {
+          border-radius: 16px;
+          padding: 15px 18px;
+          display: grid;
+          grid-template-columns: 44px minmax(0, 1fr) 16px;
+          gap: 14px;
+          align-items: center;
+          min-height: 112px;
+          border: 1px solid #e5ede7;
+          box-shadow: 0 10px 24px rgba(18, 46, 32, 0.055);
+          transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .quick-action-card:hover {
+          transform: translateY(-3px);
+          border-color: #cddfd2;
+          box-shadow: 0 16px 30px rgba(18, 46, 32, 0.09);
+        }
+
+        .verification-card {
+          background: linear-gradient(180deg, #eef7ef, #fbfdfb);
+        }
+
+        .quick-action-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 999px;
+          background: #eff6f0;
+          color: #2c7340;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .quick-action-copy p {
+          font-size: 12px;
+          line-height: 1.4;
+          margin-top: 5px;
+          max-width: 220px;
+        }
+
+        .quick-action-copy h3 {
+          font-size: 14px;
+          line-height: 1.2;
+        }
+
+        .quick-action-card svg:last-child {
+          grid-column: auto;
+          justify-self: end;
+          color: #28483a;
+          margin-top: 0;
+        }
+
+        .section-block {
+          margin-top: 28px;
+          padding: 0 24px;
+        }
+
+        .section-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+
+        .section-head h2 {
+          font-size: 24px;
+          letter-spacing: -0.04em;
+        }
+
+        .section-head a {
+          color: #2b7a40;
+          font-weight: 600;
+          font-size: 14px;
+        }
+
+        .category-strip {
+          display: grid;
+          grid-template-columns: repeat(10, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .category-pill-card {
+          border-radius: 16px;
+          padding: 14px 10px 12px;
+          text-align: center;
+          display: grid;
+          gap: 8px;
+          justify-items: center;
+          min-height: 90px;
+          border: 1px solid #e5ede7;
+          box-shadow: 0 4px 12px rgba(18, 46, 32, 0.03);
+          cursor: pointer;
+          transition:
+            transform 180ms ease,
+            border-color 180ms ease,
+            background-color 180ms ease,
+            box-shadow 180ms ease,
+            color 180ms ease;
+        }
+
+        .category-pill-card:hover {
+          color: #176d35;
+          background: #f5faf6;
+          border-color: #b9d5c0;
+          box-shadow: 0 12px 24px rgba(31, 111, 53, 0.11);
+          transform: translateY(-4px);
+        }
+
+        .category-pill-card:active {
+          transform: translateY(-1px) scale(0.98);
+        }
+
+        .category-pill-card:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 3px;
+        }
+
+        .category-pill-icon {
+          width: 34px;
+          height: 34px;
+          border-radius: 12px;
+          background: #f1f6f2;
+          color: #2b7440;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
+        }
+
+        .category-pill-card:hover .category-pill-icon {
+          color: #fff;
+          background: #2b7a40;
+          transform: scale(1.08);
+        }
+
+        .category-pill-card span:last-child {
+          font-size: 11.5px;
+          font-weight: 500;
+          line-height: 1.25;
+        }
+
+        .split-section {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+          margin-top: 22px;
+          padding: 0 24px;
+        }
+
+        .split-panel {
+          border-radius: 14px;
+          padding: 14px;
+          position: relative;
+        }
+
+        .split-section .section-head h2 {
+          font-size: 18px;
+          letter-spacing: -0.02em;
+        }
+
+        .split-section .section-head a {
+          font-size: 12px;
+        }
+
+        .card-grid {
+          display: grid;
+          grid-auto-rows: 1fr;
+          gap: 10px;
+        }
+
+        .four-up {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .six-up {
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+
+        .product-card,
+        .supplier-card {
+          border-radius: 8px;
+          overflow: hidden;
+        }
+
+        .split-section .product-card,
+        .split-section .supplier-card {
+          height: 260px;
+          min-height: 260px;
+          cursor: pointer;
+          transition:
+            transform 180ms ease,
+            border-color 180ms ease,
+            box-shadow 180ms ease;
+        }
+
+        .split-section .product-card:hover,
+        .split-section .supplier-card:hover {
+          border-color: #b9d5c0;
+          box-shadow: 0 16px 30px rgba(31, 111, 53, 0.11);
+          transform: translateY(-5px);
+        }
+
+        .split-section .product-card:active,
+        .split-section .supplier-card:active {
+          transform: translateY(-1px) scale(0.99);
+        }
+
+        .split-section .product-card:focus-visible,
+        .split-section .supplier-card:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 3px;
+        }
+
+        .product-card {
+          padding: 10px;
+        }
+
+        .split-section .product-card {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .split-section .product-media {
+          min-height: 105px;
+          margin-bottom: 8px;
+          border-radius: 8px;
+        }
+
+        .split-section .product-media img {
+          max-height: 96px;
+        }
+
+        .split-section .product-placeholder {
+          width: 62px;
+          height: 78px;
+          border-radius: 10px;
+        }
+
+        .product-media {
+          border-radius: 16px;
+          min-height: 160px;
+          display: grid;
+          place-items: center;
+          margin-bottom: 14px;
+          overflow: hidden;
+          transition: background-color 180ms ease, transform 180ms ease;
+        }
+
+        .split-section .product-card:hover .product-media {
+          transform: scale(1.02);
+        }
+
+        .media-0 {
+          background: linear-gradient(180deg, #f6f7f6, #eef2ef);
+        }
+
+        .media-1 {
+          background: linear-gradient(180deg, #f8faf8, #ecefea);
+        }
+
+        .media-2 {
+          background: linear-gradient(180deg, #f5f7f8, #edf2f2);
+        }
+
+        .media-3 {
+          background: linear-gradient(180deg, #f8faf5, #edf4ed);
+        }
+
+        .product-media img {
+          width: auto;
+          height: auto;
+          max-width: 100%;
+          max-height: 146px;
+          object-fit: contain;
+        }
+
+        .product-placeholder {
+          width: 86px;
+          height: 104px;
+          border-radius: 18px;
+          background: linear-gradient(180deg, #313d42, #97ab9f);
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+        }
+
+        .product-info h3 {
+          font-size: 16px;
+          line-height: 1.32;
+          margin-bottom: 8px;
+        }
+
+        .split-section .product-info h3 {
+          min-height: 36px;
+          margin-bottom: 5px;
+          font-size: 12px;
+          line-height: 1.22;
+        }
+
+        .split-section .product-price {
+          margin-bottom: 3px;
+          font-size: 14px;
+        }
+
+        .split-section .product-price span,
+        .split-section .product-vendor,
+        .split-section .verified-label {
+          font-size: 10.5px;
+        }
+
+        .split-section .product-info {
+          display: flex;
+          flex: 1 1 auto;
+          flex-direction: column;
+          min-height: 0;
+        }
+
+        .product-price {
+          font-size: 18px;
+          font-weight: 700;
+          color: #173326;
+          margin: 0 0 4px;
+        }
+
+        .product-price span,
+        .verified-label {
+          color: #60796b;
+          font-size: 13px;
+          font-weight: 500;
+        }
+
+        .verified-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 8px;
+        }
+
+        .split-section .product-info .verified-label {
+          margin-top: auto;
+        }
+
+        .verified-label::before {
+          content: "";
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: #22833e;
+        }
+
+        .supplier-card {
+          padding: 12px;
+          display: grid;
+          grid-template-rows: 56px minmax(34px, auto) 18px 1fr auto;
+          align-items: start;
+          justify-items: center;
+          text-align: center;
+          gap: 8px;
+        }
+
+        .supplier-mark {
+          width: 56px;
+          height: 56px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          font-size: 18px;
+          font-weight: 700;
+          letter-spacing: -0.05em;
+          transition: transform 180ms ease, box-shadow 180ms ease;
+        }
+
+        .split-section .supplier-card:hover .supplier-mark {
+          transform: scale(1.08);
+          box-shadow: 0 10px 20px rgba(31, 111, 53, 0.12);
+        }
+
+        .mark-0 {
+          background: #edf6ef;
+          color: #2f8746;
+        }
+
+        .mark-1 {
+          background: #eef5f1;
+          color: #2f7f4f;
+        }
+
+        .mark-2 {
+          background: #edf4fb;
+          color: #2c74b3;
+        }
+
+        .mark-3 {
+          background: #faf1e8;
+          color: #c07935;
+        }
+
+        .supplier-country {
+          font-size: 11px;
+        }
+
+        .split-section .supplier-card h3 {
+          font-size: 12px;
+          line-height: 1.2;
+        }
+
+        .split-section .supplier-card .verified-label {
+          font-size: 10.5px;
+        }
+
+        .supplier-rating {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: 700;
+          color: #173326;
+          margin-top: 4px;
+          align-self: end;
+          font-size: 11px;
+        }
+
+        .stars {
+          font-size: 11px;
+          color: #2e7f43;
+          letter-spacing: 0.08em;
+        }
+
+        .carousel-arrow {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 38px;
+          height: 38px;
+          border-radius: 999px;
+          background: #fff;
+          border: 1px solid #dfebe3;
+          box-shadow: 0 8px 18px rgba(17, 46, 31, 0.12);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #28483a;
+        }
+
+        .carousel-arrow-left {
+          left: -12px;
+        }
+
+        .carousel-arrow-right {
+          right: -12px;
+        }
+
+        .compact-gap {
+          margin-top: 16px;
+        }
+
+        .left-heavy {
+          justify-content: flex-start;
+        }
+
+        .tag-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        .tag-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          border: 1px solid #deebe2;
+          border-radius: 999px;
+          background: #fff;
+          color: #264738;
+          font-size: 13px;
+          cursor: pointer;
+          transition:
+            color 170ms ease,
+            background-color 170ms ease,
+            border-color 170ms ease,
+            box-shadow 170ms ease,
+            transform 170ms ease;
+        }
+
+        .tag-chip:hover {
+          color: #fff;
+          background: #287e40;
+          border-color: #287e40;
+          box-shadow: 0 8px 18px rgba(31, 111, 53, 0.18);
+          transform: translateY(-3px);
+        }
+
+        .tag-chip:active {
+          transform: translateY(0) scale(0.98);
+        }
+
+        .tag-chip:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 3px;
+        }
+
+        .trust-band {
+          margin-top: 24px;
+          margin-left: 24px;
+          margin-right: 24px;
+          border-radius: 24px;
+          padding: 24px 28px;
+          display: grid;
+          grid-template-columns: auto 1fr auto;
+          gap: 28px;
+          align-items: center;
+          background: linear-gradient(90deg, #eef8ef 0%, #f9fcf9 50%, #eff7f2 100%);
+          transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+        }
+
+        .trust-band:hover {
+          border-color: #c5dccb;
+          box-shadow: 0 14px 28px rgba(31, 111, 53, 0.09);
+          transform: translateY(-2px);
+        }
+
+        .trust-points {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 18px;
+          justify-content: center;
+        }
+
+        .trust-point {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: #2a493b;
+          font-size: 14px;
+          font-weight: 500;
+          transition: color 170ms ease, transform 170ms ease;
+        }
+
+        .trust-point:hover {
+          color: #1f7b3a;
+          transform: translateY(-2px);
+        }
+
+        .trust-point svg {
+          transition: transform 170ms ease;
+        }
+
+        .trust-point:hover svg {
+          transform: scale(1.14);
+        }
+
+        .trust-certifications p {
+          margin: 0 0 10px;
+          font-size: 13px;
+          color: #5c7568;
+          text-align: right;
+        }
+
+        .certification-list {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .certification-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 80px;
+          padding: 10px 12px;
+          border-radius: 999px;
+          background: #fff;
+          border: 1px solid #d8e5dc;
+          font-size: 13px;
+          font-weight: 700;
+          color: #1d3a2c;
+          transition:
+            color 170ms ease,
+            background-color 170ms ease,
+            border-color 170ms ease,
+            box-shadow 170ms ease,
+            transform 170ms ease;
+        }
+
+        .certification-badge:hover {
+          color: #176d35;
+          background: #f1f8f3;
+          border-color: #b9d5c0;
+          box-shadow: 0 7px 15px rgba(31, 111, 53, 0.1);
+          transform: translateY(-2px);
+        }
+
+        .featured-products-section {
+          margin-top: 28px;
+          margin-bottom: 24px;
+        }
+
+        .featured-products-section .section-head a {
+          transition: color 170ms ease, transform 170ms ease;
+        }
+
+        .featured-products-section .section-head a:hover {
+          color: #176d35;
+          text-decoration: underline;
+          text-underline-offset: 4px;
+          transform: translateX(-3px);
+        }
+
+        .featured-products-section .product-card {
+          cursor: pointer;
+          transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .featured-products-section .product-card:hover {
+          border-color: #b9d5c0;
+          box-shadow: 0 16px 30px rgba(31, 111, 53, 0.11);
+          transform: translateY(-5px);
+        }
+
+        .featured-products-section .product-card:active {
+          transform: translateY(-1px) scale(0.99);
+        }
+
+        .featured-products-section .product-card:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 3px;
+        }
+
+        .featured-products-section .product-card:hover .product-media {
+          transform: scale(1.02);
+        }
+
+        .compact-product-card .product-media {
+          min-height: 134px;
+        }
+
+        .compact-product-card .product-info h3 {
+          font-size: 15px;
+        }
+
+        @media (max-width: 1220px) {
+          .menu-categories-button {
+            width: 220px;
+            min-width: 220px;
+          }
+
+          .hero-composition {
+            grid-template-columns: 220px minmax(0, 1fr);
+            grid-template-rows: auto;
+          }
+
+          .ad-card {
+            grid-column: 2;
+            grid-row: 3;
+            height: auto;
+            min-height: auto;
+            margin-top: 4px;
+          }
+
+          .quick-action-grid {
+            grid-column: 2;
+            grid-row: 2;
+          }
+
+          .category-strip {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+          }
+
+          .four-up {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .six-up {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+
+          .trust-band {
+            grid-template-columns: 1fr;
+            justify-items: start;
+          }
+
+          .trust-points,
+          .certification-list {
+            justify-content: flex-start;
+          }
+
+          .trust-certifications p {
+            text-align: left;
+          }
+        }
+
+        @media (max-width: 980px) {
+          .market-shell {
+            padding: 0 0 40px;
+          }
+
+          .header-main {
+            grid-template-columns: 1fr;
+          }
+
+          .account-actions {
+            justify-content: space-between;
+          }
+
+          .mobile-menu-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .menu-row {
+            display: none;
+          }
+
+          .menu-row-open {
+            display: grid;
+            justify-items: start;
+          }
+
+          .menu-tabs {
+            display: grid;
+            gap: 2px;
+          }
+
+          .hero-composition {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto;
+            padding: 0 14px;
+            margin-top: 14px;
+          }
+
+          .sidebar-card,
+          .ad-card {
+            grid-column: auto;
+            grid-row: auto;
+            order: 2;
+          }
+
+          .sidebar-card {
+            height: auto;
+            margin-top: 0;
+          }
+
+          .hero-stack {
+            order: 1;
+            grid-column: auto;
+            grid-row: auto;
+            height: auto;
+          }
+
+          .quick-action-grid {
+            grid-column: auto;
+            grid-row: auto;
+            order: 1;
+          }
+
+          .hero-banner {
+            grid-template-columns: 1fr;
+            padding: 24px 20px 18px;
+          }
+
+          .hero-visual {
+            min-height: 240px;
+          }
+
+          .quick-action-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .split-section {
+            grid-template-columns: 1fr;
+            padding: 0 14px;
+          }
+
+          .section-block {
+            padding: 0 14px;
+          }
+
+          .trust-band {
+            margin-left: 14px;
+            margin-right: 14px;
+          }
+        }
+
+        @media (max-width: 720px) {
+          .market-header {
+            padding: 14px 14px 0;
+          }
+
+          .utility-bar {
+            display: none;
+          }
+
+          .brand-lockup img {
+            width: 190px;
+          }
+
+          .search-bar {
+            grid-template-columns: auto minmax(0, 1fr) auto;
+          }
+
+          .search-bar select {
+            display: none;
+          }
+
+          .account-actions {
+            gap: 10px;
+          }
+
+          .join-button,
+          .sign-in-link {
+            font-size: 13px;
+          }
+
+          .hero-buttons {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .quick-action-grid,
+          .category-strip,
+          .four-up,
+          .six-up {
+            grid-template-columns: 1fr;
+          }
+
+          .sidebar-link {
+            padding: 0 16px;
+            min-height: 34px;
+            font-size: 11px;
+          }
+
+          .sidebar-cta {
+            padding: 20px 16px;
+            font-size: 14px;
+            min-height: auto;
+          }
+
+          .quick-action-card {
+            min-height: auto;
+          }
+
+          .section-head {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .section-head h2 {
+            font-size: 24px;
+          }
+
+          .carousel-arrow {
+            display: none;
+          }
+        }
+      `}</style>
     </main>
   );
 }

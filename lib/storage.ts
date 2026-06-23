@@ -1,5 +1,5 @@
 // lib/storage.ts
-import { storage } from "@/lib/firebase";
+import { firebaseConfigError, isFirebaseConfigured, storage } from "@/lib/firebase";
 import {
   ref,
   uploadBytesResumable,
@@ -13,6 +13,16 @@ export async function uploadFileWithProgress(
   onProgress?: (percent: number) => void
 ): Promise<string> {
   return new Promise((resolve, reject) => {
+    if (!isFirebaseConfigured) {
+      reject(
+        new Error(
+          firebaseConfigError ||
+            "Firebase Storage is disabled. Migrate this upload to Supabase Storage."
+        )
+      );
+      return;
+    }
+
     try {
       const storageRef = ref(storage, path);
       const uploadTask = uploadBytesResumable(storageRef, file);

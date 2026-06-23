@@ -13,7 +13,7 @@ import {
   Layers,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, isFirebaseConfigured } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import {
@@ -50,7 +50,7 @@ export default function Header() {
   /* AUTH */
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+  const [loadingUser, setLoadingUser] = useState(isFirebaseConfigured);
   const [scrolled, setScrolled] = useState(false);
   /* SEARCH */
   const [queryText, setQueryText] = useState("");
@@ -85,6 +85,10 @@ export default function Header() {
 
   /* ---------------- AUTH ---------------- */
   useEffect(() => {
+    if (!isFirebaseConfigured) {
+      return;
+    }
+
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {
         setAuthUser(null);
@@ -104,6 +108,10 @@ export default function Header() {
 
   /* ---------------- LOAD SEARCH DATA (ONCE) ---------------- */
   useEffect(() => {
+    if (!isFirebaseConfigured) {
+      return;
+    }
+
     async function loadSearchData() {
       try {
         const pSnap = await getDocs(
@@ -314,6 +322,10 @@ export default function Header() {
                 </button>
                 <button
                   onClick={async () => {
+                    if (!isFirebaseConfigured) {
+                      router.push("/");
+                      return;
+                    }
                     await signOut(auth);
                     router.push("/");
                   }}
@@ -380,6 +392,11 @@ export default function Header() {
                   </button>
                   <button
                     onClick={async () => {
+                      if (!isFirebaseConfigured) {
+                        setOpenMobile(false);
+                        router.push("/");
+                        return;
+                      }
                       await signOut(auth);
                       setOpenMobile(false);
                       router.push("/");
