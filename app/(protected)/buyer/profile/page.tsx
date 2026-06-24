@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,6 +9,7 @@ import {
   MapPin, Mail, Phone, Globe, Link2, User, Briefcase,
   ChevronDown, ChevronUp,
 } from "lucide-react";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 // ─── tiny reusable display/edit row ──────────────────────────────────────────
 function Field({ label, value, editing, name, onChange, type = "text", options }: {
@@ -98,29 +96,50 @@ export default function BuyerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [buyerId, setBuyerId] = useState("");
   const [profileComplete, setProfileComplete] = useState(false);
   const [data, setData] = useState<any>({});
   const [draft, setDraft] = useState<any>({});
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) { router.push("/login"); return; }
-      setBuyerId(u.uid);
-
-      const userSnap = await getDoc(doc(db, "users", u.uid));
-      if (userSnap.exists()) {
-        setProfileComplete(!!userSnap.data().buyerProfileComplete);
+    async function loadProfile() {
+      const session = getStoredSession();
+      if (!session) {
+        router.push("/login");
+        return;
       }
 
-      const buyerSnap = await getDoc(doc(db, "buyers", u.uid));
-      if (buyerSnap.exists()) {
-        setData(buyerSnap.data());
-        setDraft(buyerSnap.data());
+      try {
+        const response = await fetch("/api/buyer/profile", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          router.push("/login");
+          return;
+        }
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || "Unable to load buyer profile.");
+        }
+
+        const buyer = payload.buyer || {};
+        setProfileComplete(Boolean(payload.profileComplete));
+        setData(buyer);
+        setDraft(buyer);
+      } catch (err) {
+        console.error("BUYER_PROFILE_LOAD_ERROR", err);
+        setError(err instanceof Error ? err.message : "Unable to load buyer profile.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
-    return () => unsub();
+    }
+
+    void loadProfile();
   }, [router]);
 
   const handleChange = (name: string, value: string) => {
@@ -136,15 +155,41 @@ export default function BuyerProfilePage() {
     editing ? draft?.[section]?.[key] ?? "" : data?.[section]?.[key] ?? "";
 
   const handleSave = async () => {
-    if (!buyerId) return;
+    const session = getStoredSession();
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
     setSaving(true);
+    setError("");
     try {
-      await setDoc(doc(db, "buyers", buyerId), { ...draft, updatedAt: serverTimestamp() }, { merge: true });
+      const response = await fetch("/api/buyer/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...draft,
+          status: draft.status || data.status || "submitted",
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Save failed. Please try again.");
+      }
+
+      const buyer = payload.buyer || draft;
       setData(draft);
+      setData(buyer);
+      setDraft(buyer);
       setEditing(false);
     } catch (err) {
       console.error(err);
-      alert("Save failed. Please try again.");
+      setError(err instanceof Error ? err.message : "Save failed. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -187,6 +232,12 @@ export default function BuyerProfilePage() {
       </Link>
 
       {/* ── Header card ── */}
+      {error && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
+
       <div className="rounded-3xl bg-white border border-gray-100 shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center">

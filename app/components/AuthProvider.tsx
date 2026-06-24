@@ -1,20 +1,14 @@
 "use client";
 import { ReactNode, useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth, isFirebaseConfigured } from "@/lib/firebase";
+import { getCurrentUser } from "@/lib/supabaseAuth";
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
-  const [loading, setLoading] = useState(isFirebaseConfigured);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
-      return;
-    }
-
-    const unsub = onAuthStateChanged(auth, () => {
+    getCurrentUser().finally(() => {
       setLoading(false);
     });
-    return () => unsub();
   }, []);
 
   if (loading) return <div>Loading...</div>;

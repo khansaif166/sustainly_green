@@ -4,14 +4,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
 import {
-  collection,
-  getDocs,
-  limit,
-  query,
-  where,
-} from "firebase/firestore";
+  fetchActiveCategories,
+  fetchApprovedProducts,
+  fetchApprovedVendors,
+} from "@/lib/supabasePublic";
+import {
+  AUTH_SESSION_CLEARED_EVENT,
+  AUTH_SESSION_SAVED_EVENT,
+  ensureCurrentProfile,
+  getCurrentUser,
+  getStoredSession,
+  redirectForRole,
+  signOutSupabase,
+  type SupabaseProfile,
+} from "@/lib/supabaseAuth";
 import Footer from "./components/layouts/Footer";
 import {
   ArrowRight,
@@ -52,6 +59,7 @@ type SupplierCard = {
   country: string;
   rating: string;
   mark: string;
+  isUnclaimed?: boolean;
 };
 
 const sidebarCategories: CategoryItem[] = [
@@ -243,27 +251,60 @@ export default function HomePage() {
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [profile, setProfile] = useState<SupabaseProfile | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryItem[]>(sidebarCategories);
   const [bestSellers, setBestSellers] = useState<ProductCard[]>(staticProducts);
   const [featuredProducts, setFeaturedProducts] = useState<ProductCard[]>(staticFeaturedProducts);
   const [featuredSuppliers, setFeaturedSuppliers] = useState<SupplierCard[]>(staticSuppliers);
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
-      return;
+    async function loadAuth() {
+      try {
+        const user = await getCurrentUser();
+        const accessToken = getStoredSession()?.accessToken;
+
+        if (!user || !accessToken) {
+          setProfile(null);
+          return;
+        }
+
+        setProfile(await ensureCurrentProfile(accessToken));
+      } finally {
+        setAuthLoading(false);
+      }
     }
 
+    void loadAuth();
+
+    function handleSessionSaved() {
+      void loadAuth();
+    }
+
+    function handleSessionCleared() {
+      setProfile(null);
+      setAuthLoading(false);
+    }
+
+    window.addEventListener(AUTH_SESSION_SAVED_EVENT, handleSessionSaved);
+    window.addEventListener(AUTH_SESSION_CLEARED_EVENT, handleSessionCleared);
+
+    return () => {
+      window.removeEventListener(AUTH_SESSION_SAVED_EVENT, handleSessionSaved);
+      window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, handleSessionCleared);
+    };
+  }, []);
+
+  useEffect(() => {
     async function loadHomepageData() {
       try {
-        const categorySnap = await getDocs(
-          query(collection(db, "categories"), where("active", "==", true), limit(10)),
-        );
+        const categories = await fetchActiveCategories(10);
 
-        if (!categorySnap.empty) {
+        if (categories.length > 0) {
           setCategoryOptions(
-            categorySnap.docs.map((item, index) => ({
+            categories.map((item, index) => ({
               id: item.id,
-              name: String(item.data().name || `Category ${index + 1}`),
+              name: item.name,
               icon: sidebarCategories[index % sidebarCategories.length]?.icon || "sun",
             })),
           );
@@ -271,57 +312,43 @@ export default function HomePage() {
       } catch {}
 
       try {
-        const productSnap = await getDocs(
-          query(
-            collection(db, "products"),
-            where("approved", "==", true),
-            where("listingType", "==", "Product"),
-            limit(6),
-          ),
-        );
+        const products = await fetchApprovedProducts({
+          listingType: "Product",
+          limit: 6,
+        });
 
-        if (!productSnap.empty) {
-          const products = productSnap.docs.map((item, index) => {
-            const data = item.data();
-            return {
-              id: item.id,
-              title: String(data.title || `Product ${index + 1}`),
-              price: `$${Number(data.price || (index + 1) * 120).toFixed(2)}`,
-              unit: String(data.unit || "Unit"),
-              vendor: String(data.vendorName || data.companyName || "Verified Supplier"),
-              image:
-                typeof data.images?.[0] === "string" && data.images[0].startsWith("/")
-                  ? data.images[0]
-                  : undefined,
-            };
-          });
+        if (products.length > 0) {
+          const cards = products.map((product, index) => ({
+            id: product.id,
+            title: product.title || `Product ${index + 1}`,
+            price:
+              product.priceType === "Price on Request" || product.price === undefined
+                ? "Price on request"
+                : `${product.currency} ${product.price.toFixed(2)}`,
+            unit: product.moq ? `MOQ ${product.moq}` : "Unit",
+            vendor: product.vendorName,
+            image: product.images[0]?.startsWith("/") ? product.images[0] : undefined,
+          }));
 
-          setBestSellers(products.slice(0, 4));
-          setFeaturedProducts(products.slice(0, 6));
+          setBestSellers(cards.slice(0, 4));
+          setFeaturedProducts(cards.slice(0, 6));
         }
       } catch {}
 
       try {
-        const vendorSnap = await getDocs(
-          query(collection(db, "vendors"), where("approved", "==", true), limit(4)),
-        );
+        const vendors = await fetchApprovedVendors(8);
 
-        if (!vendorSnap.empty) {
+        if (vendors.length > 0) {
           setFeaturedSuppliers(
-            vendorSnap.docs.map((item, index) => {
-              const data = item.data();
-              const companyName = String(data.companyName || `Supplier ${index + 1}`);
+            vendors.map((vendor, index) => {
+              const companyName = vendor.companyName || `Supplier ${index + 1}`;
               return {
-                id: item.id,
+                id: vendor.id,
                 name: companyName,
-                country: String(data.country || data.location || "India"),
-                rating: String(data.GreenLensScore || data.rating || 4.8),
-                mark: companyName
-                  .split(" ")
-                  .slice(0, 2)
-                  .map((part) => part.charAt(0))
-                  .join("")
-                  .toUpperCase(),
+                country: vendor.country || vendor.location || "India",
+                rating: vendor.isUnclaimed ? "Listed" : "4.8",
+                mark: vendor.logoText,
+                isUnclaimed: vendor.isUnclaimed,
               };
             }),
           );
@@ -345,6 +372,14 @@ export default function HomePage() {
 
     router.push(`/browse${params.toString() ? `?${params.toString()}` : ""}`);
   }
+
+  async function handleLogout() {
+    await signOutSupabase();
+    setProfile(null);
+    router.refresh();
+  }
+
+  const dashboardLink = profile ? redirectForRole(profile) : "/login";
 
   return (
     <main className="market-home">
@@ -399,13 +434,30 @@ export default function HomePage() {
             </div>
 
             <div className="account-actions">
-              <Link href="/login" className="sign-in-link">
-                <UserRound size={18} />
-                Sign In
-              </Link>
-              <Link href="/register?role=BUYER" className="join-button">
-                Join Free
-              </Link>
+              {!authLoading && profile ? (
+                <>
+                  <span className="sign-in-link account-user">
+                    <UserRound size={18} />
+                    Hi, {profile.name || "User"}
+                  </span>
+                  <Link href={dashboardLink} className="join-button">
+                    Dashboard
+                  </Link>
+                  <button type="button" className="sign-in-link" onClick={handleLogout}>
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="sign-in-link">
+                    <UserRound size={18} />
+                    Sign In
+                  </Link>
+                  <Link href="/register?role=BUYER" className="join-button">
+                    Join Free
+                  </Link>
+                </>
+              )}
               <button
                 type="button"
                 className="mobile-menu-toggle"
@@ -586,7 +638,7 @@ export default function HomePage() {
 
           <div className="split-panel">
             <div className="section-head">
-              <h2>Featured Suppliers</h2>
+              <h2>Listed Green Vendors</h2>
               <Link href="/browse?type=vendor">View all</Link>
             </div>
             <div className="card-grid four-up">
@@ -595,10 +647,12 @@ export default function HomePage() {
                   <div className={`supplier-mark mark-${index % 4}`}>{supplier.mark}</div>
                   <h3>{supplier.name}</h3>
                   <p className="supplier-country">{supplier.country}</p>
-                  <p className="verified-label">Verified Supplier</p>
+                  <p className="verified-label">
+                    {supplier.isUnclaimed ? "Listed Supplier" : "Verified Supplier"}
+                  </p>
                   <div className="supplier-rating">
                     <span>{supplier.rating}</span>
-                    <span className="stars">★★★★★</span>
+                    {!supplier.isUnclaimed && <span className="stars">★★★★★</span>}
                   </div>
                 </Link>
               ))}
@@ -935,7 +989,7 @@ export default function HomePage() {
           color: #173326;
           width: 250px;
           min-width: 250px;
-          font-size: 13px;
+          font-size: 14px;
           line-height: 1;
           justify-content: flex-start;
         }
@@ -955,7 +1009,7 @@ export default function HomePage() {
           align-items: center;
           height: 52px;
           padding: 0 14px;
-          font-size: 12px;
+          font-size: 14px;
           font-weight: 600;
           line-height: 1;
           letter-spacing: 0.01em;
@@ -1042,7 +1096,7 @@ export default function HomePage() {
           padding: 4px 20px;
           min-height: 0;
           flex: 1 1 0;
-          font-size: 11px;
+          font-size: 13px;
           line-height: 1.35;
           color: #274839;
           border-bottom: 0;
@@ -1121,17 +1175,17 @@ export default function HomePage() {
           display: grid;
           gap: 10px;
           color: #355545;
-          font-size: 11px;
+          font-size: 13px;
           line-height: 1.45;
-          min-height: 126px;
-          flex: 0 0 126px;
+          min-height: 136px;
+          flex: 0 0 136px;
           align-content: start;
         }
 
         .sidebar-cta-label {
           font-weight: 700;
           color: #173326;
-          font-size: 11px;
+          font-size: 13px;
         }
 
         .sidebar-cta .sidebar-cta-button {
@@ -1140,13 +1194,13 @@ export default function HomePage() {
           justify-content: center;
           width: 145px;
           max-width: 100%;
-          min-height: 34px;
+          min-height: 36px;
           margin-top: 6px;
           padding: 8px 18px;
           border-radius: 6px;
           background: linear-gradient(180deg, #2a8a43, #1f6f35);
           color: #fff;
-          font-size: 11px;
+          font-size: 13px;
           font-weight: 700;
         }
 
@@ -1193,8 +1247,8 @@ export default function HomePage() {
 
         .hero-copy h1 {
           font-size: clamp(2.9rem, 4vw, 4.2rem);
-          line-height: 0.95;
-          letter-spacing: -0.05em;
+          line-height: 1.02;
+          letter-spacing: -0.04em;
           margin: 0;
         }
 
@@ -1504,14 +1558,14 @@ export default function HomePage() {
         }
 
         .quick-action-copy p {
-          font-size: 12px;
+          font-size: 13px;
           line-height: 1.4;
           margin-top: 5px;
           max-width: 220px;
         }
 
         .quick-action-copy h3 {
-          font-size: 14px;
+          font-size: 15px;
           line-height: 1.2;
         }
 
@@ -1554,12 +1608,12 @@ export default function HomePage() {
 
         .category-pill-card {
           border-radius: 16px;
-          padding: 14px 10px 12px;
+          padding: 16px 10px 14px;
           text-align: center;
           display: grid;
           gap: 8px;
           justify-items: center;
-          min-height: 90px;
+          min-height: 100px;
           border: 1px solid #e5ede7;
           box-shadow: 0 4px 12px rgba(18, 46, 32, 0.03);
           cursor: pointer;
@@ -1607,7 +1661,7 @@ export default function HomePage() {
         }
 
         .category-pill-card span:last-child {
-          font-size: 11.5px;
+          font-size: 13px;
           font-weight: 500;
           line-height: 1.25;
         }
@@ -1764,7 +1818,7 @@ export default function HomePage() {
         .split-section .product-info h3 {
           min-height: 36px;
           margin-bottom: 5px;
-          font-size: 12px;
+          font-size: 13px;
           line-height: 1.22;
         }
 
@@ -1776,7 +1830,7 @@ export default function HomePage() {
         .split-section .product-price span,
         .split-section .product-vendor,
         .split-section .verified-label {
-          font-size: 10.5px;
+          font-size: 12px;
         }
 
         .split-section .product-info {
@@ -1867,16 +1921,16 @@ export default function HomePage() {
         }
 
         .supplier-country {
-          font-size: 11px;
+          font-size: 12px;
         }
 
         .split-section .supplier-card h3 {
-          font-size: 12px;
+          font-size: 13px;
           line-height: 1.2;
         }
 
         .split-section .supplier-card .verified-label {
-          font-size: 10.5px;
+          font-size: 12px;
         }
 
         .supplier-rating {
@@ -1887,11 +1941,11 @@ export default function HomePage() {
           color: #173326;
           margin-top: 4px;
           align-self: end;
-          font-size: 11px;
+          font-size: 12px;
         }
 
         .stars {
-          font-size: 11px;
+          font-size: 12px;
           color: #2e7f43;
           letter-spacing: 0.08em;
         }

@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db, setLocalPersistence } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { sendPasswordResetEmail } from "firebase/auth";
+import {
+  ensureCurrentProfile,
+  redirectForRole,
+  requestPasswordReset,
+  signInWithSupabase,
+} from "@/lib/supabaseAuth";
 // React Icons
 import {
   HiShieldCheck,
@@ -32,15 +34,11 @@ export default function LoginPage() {
 
     try {
       setResetLoading(true);
-      await sendPasswordResetEmail(auth, email);
+      await requestPasswordReset(email);
       setResetSent(true);
       setError(null);
     } catch (err: any) {
-      if (err.code === "auth/user-not-found") {
-        setError("No account found with this email.");
-      } else {
-        setError("Failed to send reset email.");
-      }
+      setError("Failed to send reset email.");
     } finally {
       setResetLoading(false);
     }
@@ -51,71 +49,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await setLocalPersistence();
+      const session = await signInWithSupabase(email, password);
+      const profile = await ensureCurrentProfile(session.accessToken);
 
-      // 🔐 Login
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-
-      const user = cred.user;
-
-      // 🔍 Fetch user profile
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      if (!userSnap.exists()) {
-        throw new Error("User profile not found.");
-      }
-
-      const userData = userSnap.data();
-      // 🔁 Role based redirect
-      if (userData.role === "ADMIN") {
-        router.push("/admin");
-        return;
-      }
-
-      if (userData.role === "BUYER") {
-        router.push("/");
-        return;
-      }
-
-      if (userData.role === "VENDOR") {
-
-  // ✅ 1️⃣ Not onboarded
-  if (!userData.vendorProfileComplete) {
-    router.push("/vendor/onboarding");
-    return;
-  }
-
-  // ✅ 2️⃣ Get vendor approval status
-  const vendorSnap = await getDoc(doc(db, "vendors", user.uid));
-
-  if (!vendorSnap.exists()) {
-    router.push("/vendor/onboarding");
-    return;
-  }
-
-  const vendorData = vendorSnap.data();
-
-  // ✅ 3️⃣ Not approved yet
-  if (!vendorData.approved) {
-    router.push("/vendor/dashboard");   // optional page
-    return;
-  }
-
-  // ✅ 4️⃣ Approved → dashboard
-  router.push("/vendor/dashboard");
-  return;
-}
-
-      router.push("/");
+      router.push(redirectForRole(profile));
     } catch (err: any) {
-      if (err.code === "auth/user-not-found") {
-        setError("Account not found.");
-      } else if (err.code === "auth/wrong-password") {
-        setError("Incorrect password.");
-      } else if (err.code === "auth/invalid-email") {
-        setError("Invalid email address.");
-      } else {
-        setError("Login failed. Please try again.");
-      }
+      setError("Login failed. Please check your email and password.");
     } finally {
       setLoading(false);
     }
@@ -268,7 +207,7 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-6 text-xs text-gray-400">
-            Secure login powered by Firebase Authentication
+            Secure login powered by Supabase Authentication
           </p>
         </div>
       </div>

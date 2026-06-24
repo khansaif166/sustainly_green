@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
 import ReplyQuoteModal from "./ReplyQuoteModal";
 import {
   FiSend,
@@ -13,6 +10,8 @@ import {
 } from "react-icons/fi";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 /* ================= TYPES ================= */
 
@@ -34,29 +33,46 @@ interface RFQ {
 /* ================= COMPONENT ================= */
 
 export default function VendorRFQsPage() {
+  const router = useRouter();
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [active, setActive] = useState<RFQ | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<RFQStatusFilter>("ALL");
 
   /* ================= LOAD RFQS ================= */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) return;
+    async function loadRfqs() {
+      const session = getStoredSession();
 
-      const q = query(
-        collection(db, "rfqs"),
-        where("vendorId", "==", u.uid)
-      );
+      if (!session) {
+        router.push("/login");
+        return;
+      }
 
-      const snap = await getDocs(q);
-      setRfqs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as RFQ)));
-      setLoading(false);
-    });
+      try {
+        const response = await fetch("/api/vendor/rfqs", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+        const payload = await response.json();
 
-    return () => unsub();
-  }, []);
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || "Unable to load RFQs.");
+        }
+
+        setRfqs(payload.rfqs || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load RFQs.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadRfqs();
+  }, [router]);
 
   /* ================= FILTER + SORT ================= */
 
@@ -127,6 +143,12 @@ export default function VendorRFQsPage() {
           Total RFQs: {rfqs.length}
         </span>
       </div>
+
+      {error && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* ================= FILTER ================= */}
       <div className="flex flex-wrap gap-3">

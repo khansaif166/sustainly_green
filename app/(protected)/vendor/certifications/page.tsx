@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  getDocs
-} from "firebase/firestore";
+import { useRouter } from "next/navigation";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 type Certification = {
   id: string;
@@ -17,39 +12,43 @@ type Certification = {
 };
 
 export default function VendorCertifications() {
+  const router = useRouter();
 
   const [data, setData] = useState<Certification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
 
     async function load() {
+      const session = getStoredSession();
 
-      const uid = auth.currentUser?.uid;
-
-      if (!uid) {
-        setLoading(false);
+      if (!session) {
+        router.push("/login");
         return;
       }
 
       try {
+        const response = await fetch("/api/vendor/certifications", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+        const payload = await response.json();
 
-        const q = query(
-          collection(db, "certificationRequests"),
-          where("vendorId", "==", uid)
-        );
+        if (!response.ok) {
+          throw new Error(
+            payload?.error?.message || "Unable to load certifications.",
+          );
+        }
 
-        const snap = await getDocs(q);
-
-        const list: Certification[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<Certification, "id">)
-        }));
-
-        setData(list);
+        setData(payload.certifications || []);
 
       } catch (err) {
         console.error("Error loading certifications:", err);
+        setError(
+          err instanceof Error ? err.message : "Unable to load certifications.",
+        );
       }
 
       setLoading(false);
@@ -57,7 +56,7 @@ export default function VendorCertifications() {
 
     load();
 
-  }, []);
+  }, [router]);
 
   return (
     <main className="p-10">
@@ -72,6 +71,12 @@ export default function VendorCertifications() {
 
       {!loading && data.length === 0 && (
         <p className="text-gray-500">No certifications found</p>
+      )}
+
+      {error && (
+        <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </p>
       )}
 
       <div className="space-y-4">

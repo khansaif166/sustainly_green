@@ -1,17 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  getDoc,
-  doc,
-} from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import {
   LineChart,
@@ -32,6 +21,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 /* ================= TYPES ================= */
 
@@ -39,7 +29,7 @@ type RFQ = {
   id: string;
   status: string;
   buyerEmail?: string;
-  createdAt?: any;
+  createdAt?: string;
   vendorResponse?: {
     price?: number;
     currency?: string;
@@ -54,37 +44,44 @@ export default function VendorDashboardPage() {
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [error, setError] = useState("");
 
   /* ================= LOAD DATA ================= */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
+    async function loadDashboard() {
+      const session = getStoredSession();
+
+      if (!session) {
         router.push("/login");
         return;
       }
 
-      const userSnap = await getDoc(doc(db, "users", u.uid));
+      try {
+        const response = await fetch("/api/vendor/dashboard", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+        const payload = await response.json();
 
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-
-        if (!data.vendorProfileComplete) {
-          setNeedsOnboarding(true);
+        if (!response.ok) {
+          throw new Error(
+            payload?.error?.message || "Unable to load vendor dashboard.",
+          );
         }
+
+        setNeedsOnboarding(Boolean(payload.needsOnboarding));
+        setRfqs(payload.rfqs || []);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Unable to load vendor dashboard.",
+        );
+      } finally {
+        setLoading(false);
       }
+    }
 
-      const q = query(
-        collection(db, "rfqs"),
-        where("vendorId", "==", u.uid),
-        orderBy("createdAt", "asc"),
-      );
-
-      const snap = await getDocs(q);
-      setRfqs(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as RFQ));
-      setLoading(false);
-    });
-
-    return () => unsub();
+    loadDashboard();
   }, [router]);
 
   /* ================= METRICS ================= */
@@ -186,6 +183,12 @@ export default function VendorDashboardPage() {
         </Link>
       </section>
 
+      {error && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* ================= KPI ================= */}
       <section className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <PremiumKpi label="RFQs Received" value={total} icon={FileText} />
@@ -266,8 +269,8 @@ export default function VendorDashboardPage() {
                     : "—"}
                 </td>
                 <td className="text-center">
-                  {r.createdAt?.toDate
-                    ? r.createdAt.toDate().toLocaleDateString()
+                  {r.createdAt
+                    ? new Date(r.createdAt).toLocaleDateString()
                     : "—"}
                 </td>
               </tr>

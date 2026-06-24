@@ -29,10 +29,6 @@ export const firebaseConfigError = isFirebaseConfigured
       .map(([key]) => key)
       .join(", ")}`;
 
-if (!isFirebaseConfigured && typeof window !== "undefined") {
-  console.warn(firebaseConfigError);
-}
-
 const appInstance: FirebaseApp | null = isFirebaseConfigured
   ? !getApps().length
     ? initializeApp(firebaseConfig)

@@ -2,39 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { db } from "@/lib/firebase";
+import { fetchApprovedProductById, type PublicProduct } from "@/lib/supabasePublic";
 import { CheckCircle, Package, Globe, Tag, ArrowLeft } from "lucide-react";
 import BuyerRFQModal from "../../components/ContactVendorModal";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  increment,
-  serverTimestamp,
-} from "firebase/firestore";
 import Link from "next/link";
 
 /* ================= TYPES ================= */
 
-type Product = {
-  id: string;
-  vendorId: string;
-  title: string;
-  description: string;
-  images?: string[];
-  listingType?: string[];
-  availableFor?: string[];
-  shipRegions?: string[];
-  priceType?: string;
-  price?: number;
-  currency?: string;
-  moq?: number;
-  sustainabilityTags?: string[];
-  tagNames?: string[];
-  approved?: boolean;
-};
+type Product = PublicProduct;
 
 /* ================= PAGE ================= */
 
@@ -51,40 +28,16 @@ export default function ProductDetailPage() {
     async function fetchProduct() {
       if (!productId) return;
 
-      const ref = doc(db, "products", productId as string);
-      const snap = await getDoc(ref);
-
-      if (snap.exists()) {
-        const data = snap.data() as Omit<Product, "id">;
-
-        let tagNames: string[] = [];
-
-        if (data.sustainabilityTags?.length) {
-          const tagPromises = data.sustainabilityTags.map(async (tagId) => {
-            const tagSnap = await getDoc(doc(db, "tags", tagId));
-            return tagSnap.exists() ? tagSnap.data().name : null;
-          });
-
-          tagNames = (await Promise.all(tagPromises)).filter(
-            Boolean,
-          ) as string[];
-        }
-
-        setProduct({
-          id: snap.id,
-          ...data,
-          tagNames,
-        });
-
-        setActiveImage(data.images?.[0] || null);
-
-        await updateDoc(ref, {
-          views: increment(1),
-          lastViewedAt: serverTimestamp(),
-        });
+      try {
+        const data = await fetchApprovedProductById(productId as string);
+        setProduct(data);
+        setActiveImage(data?.images?.[0] || null);
+      } catch (error) {
+        console.error("Failed to load Supabase product", error);
+        setProduct(null);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
     fetchProduct();

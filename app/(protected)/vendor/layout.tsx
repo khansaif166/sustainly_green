@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -11,7 +11,9 @@ import {
   MessageSquareText,
   X,
   BarChart3,
+  LogOut,
 } from "lucide-react";
+import { fetchCurrentProfile, getCurrentUser, signOutSupabase } from "@/lib/supabaseAuth";
 
 const navItems = [
   { name: "Dashboard", href: "/vendor/dashboard", icon: LayoutDashboard },
@@ -27,7 +29,38 @@ export default function VendorLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    async function guardVendor() {
+      const user = await getCurrentUser();
+      const profile = user ? await fetchCurrentProfile() : null;
+
+      if (!profile || (profile.role !== "VENDOR" && profile.role !== "ADMIN")) {
+        router.replace("/login");
+        return;
+      }
+
+      setCheckingAuth(false);
+    }
+
+    void guardVendor();
+  }, [router]);
+
+  async function logout() {
+    await signOutSupabase();
+    router.push("/login");
+  }
+
+  if (checkingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">
+        Checking access...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-[var(--color-bg-soft)]">
@@ -106,6 +139,13 @@ export default function VendorLayout({
               </Link>
             );
           })}
+          <button
+            onClick={logout}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-red-600 transition-all duration-200 hover:bg-red-50"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
         </nav>
       </aside>
 

@@ -1,16 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  Timestamp,
-} from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 import {
   BarChart,
@@ -26,6 +17,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ArrowLeft, Download, FileText } from "lucide-react";
 import Link from "next/link";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 /* ================= TYPES ================= */
 
@@ -36,14 +28,16 @@ type RFQ = {
   requiredTimeline: string;
   deliveryCountry: string;
   status: string;
-  createdAt: Timestamp;
+  createdAt: string;
 };
 
 /* ================= PAGE ================= */
 
 export default function BuyerRFQReportPage() {
+  const router = useRouter();
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
@@ -51,22 +45,43 @@ export default function BuyerRFQReportPage() {
   /* ================= LOAD DATA ================= */
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) return;
+    async function loadRfqs() {
+      const session = getStoredSession();
 
-      const q = query(
-        collection(db, "rfqs"),
-        where("buyerId", "==", u.uid),
-        orderBy("createdAt", "desc")
-      );
+      if (!session) {
+        router.push("/login");
+        return;
+      }
 
-      const snap = await getDocs(q);
-      setRfqs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as RFQ)));
-      setLoading(false);
-    });
+      try {
+        const response = await fetch("/api/buyer/rfqs", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
 
-    return () => unsub();
-  }, []);
+        if (response.status === 401 || response.status === 403) {
+          router.push("/login");
+          return;
+        }
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || "Unable to load RFQ report.");
+        }
+
+        setRfqs(payload.rfqs || []);
+      } catch (err) {
+        console.error("BUYER_REPORT_LOAD_ERROR", err);
+        setError(err instanceof Error ? err.message : "Unable to load RFQ report.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadRfqs();
+  }, [router]);
 
   /* ================= METRICS ================= */
 
@@ -106,7 +121,7 @@ export default function BuyerRFQReportPage() {
       Timeline: r.requiredTimeline,
       Country: r.deliveryCountry,
       Status: r.status,
-      Date: r.createdAt.toDate().toLocaleDateString(),
+      Date: new Date(r.createdAt).toLocaleDateString(),
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -130,7 +145,7 @@ export default function BuyerRFQReportPage() {
         r.requiredTimeline.replaceAll("_", " "),
         r.deliveryCountry,
         r.status.replaceAll("_", " "),
-        r.createdAt.toDate().toLocaleDateString(),
+        new Date(r.createdAt).toLocaleDateString(),
       ]),
       styles: { fontSize: 9 },
       headStyles: {
@@ -243,6 +258,12 @@ export default function BuyerRFQReportPage() {
         </div>
       </section>
 
+      {error && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* ================= BAR CHART ================= */}
       <Card title="RFQ Status Overview">
         <ResponsiveContainer width="100%" height={280}>
@@ -287,7 +308,7 @@ export default function BuyerRFQReportPage() {
                   </td>
 
                   <td className="px-4 text-[var(--color-text-secondary)]">
-                    {r.createdAt.toDate().toLocaleDateString()}
+                    {new Date(r.createdAt).toLocaleDateString()}
                   </td>
 
                   <td className="px-4 font-medium text-[var(--color-text-primary)] max-w-[260px] truncate">
@@ -323,7 +344,7 @@ export default function BuyerRFQReportPage() {
               <div className="flex justify-between items-center">
                 <StatusBadge status={r.status} />
                 <span className="text-xs text-[var(--color-text-secondary)]">
-                  {r.createdAt.toDate().toLocaleDateString()}
+                  {new Date(r.createdAt).toLocaleDateString()}
                 </span>
               </div>
 

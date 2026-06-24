@@ -13,24 +13,21 @@ import {
   Layers,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { auth, db, isFirebaseConfigured } from "@/lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import {
-  collection,
-  getDocs,
-  query,
-  where,
-  doc,
-  getDoc,
-} from "firebase/firestore";
-import type { User as FirebaseUser } from "firebase/auth";
-
-/* ---------------- TYPES ---------------- */
-type UserProfile = {
-  name?: string;
-  role?: "ADMIN" | "BUYER" | "VENDOR";
-};
+  AUTH_SESSION_CLEARED_EVENT,
+  AUTH_SESSION_SAVED_EVENT,
+  ensureCurrentProfile,
+  getCurrentUser,
+  getStoredSession,
+  signOutSupabase,
+  type SupabaseProfile,
+} from "@/lib/supabaseAuth";
+import {
+  fetchActiveCategories,
+  fetchApprovedProducts,
+  fetchApprovedVendors,
+} from "@/lib/supabasePublic";
 
 type Suggestion = {
   id: string;
@@ -48,9 +45,9 @@ export default function Header() {
   const [openMobile, setOpenMobile] = useState(false);
 
   /* AUTH */
-  const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loadingUser, setLoadingUser] = useState(isFirebaseConfigured);
+  const [authUser, setAuthUser] = useState<{ id: string; email?: string } | null>(null);
+  const [profile, setProfile] = useState<SupabaseProfile | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   /* SEARCH */
   const [queryText, setQueryText] = useState("");
@@ -85,66 +82,71 @@ export default function Header() {
 
   /* ---------------- AUTH ---------------- */
   useEffect(() => {
-    if (!isFirebaseConfigured) {
-      return;
-    }
+    async function loadAuth() {
+      setLoadingUser(true);
+      const user = await getCurrentUser();
 
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
+      if (!user) {
         setAuthUser(null);
         setProfile(null);
         setLoadingUser(false);
         return;
       }
 
-      setAuthUser(u);
-      const snap = await getDoc(doc(db, "users", u.uid));
-      if (snap.exists()) setProfile(snap.data() as UserProfile);
+      setAuthUser({ id: user.id, email: user.email });
+      const accessToken = getStoredSession()?.accessToken;
+      setProfile(accessToken ? await ensureCurrentProfile(accessToken) : null);
       setLoadingUser(false);
-    });
+    }
 
-    return () => unsub();
+    void loadAuth();
+
+    function clearAuth() {
+      setAuthUser(null);
+      setProfile(null);
+      setLoadingUser(false);
+    }
+
+    window.addEventListener(AUTH_SESSION_SAVED_EVENT, loadAuth);
+    window.addEventListener(AUTH_SESSION_CLEARED_EVENT, clearAuth);
+
+    return () => {
+      window.removeEventListener(AUTH_SESSION_SAVED_EVENT, loadAuth);
+      window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, clearAuth);
+    };
   }, []);
 
   /* ---------------- LOAD SEARCH DATA (ONCE) ---------------- */
   useEffect(() => {
-    if (!isFirebaseConfigured) {
-      return;
-    }
-
     async function loadSearchData() {
       try {
-        const pSnap = await getDocs(
-          query(collection(db, "products"), where("approved", "==", true)),
-        );
+        const publicProducts = await fetchApprovedProducts({ limit: 20 });
         setProducts(
-          pSnap.docs.map((d) => ({
-            id: d.id,
-            title: d.data().title || "",
+          publicProducts.map((product) => ({
+            id: product.id,
+            title: product.title,
             type: "product",
           })),
         );
       } catch (e) {}
 
       try {
-        const vSnap = await getDocs(
-          query(collection(db, "vendors"), where("approved", "==", true)),
-        );
+        const publicVendors = await fetchApprovedVendors();
         setVendors(
-          vSnap.docs.map((d) => ({
-            id: d.id,
-            title: d.data().companyName || "",
+          publicVendors.map((vendor) => ({
+            id: vendor.id,
+            title: vendor.companyName,
             type: "vendor",
           })),
         );
       } catch (e) {}
 
       try {
-        const cSnap = await getDocs(collection(db, "categories"));
+        const publicCategories = await fetchActiveCategories();
         setCategories(
-          cSnap.docs.map((d) => ({
-            id: d.id,
-            title: d.data().name || "",
+          publicCategories.map((category) => ({
+            id: category.id,
+            title: category.name,
             type: "category",
           })),
         );
@@ -262,7 +264,7 @@ export default function Header() {
                       setShowDropdown(false);
                       if (s.type === "product")
                         router.push(`/products/${s.id}`);
-                      if (s.type === "vendor") router.push(`/vendor/${s.id}`);
+                      if (s.type === "vendor") router.push(`/find-vendors/${s.id}`);
                       if (s.type === "category")
                         router.push(`/browse?category=${s.id}`);
                     }}
@@ -294,7 +296,9 @@ export default function Header() {
           </div>
 
           <div className="nav-actions">
-            {!loadingUser && !authUser ? (
+            {loadingUser ? (
+              <span className="nbtn nbtn-ghost hidden md:flex">Checking...</span>
+            ) : !authUser ? (
               <>
                 <Link href="/login" className="nbtn nbtn-ghost">
                   Login
@@ -322,11 +326,9 @@ export default function Header() {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!isFirebaseConfigured) {
-                      router.push("/");
-                      return;
-                    }
-                    await signOut(auth);
+                    await signOutSupabase();
+                    setAuthUser(null);
+                    setProfile(null);
                     router.push("/");
                   }}
                   className="nbtn nbtn-ghost text-red-600 border-none  hidden md:flex"
@@ -392,12 +394,9 @@ export default function Header() {
                   </button>
                   <button
                     onClick={async () => {
-                      if (!isFirebaseConfigured) {
-                        setOpenMobile(false);
-                        router.push("/");
-                        return;
-                      }
-                      await signOut(auth);
+                      await signOutSupabase();
+                      setAuthUser(null);
+                      setProfile(null);
                       setOpenMobile(false);
                       router.push("/");
                     }}

@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ChevronUp, ChevronDown, User, AlertTriangle, Upload, Image as ImageIcon,
   ArrowLeft, BarChart3, Leaf, ShoppingBag, Clock, CheckCircle2, Save, Edit3, X, Building2
 } from "lucide-react";
-import { uploadFileWithProgress } from "@/lib/storage";
+import { getStoredSession } from "@/lib/supabaseAuth";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function clean<T extends object>(obj: T): Partial<T> {
@@ -224,39 +224,72 @@ export default function VendorProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [vendorId, setVendorId] = useState("");
   const [approved, setApproved] = useState(false);
   const [data, setData] = useState<any>(null);
   const [draft, setDraft] = useState<any>(null);
   const [cats, setCats] = useState<any[]>([]);
   const [subCats, setSubCats] = useState<any[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchCats() {
-      const cSnap = await getDocs(collection(db, "categories"));
-      const sSnap = await getDocs(collection(db, "subcategories"));
-      setCats(cSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setSubCats(sSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+
+      const headers = {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      };
+      const [catRes, subCatRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/categories?select=id,name&active=eq.true&order=name.asc`, { headers }),
+        fetch(`${SUPABASE_URL}/rest/v1/subcategories?select=id,name,category_id&active=eq.true&order=name.asc`, { headers }),
+      ]);
+
+      if (catRes.ok) setCats(await catRes.json());
+      if (subCatRes.ok) setSubCats(await subCatRes.json());
     }
     fetchCats();
   }, []);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) { router.push("/login"); return; }
-      setVendorId(u.uid);
+    async function loadVendor() {
+      const session = getStoredSession();
+      if (!session) { router.push("/login"); return; }
 
-      const snap = await getDoc(doc(db, "vendors", u.uid));
-      if (!snap.exists()) { router.push("/vendor/onboarding"); return; }
+      try {
+        const response = await fetch("/api/vendor/profile", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
 
-      const d = snap.data();
-      setApproved(!!d.approved);
-      setData(d);
-      setDraft(d);
-      setLoading(false);
-    });
-    return () => unsub();
+        if (response.status === 401 || response.status === 403) {
+          router.push("/login");
+          return;
+        }
+
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || "Unable to load vendor profile.");
+        }
+
+        if (!payload.vendor) {
+          router.push("/vendor/onboarding");
+          return;
+        }
+
+        setApproved(Boolean(payload.vendor.approved));
+        setData(payload.vendor);
+        setDraft(payload.vendor);
+      } catch (err) {
+        console.error("VENDOR_PROFILE_LOAD_ERROR", err);
+        setError(err instanceof Error ? err.message : "Unable to load vendor profile.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadVendor();
   }, [router]);
 
   // flat setter — handles both top-level and any field path
@@ -267,23 +300,38 @@ export default function VendorProfilePage() {
     (editing ? draft : data)?.[key] ?? "";
 
   const handleSave = async () => {
-    if (!vendorId) return;
+    const session = getStoredSession();
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
     setSaving(true);
+    setError("");
     try {
       let logoUrl = draft.logoUrl || "";
-      if (logoFile) {
-        const path = `vendors/${vendorId}/logos/${Date.now()}_${logoFile.name}`;
-        logoUrl = await uploadFileWithProgress(logoFile, path);
+
+      const response = await fetch("/api/vendor/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(clean({ ...draft, logoUrl })),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Save failed. Please try again.");
       }
 
-      const payload = clean({ ...draft, logoUrl, updatedAt: serverTimestamp() });
-      await setDoc(doc(db, "vendors", vendorId), payload, { merge: true });
-      setData({ ...draft, logoUrl });
+      setData(payload.vendor || { ...draft, logoUrl });
+      setDraft(payload.vendor || { ...draft, logoUrl });
       setLogoFile(null);
       setEditing(false);
     } catch (err) {
       console.error(err);
-      alert("Save failed. Please try again.");
+      setError(err instanceof Error ? err.message : "Save failed. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -330,6 +378,12 @@ export default function VendorProfilePage() {
       </Link>
 
       {/* Header card */}
+      {error && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
+
       <div className="rounded-3xl bg-white border border-gray-100 shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center overflow-hidden border border-gray-100 shadow-sm relative group">
@@ -341,9 +395,8 @@ export default function VendorProfilePage() {
               <Building2 className="h-8 w-8 text-green-600" />
             )}
             {editing && (
-              <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+              <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-not-allowed" title="Logo upload will be re-enabled after Supabase Storage migration.">
                 <Upload size={20} className="text-white" />
-                <input type="file" className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && setLogoFile(e.target.files[0])} />
               </label>
             )}
           </div>

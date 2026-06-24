@@ -1,23 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, FileText } from "lucide-react";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 /* ================= TYPES ================= */
 
 type RFQ = {
   id: string;
   requirementTitle: string;
-  vendorId: string;
+  vendorId: string | null;
   status: string;
   deliveryCountry: string;
   estimatedQuantity: string;
   requiredTimeline: string;
-  createdAt?: any;
+  createdAt?: string;
   vendorResponse?: {
     price?: number;
     currency?: string;
@@ -25,46 +24,59 @@ type RFQ = {
   };
 };
 
+type BuyerRfqsResponse = {
+  ok: boolean;
+  rfqs: RFQ[];
+};
+
 /* ================= PAGE ================= */
 
 export default function BuyerRFQsPage() {
+  const router = useRouter();
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   /* ================= LOAD RFQS ================= */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) return;
+    async function loadRfqs() {
+      const session = getStoredSession();
 
-      const q = query(
-        collection(db, "rfqs"),
-        where("buyerId", "==", u.uid),
-        orderBy("createdAt", "desc")
-      );
+      if (!session) {
+        router.push("/login");
+        return;
+      }
 
-      const snap = await getDocs(q);
-      setRfqs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as RFQ)));
-      setLoading(false);
-    });
+      try {
+        const response = await fetch("/api/buyer/rfqs", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
 
-    return () => unsub();
-  }, []);
+        if (response.status === 401 || response.status === 403) {
+          router.push("/login");
+          return;
+        }
 
-  /* ================= STATUS STYLES ================= */
-  function statusStyle(status: string) {
-    switch (status) {
-      case "RFQ_REQUESTED":
-        return "bg-[rgba(244,196,48,0.15)] text-[var(--color-solar-yellow)]";
-      case "QUOTED":
-        return "bg-[rgba(10,76,138,0.15)] text-[var(--color-ocean-blue)]";
-      case "ACCEPTED":
-        return "bg-[rgba(11,110,79,0.15)] text-[var(--color-primary-green)]";
-      case "REJECTED":
-        return "bg-[rgba(220,38,38,0.15)] text-red-500";
-      default:
-        return "bg-gray-100 text-gray-600";
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || "Unable to load RFQs.");
+        }
+
+        const data = payload as BuyerRfqsResponse;
+        setRfqs(data.rfqs || []);
+      } catch (err) {
+        console.error("BUYER_RFQS_LOAD_ERROR", err);
+        setError(err instanceof Error ? err.message : "Unable to load RFQs.");
+      } finally {
+        setLoading(false);
+      }
     }
-  }
+
+    void loadRfqs();
+  }, [router]);
 
   return (
     <main className="space-y-8">
@@ -95,8 +107,14 @@ export default function BuyerRFQsPage() {
       </Link>
 
       {/* ================= HEADER ================= */}
+      {error && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
+
       <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-  {rfqs.map((r) => (
+  {!error && rfqs.map((r) => (
     <div
       key={r.id}
       className="
@@ -131,7 +149,7 @@ export default function BuyerRFQsPage() {
           <span className="font-medium text-[var(--color-text-primary)]">
             Timeline:
           </span>{" "}
-          {r.requiredTimeline.replaceAll("_", " ")}
+          {r.requiredTimeline?.replaceAll("_", " ")}
         </div>
 
         {/* Quote Slot (reserved space) */}
@@ -190,7 +208,7 @@ export default function BuyerRFQsPage() {
 
 
       {/* ================= EMPTY ================= */}
-      {!loading && rfqs.length === 0 && (
+      {!loading && !error && rfqs.length === 0 && (
         <div className="text-sm text-(--color-text-secondary)">
           You haven’t submitted any RFQs yet.
         </div>
@@ -200,18 +218,6 @@ export default function BuyerRFQsPage() {
      
     </main>
   );
-}
-function statusStyle(status: string) {
-  switch (status) {
-    case "RFQ_REQUESTED":
-      return "bg-[var(--color-ocean-blue)]/10 text-[var(--color-ocean-blue)]";
-    case "QUOTED":
-      return "bg-[var(--color-solar-yellow)]/30 text-[var(--color-solar-yellow)]";
-    case "ACCEPTED":
-      return "bg-[var(--color-primary-green)]/10 text-[var(--color-primary-green)]";
-    default:
-      return "bg-gray-100 text-gray-600";
-  }
 }
 
 function StatusBadge({ status }: { status: string }) {

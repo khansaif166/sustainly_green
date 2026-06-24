@@ -1,23 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { fetchApprovedVendors, type PublicVendor } from "@/lib/supabasePublic";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import Link from "next/link";
-import { Search, Building2, BadgeCheck, Clock } from "lucide-react";
+import { Search, BadgeCheck, Clock } from "lucide-react";
 
 /* ---------------- TYPES ---------------- */
-type Vendor = {
-  id: string;
-  name?: string;
-  logoUrl?: string;
-  description?: string;
-  approved?: boolean;
-  companyName?: string;
-  [x: string]: any;
-};
+type Vendor = PublicVendor & { name?: string };
 
 /* ================= PAGE ================= */
 export default function FindVendorsPage() {
@@ -29,13 +20,14 @@ export default function FindVendorsPage() {
   useEffect(() => {
     async function loadVendors() {
       setLoading(true);
-
-      const snap = await getDocs(collection(db, "vendors"));
-      setVendors(
-        snap.docs.map((d) => ({ id: d.id, ...d.data() } as Vendor))
-      );
-
-      setLoading(false);
+      try {
+        setVendors(await fetchApprovedVendors());
+      } catch (error) {
+        console.error("Failed to load Supabase vendors", error);
+        setVendors([]);
+      } finally {
+        setLoading(false);
+      }
     }
 
     loadVendors();
@@ -117,7 +109,12 @@ export default function FindVendorsPage() {
                   </div>
 
                   {/* BADGE */}
-                  {v.approved ? (
+                  {v.isUnclaimed ? (
+                    <span className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                      <Clock className="h-3 w-3" />
+                      Listed
+                    </span>
+                  ) : v.approved ? (
                     <span className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">
                       <BadgeCheck className="h-3 w-3" />
                       Verified
@@ -142,7 +139,7 @@ export default function FindVendorsPage() {
 
                 {/* CTA */}
                 <span className="inline-block text-xs font-medium text-[var(--color-primary-green)]">
-                  View Vendor →
+                  {v.isUnclaimed ? "View Listing →" : "View Vendor →"}
                 </span>
               </Link>
             ))}

@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+const COPYRIGHT_YEAR = 2026;
+
 export default function Footer() {
   return (
     <footer>
@@ -66,7 +68,7 @@ export default function Footer() {
       <div className="footer-bottom">
         <div className="footer-bottom-left">
           <p>
-            © {new Date().getFullYear()} Sustainly Green India Pvt Ltd · Chennai, Tamil Nadu, India &nbsp;
+            {`© ${COPYRIGHT_YEAR} Sustainly Green India Pvt Ltd · Chennai, Tamil Nadu, India `}
             <span className="cin">grow@sustainlygreen.com</span>
           </p>
         </div>

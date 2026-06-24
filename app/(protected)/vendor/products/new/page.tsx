@@ -2,17 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  addDoc,
-  doc,
-  getDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
-import { uploadFileWithProgress } from "@/lib/storage";
+import { getStoredSession } from "@/lib/supabaseAuth";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 /* ---------- CONSTANTS ---------- */
 const LISTING_TYPES = ["Product", "Service"];
@@ -23,7 +16,6 @@ const SHIP_REGIONS = ["Local Only", "Countrywide", "Regional", "Worldwide"];
 export default function AddProductPage() {
   const router = useRouter();
 
-  const [user, setUser] = useState<any>(null);
   const [vendorApproved, setVendorApproved] = useState(false);
 
   const [categories, setCategories] = useState<any[]>([]);
@@ -42,7 +34,7 @@ export default function AddProductPage() {
   const [availableFor, setAvailableFor] = useState<string[]>([]);
   const [priceType, setPriceType] = useState("");
   const [price, setPrice] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("INR");
   const [moq, setMoq] = useState("");
   const [discount, setDiscount] = useState("");
 
@@ -53,36 +45,52 @@ export default function AddProductPage() {
   const [inStock, setInStock] = useState(true);
 
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   /* ---------- AUTH CHECK ---------- */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) return router.push("/login");
-
-      setUser(u);
-
-      const vendorSnap = await getDoc(doc(db, "vendors", u.uid));
-      // if (!vendorSnap.exists() || !vendorSnap.data().approved) {
-      //   router.push("/vendor/pending");
-      //   return;
-      // }
-
+    const session = getStoredSession();
+    if (!session) {
+      router.push("/login");
+      return;
+    }
       setVendorApproved(true);
-    });
-
-    return () => unsub();
   }, [router]);
 
   /* ---------- LOAD MASTER DATA ---------- */
   useEffect(() => {
     async function load() {
-      const c = await getDocs(collection(db, "categories"));
-      const s = await getDocs(collection(db, "subcategories"));
-      const t = await getDocs(collection(db, "tags"));
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
 
-      setCategories(c.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setSubCategories(s.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setTags(t.docs.map((d) => ({ id: d.id, ...d.data() })));
+      const headers = {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      };
+
+      const [categoriesResponse, subcategoriesResponse, tagsResponse] =
+        await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/categories?select=id,name&active=eq.true&order=name.asc`, { headers }),
+          fetch(`${SUPABASE_URL}/rest/v1/subcategories?select=id,name,category_id&active=eq.true&order=name.asc`, { headers }),
+          fetch(`${SUPABASE_URL}/rest/v1/sustainability_tags?select=id,name&active=eq.true&order=name.asc`, { headers }),
+        ]);
+
+      const [categoryRows, subcategoryRows, tagRows] = await Promise.all([
+        categoriesResponse.json(),
+        subcategoriesResponse.json(),
+        tagsResponse.json(),
+      ]);
+
+      setCategories(Array.isArray(categoryRows) ? categoryRows : []);
+      setSubCategories(
+        Array.isArray(subcategoryRows)
+          ? subcategoryRows.map((row) => ({
+              id: row.id,
+              name: row.name,
+              categoryId: row.category_id,
+            }))
+          : [],
+      );
+      setTags(Array.isArray(tagRows) ? tagRows : []);
     }
     load();
   }, []);
@@ -105,7 +113,12 @@ export default function AddProductPage() {
   /* ---------- SUBMIT ---------- */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!vendorApproved || !user) return;
+    const session = getStoredSession();
+
+    if (!vendorApproved || !session) {
+      router.push("/login");
+      return;
+    }
 
     // if (images.length === 0 || images.length > 5) {
     //   alert("Please upload 1–5 images.");
@@ -113,82 +126,44 @@ export default function AddProductPage() {
     // }
 
     setLoading(true);
+    setError("");
 
     try {
-      const imageUrls: string[] = [];
-      const orderedImages = [
-        images[coverIndex],
-        ...images.filter((_, i) => i !== coverIndex),
-      ];
-
-      for (const file of orderedImages) {
-        const path = `products/${user.uid}/${Date.now()}_${file.name}`;
-        const url = await uploadFileWithProgress(file, path);
-        imageUrls.push(url);
-      }
-
-      // map selected tag ids to names
-      const selectedTagObjects = tags
-        .filter((t) => selectedTags.includes(t.id))
-        .map((t) => ({
-          id: t.id,
-          name: t.name,
-        }));
-
-      const selectedTagNames = selectedTagObjects.map((t) => t.name);
-
-      // get vendor data
-      const vendorRef = doc(db, "vendors", user.uid);
-      const vendorSnap = await getDoc(vendorRef);
-
-      let vendorName = "Unknown Vendor";
-
-      if (vendorSnap.exists()) {
-        vendorName = vendorSnap.data().companyName || "Unknown Vendor";
-      }
-
-      await addDoc(collection(db, "products"), {
-        vendorId: user.uid,
-        vendorName, 
-
+      const response = await fetch("/api/vendor/products", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
         title,
         description,
-
         listingType,
         availableFor,
-
         categoryId,
         subCategoryId,
-
-        images: imageUrls,
-
+          images: [],
         priceType,
-        price: price ? Number(price) : null,
+          price,
         currency,
-        moq: moq ? Number(moq) : null,
+          moq,
         discount,
-
         shipRegions,
         inStock,
-        featured: false,
-        isAd: false,
-
         sustainabilityTagIds: selectedTags,
-        sustainabilityTagNames: selectedTagNames,
         sustainabilityClaim,
-        approved: false,
-        status: "PENDING",
-        views: 0,
-        lastViewedAt: null,
-
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        }),
       });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Failed to create listing");
+      }
 
       router.push("/vendor/dashboard");
     } catch (err) {
       console.error(err);
-      alert("Failed to create listing");
+      setError(err instanceof Error ? err.message : "Failed to create listing");
     } finally {
       setLoading(false);
     }
@@ -213,6 +188,12 @@ export default function AddProductPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          {error && (
+            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* BASIC INFO */}
           <section className="bg-white rounded-2xl p-6 space-y-5">
             <h2 className="section">Basic Listing Info</h2>
@@ -329,7 +310,7 @@ export default function AddProductPage() {
               </label>
 
               <p className="help">
-                Upload up to 5 images. First image will be used as cover.
+                Upload up to 5 images. Supabase Storage upload is being migrated, so selected files are preview-only for now.
               </p>
             </div>
           </section>

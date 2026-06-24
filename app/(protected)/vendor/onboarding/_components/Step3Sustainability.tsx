@@ -3,8 +3,31 @@
 import React from "react";
 import { Select, TextArea, FileUpload, Input } from "./FormFields";
 import { ShieldCheck, Info } from "lucide-react";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+async function supabaseOptions(table: "certifications" | "certifying_bodies") {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+
+  const params = new URLSearchParams({
+    select: "id,name",
+    status: "eq.Active",
+    order: "name.asc",
+  });
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+
+  if (!response.ok) return [];
+
+  const rows = (await response.json()) as Array<{ id: string; name: string }>;
+  return rows.map((row) => ({ label: row.name, value: row.id }));
+}
 
 export const Step3Sustainability = () => {
   const [certs, setCerts] = React.useState<{label: string, value: string}[]>([]);
@@ -14,13 +37,13 @@ export const Step3Sustainability = () => {
   React.useEffect(() => {
     const loadMasterData = async () => {
       try {
-        const [certSnap, bodySnap] = await Promise.all([
-          getDocs(query(collection(db, "certificationsMaster"), where("status", "==", "Active"))),
-          getDocs(query(collection(db, "certifyingBodies"), where("status", "==", "Active")))
+        const [certRows, bodyRows] = await Promise.all([
+          supabaseOptions("certifications"),
+          supabaseOptions("certifying_bodies"),
         ]);
-        
-        setCerts(certSnap.docs.map(d => ({ label: d.data().name, value: d.id })));
-        setBodies(bodySnap.docs.map(d => ({ label: d.data().name, value: d.id })));
+
+        setCerts(certRows);
+        setBodies(bodyRows);
       } catch (error) {
         console.error("Error loading master data:", error);
       } finally {

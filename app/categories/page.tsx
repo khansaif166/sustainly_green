@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { fetchActiveCategories } from "@/lib/supabasePublic";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import { FiArrowLeft, FiGrid, FiSearch } from "react-icons/fi";
@@ -44,11 +43,7 @@ export default function CategoriesPage() {
   useEffect(() => {
     async function load() {
       try {
-        const snap = await getDocs(
-          query(collection(db, "categories"), where("active", "==", true)),
-        );
-        const data = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Category[];
-        setCategories(data.length > 0 ? data : []);
+        setCategories(await fetchActiveCategories());
       } catch {
         setCategories([]);
       } finally {

@@ -4,10 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
-import { uploadFileWithProgress } from "@/lib/storage";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { getStoredSession } from "@/lib/supabaseAuth";
 import { onboardingSchema, OnboardingFormData } from "./schema";
 import { Stepper } from "./_components/Stepper";
 import { Step1Identity } from "./_components/Step1Identity";
@@ -19,7 +16,6 @@ import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 export const OnboardingForm = () => {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -41,20 +37,41 @@ export const OnboardingForm = () => {
 
   // Auth & Prefill
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        setUser(u);
-        const snap = await getDoc(doc(db, "vendors", u.uid));
-        if (snap.exists()) {
-          const data = snap.data();
-          reset({ ...data } as any);
-        }
-        setLoading(false);
-      } else {
+    async function loadVendor() {
+      const session = getStoredSession();
+      if (!session) {
         router.push("/login");
+        return;
       }
-    });
-    return () => unsub();
+
+      try {
+        const response = await fetch("/api/vendor/profile", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          router.push("/login");
+          return;
+        }
+
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || "Unable to load vendor profile.");
+        }
+
+        if (payload.vendor) {
+          reset({ ...payload.vendor } as any);
+        }
+      } catch (error) {
+        console.error("Vendor profile load failed:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadVendor();
   }, [reset, router]);
 
   const handleNext = async () => {
@@ -82,57 +99,30 @@ export const OnboardingForm = () => {
   };
 
   const onSubmit = async (data: OnboardingFormData) => {
-    if (!user) return;
+    const session = getStoredSession();
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      let logoUrl = "";
-      let certUrl = "";
-      let awardsUrl = "";
-
-      if (data.logoFile instanceof File) {
-        const path = `vendors/${user.uid}/logos/${Date.now()}_${data.logoFile.name}`;
-        logoUrl = await uploadFileWithProgress(data.logoFile, path);
-      }
-
-      if (data.certificateFile instanceof File) {
-        const path = `vendors/${user.uid}/certs/${Date.now()}_${data.certificateFile.name}`;
-        certUrl = await uploadFileWithProgress(data.certificateFile, path);
-      }
-      
-      if (data.awardsFile instanceof File) {
-        const path = `vendors/${user.uid}/awards/${Date.now()}_${data.awardsFile.name}`;
-        awardsUrl = await uploadFileWithProgress(data.awardsFile, path);
-      }
-
       const { logoFile, certificateFile, awardsFile, ...cleanData } = data;
 
-      const payload = {
-        uid: user.uid,
-        ...cleanData,
-        ...(logoUrl && { logoUrl }),
-        ...(certUrl && { certificateFileUrl: certUrl }),
-        ...(awardsUrl && { awardsImageUrl: awardsUrl }),
-        approved: false,
-        updatedAt: serverTimestamp(),
-      };
-      
-      const existing = await getDoc(doc(db, "vendors", user.uid));
-      if (!existing.exists()) {
-        (payload as any).createdAt = serverTimestamp();
-      }
-
-      await setDoc(doc(db, "vendors", user.uid), payload, { merge: true });
-
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          role: "VENDOR",
-          vendorProfileComplete: true,
-          companyName: data.companyName,
+      const response = await fetch("/api/vendor/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
         },
-        { merge: true }
-      );
+        body: JSON.stringify(cleanData),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload?.error?.message || "Something went wrong.");
+      }
 
       router.push("/vendor/dashboard");
     } catch (err) {

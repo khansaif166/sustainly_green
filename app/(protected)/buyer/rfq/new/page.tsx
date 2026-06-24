@@ -2,16 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { ArrowLeft } from "lucide-react";
+import { fetchCurrentProfile, getStoredSession } from "@/lib/supabaseAuth";
 
 export default function CreateRFQPage() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
-  const [buyer, setBuyer] = useState<any>(null);
+  const [error, setError] = useState("");
 
   const [form, setForm] = useState({
     requirementTitle: "",
@@ -28,25 +26,30 @@ export default function CreateRFQPage() {
 
   /* ================= AUTH ================= */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (!u) {
+    async function loadProfile() {
+      const session = getStoredSession();
+
+      if (!session) {
         router.push("/login");
         return;
       }
 
-      setBuyer(u);
+      const profile = await fetchCurrentProfile(session.accessToken);
+
       setForm((f) => ({
         ...f,
-        buyerName: u.displayName || "",
-        buyerEmail: u.email || "",
+        buyerName: profile?.name || session.user.email?.split("@")[0] || "",
+        buyerEmail: profile?.email || session.user.email || "",
       }));
-    });
+    }
 
-    return () => unsub();
+    void loadProfile();
   }, [router]);
 
   /* ================= SUBMIT ================= */
   async function submitRFQ() {
+    setError("");
+
     if (
       !form.requirementTitle ||
       !form.estimatedQuantity ||
@@ -59,21 +62,38 @@ export default function CreateRFQPage() {
       return;
     }
 
+    const session = getStoredSession();
+
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
     setLoading(true);
 
-    await addDoc(collection(db, "rfqs"), {
-      ...form,
+    try {
+      const response = await fetch("/api/buyer/rfqs", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
 
-      buyerId: buyer.uid,                 // ✅ IMPORTANT
-      status: "RFQ_REQUESTED",
-      contactShared: false,
+      const payload = await response.json();
 
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Unable to submit RFQ.");
+      }
 
-    setLoading(false);
-    router.push("/buyer/dashboard");
+      router.push("/buyer/dashboard");
+    } catch (err) {
+      console.error("BUYER_RFQ_CREATE_ERROR", err);
+      setError(err instanceof Error ? err.message : "Unable to submit RFQ.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -99,6 +119,12 @@ export default function CreateRFQPage() {
 
       {/* FORM */}
       <div className="bg-white border rounded-2xl p-6 space-y-6">
+        {error && (
+          <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-700">
+            {error}
+          </div>
+        )}
+
         {/* REQUIREMENT */}
         <div>
           <label className="label">What do you need? *</label>

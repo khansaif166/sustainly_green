@@ -1,0 +1,143 @@
+<mxfile host="app.diagrams.net" modified="2026-06-23T00:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="sustainly-firebase-schema" name="Firebase Schema">
+    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Sustainly Firebase Schema - Canonical Data Model" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#111827;" vertex="1" parent="1">
+          <mxGeometry x="360" y="20" width="760" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="auth" value="Firebase Auth&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;uid, email, password, displayName&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#111827;fontColor=#ffffff;fontStyle=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="610" y="90" width="260" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="users" value="users/{uid}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;role, name, email&lt;br&gt;buyerProfileComplete&lt;br&gt;vendorProfileComplete&lt;br&gt;buyerApproved/vendorApproved&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#2563EB;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="610" y="210" width="260" height="125" as="geometry" />
+        </mxCell>
+
+        <mxCell id="buyers" value="buyers/{uid}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;companyInfo&lt;br&gt;businessOverview&lt;br&gt;sustainability&lt;br&gt;procurement&lt;br&gt;approved, status&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#059669;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="250" y="430" width="280" height="135" as="geometry" />
+        </mxCell>
+
+        <mxCell id="vendors" value="vendors/{uid}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;company profile&lt;br&gt;contact details&lt;br&gt;business/sustainability data&lt;br&gt;logo/cert/award URLs&lt;br&gt;approved, status&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#059669;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="950" y="430" width="300" height="145" as="geometry" />
+        </mxCell>
+
+        <mxCell id="products" value="products/{productId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;vendorId, vendorName&lt;br&gt;title, description&lt;br&gt;categoryId, subCategoryId&lt;br&gt;images[], price/moq&lt;br&gt;approved, status, views&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#D97706;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="950" y="690" width="300" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rfqs" value="rfqs/{rfqId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;buyerId, vendorId, productId&lt;br&gt;requirement fields&lt;br&gt;buyer contact snapshot&lt;br&gt;status, contactShared&lt;br&gt;vendorResponse&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE7F3;strokeColor=#DB2777;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="580" y="690" width="320" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="categories" value="categories/{categoryId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;name, slug&lt;br&gt;imageUrl&lt;br&gt;active, sortOrder&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="470" width="230" height="105" as="geometry" />
+        </mxCell>
+
+        <mxCell id="subcategories" value="subcategories/{subcategoryId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;name&lt;br&gt;categoryId&lt;br&gt;active, sortOrder&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="620" width="230" height="105" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tags" value="tags/{tagId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;sustainability tag&lt;br&gt;name, active&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3F4F6;strokeColor=#6B7280;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="780" width="230" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="certs" value="certifications/{certificationId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;name, description&lt;br&gt;country, status&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#7C3AED;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="80" y="700" width="260" height="95" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bodies" value="certifyingBodies/{bodyId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;name, description&lt;br&gt;country, status&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#7C3AED;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="80" y="830" width="260" height="95" as="geometry" />
+        </mxCell>
+
+        <mxCell id="certReqs" value="certificationRequests/{requestId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;vendorId&lt;br&gt;certificationId&lt;br&gt;company/contact snapshot&lt;br&gt;status&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#7C3AED;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="400" y="830" width="280" height="115" as="geometry" />
+        </mxCell>
+
+        <mxCell id="blogs" value="blogs/{blogId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;title, slug&lt;br&gt;content HTML&lt;br&gt;image, published&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1010" width="235" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="careers" value="careers/{careerId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;title, department&lt;br&gt;description&lt;br&gt;active&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="380" y="1010" width="235" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="apps" value="jobApplications/{applicationId}&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;jobId, jobTitle&lt;br&gt;name/email/phone&lt;br&gt;resumeURL, status&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="680" y="1010" width="260" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="settings" value="settings/homepageBanner&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;imageUrl&lt;br&gt;linkUrl&lt;br&gt;active&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontColor=#111827;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="1010" width="250" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="storage" value="Firebase Storage&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;vendors/{uid}/...&lt;br&gt;products/...&lt;br&gt;categories/...&lt;br&gt;blogs/...&lt;br&gt;resumes/...&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7ED;strokeColor=#EA580C;fontColor=#111827;fontStyle=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="990" width="260" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legacy" value="Deprecated compatibility reads&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;certifications_master&lt;br&gt;certificationsMaster&lt;br&gt;certification_requests&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F9FAFB;strokeColor=#9CA3AF;fontColor=#6B7280;dashed=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="80" y="550" width="260" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e-auth-users" value="1:1 profile" style="endArrow=block;html=1;rounded=0;strokeColor=#374151;fontColor=#374151;" edge="1" parent="1" source="auth" target="users">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-users-buyers" value="BUYER 1:1" style="endArrow=block;html=1;rounded=0;strokeColor=#059669;fontColor=#059669;" edge="1" parent="1" source="users" target="buyers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-users-vendors" value="VENDOR 1:1" style="endArrow=block;html=1;rounded=0;strokeColor=#059669;fontColor=#059669;" edge="1" parent="1" source="users" target="vendors">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-vendors-products" value="1:N owns" style="endArrow=block;html=1;rounded=0;strokeColor=#D97706;fontColor=#D97706;" edge="1" parent="1" source="vendors" target="products">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-buyers-rfqs" value="1:N creates" style="endArrow=block;html=1;rounded=0;strokeColor=#DB2777;fontColor=#DB2777;" edge="1" parent="1" source="buyers" target="rfqs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-vendors-rfqs" value="1:N receives" style="endArrow=block;html=1;rounded=0;strokeColor=#DB2777;fontColor=#DB2777;" edge="1" parent="1" source="vendors" target="rfqs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-products-rfqs" value="optional product" style="endArrow=block;html=1;rounded=0;strokeColor=#DB2777;fontColor=#DB2777;" edge="1" parent="1" source="products" target="rfqs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-cat-sub" value="1:N" style="endArrow=block;html=1;rounded=0;strokeColor=#6B7280;fontColor=#6B7280;" edge="1" parent="1" source="categories" target="subcategories">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-cat-products" value="categoryId" style="endArrow=block;html=1;rounded=0;strokeColor=#6B7280;fontColor=#6B7280;" edge="1" parent="1" source="categories" target="products">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-sub-products" value="subCategoryId" style="endArrow=block;html=1;rounded=0;strokeColor=#6B7280;fontColor=#6B7280;" edge="1" parent="1" source="subcategories" target="products">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-tags-products" value="tagIds[]" style="endArrow=block;html=1;rounded=0;strokeColor=#6B7280;fontColor=#6B7280;" edge="1" parent="1" source="tags" target="products">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-vendors-certreqs" value="1:N" style="endArrow=block;html=1;rounded=0;strokeColor=#7C3AED;fontColor=#7C3AED;" edge="1" parent="1" source="vendors" target="certReqs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-certs-certreqs" value="certificationId" style="endArrow=block;html=1;rounded=0;strokeColor=#7C3AED;fontColor=#7C3AED;" edge="1" parent="1" source="certs" target="certReqs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-careers-apps" value="1:N" style="endArrow=block;html=1;rounded=0;strokeColor=#0284C7;fontColor=#0284C7;" edge="1" parent="1" source="careers" target="apps">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-storage-vendors" value="file URLs" style="endArrow=block;html=1;rounded=0;strokeColor=#EA580C;fontColor=#EA580C;dashed=1;" edge="1" parent="1" source="storage" target="vendors">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-storage-products" value="image URLs" style="endArrow=block;html=1;rounded=0;strokeColor=#EA580C;fontColor=#EA580C;dashed=1;" edge="1" parent="1" source="storage" target="products">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-storage-content" value="content assets" style="endArrow=block;html=1;rounded=0;strokeColor=#EA580C;fontColor=#EA580C;dashed=1;" edge="1" parent="1" source="storage" target="blogs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-storage-apps" value="resumeURL" style="endArrow=block;html=1;rounded=0;strokeColor=#EA580C;fontColor=#EA580C;dashed=1;" edge="1" parent="1" source="storage" target="apps">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-legacy-certs" value="merge into" style="endArrow=block;html=1;rounded=0;strokeColor=#9CA3AF;fontColor=#6B7280;dashed=1;" edge="1" parent="1" source="legacy" target="certs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

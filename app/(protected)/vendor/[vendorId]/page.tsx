@@ -2,9 +2,46 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
 import Link from "next/link";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+type VendorProfile = {
+  companyName: string;
+  businessType?: string;
+  primaryCategory?: string;
+  approved: boolean;
+  description?: string;
+  hasCertifications: boolean;
+  certifications: string[];
+  certificateFiles: string[];
+  businessEmail?: string;
+  phone?: string;
+  city?: string;
+  country?: string;
+  yearEstablished?: string;
+};
+
+function mapVendor(row: Record<string, any>): VendorProfile {
+  return {
+    companyName: row.company_name || "Unnamed Vendor",
+    businessType: row.business_type || "",
+    primaryCategory: row.primary_category || "",
+    approved: Boolean(row.approved),
+    description: row.short_description || row.registered_address || "",
+    hasCertifications: Boolean(row.primary_sustainability_cert || row.certificate_file_url),
+    certifications: row.primary_sustainability_cert
+      ? [row.primary_sustainability_cert]
+      : [],
+    certificateFiles: row.certificate_file_url ? [row.certificate_file_url] : [],
+    businessEmail: row.business_email || "",
+    phone: row.whatsapp || row.alternate_phone || "",
+    city: row.city || "",
+    country: row.country || "",
+    yearEstablished: row.year_of_incorporation || "",
+  };
+}
 
 export default function VendorProfilePage() {
   const { vendorId } = useParams();
@@ -14,8 +51,30 @@ export default function VendorProfilePage() {
   useEffect(() => {
     async function fetchVendor() {
       if (!vendorId) return;
-      const snap = await getDoc(doc(db, "vendors", vendorId as string));
-      if (snap.exists()) setVendor(snap.data());
+
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        setLoading(false);
+        return;
+      }
+
+      const params = new URLSearchParams({
+        select:
+          "company_name,business_type,primary_category,approved,short_description,registered_address,primary_sustainability_cert,certificate_file_url,business_email,whatsapp,alternate_phone,city,country,year_of_incorporation",
+        id: `eq.${vendorId as string}`,
+        limit: "1",
+      });
+
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/vendors?${params}`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      if (response.ok) {
+        const rows = await response.json();
+        if (Array.isArray(rows) && rows[0]) setVendor(mapVendor(rows[0]));
+      }
       setLoading(false);
     }
     fetchVendor();

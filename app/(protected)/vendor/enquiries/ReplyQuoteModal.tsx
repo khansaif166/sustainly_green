@@ -1,14 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import {
-  doc,
-  updateDoc,
-  serverTimestamp,
-  getDoc,
-} from "firebase/firestore";
+import { useState } from "react";
 import { X, Send } from "lucide-react";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 export default function ReplyQuoteModal({
   rfq,
@@ -21,10 +15,6 @@ export default function ReplyQuoteModal({
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [vendorContact, setVendorContact] = useState<{
-    phone?: string;
-    email?: string;
-  }>({});
 
   const [form, setForm] = useState({
     price: "",
@@ -32,24 +22,6 @@ export default function ReplyQuoteModal({
     deliveryTimeline: "",
     message: "",
   });
-
-  /* ================= LOAD VENDOR CONTACT ================= */
-  useEffect(() => {
-    async function loadVendor() {
-      if (!rfq.vendorId) return;
-
-      const snap = await getDoc(doc(db, "vendors", rfq.vendorId));
-      if (snap.exists()) {
-        const v = snap.data();
-        setVendorContact({
-          phone: v.phone || "",
-          email: v.email || "",
-        });
-      }
-    }
-
-    loadVendor();
-  }, [rfq.vendorId]);
 
   /* ================= SUBMIT QUOTE ================= */
   async function submitQuote() {
@@ -63,25 +35,36 @@ export default function ReplyQuoteModal({
     setLoading(true);
 
     try {
-      await updateDoc(doc(db, "rfqs", rfq.id), {
-        vendorResponse: {
+      const session = getStoredSession();
+      if (!session) {
+        setError("Please login again before sending a quote.");
+        return;
+      }
+
+      const response = await fetch(`/api/vendor/rfqs/${rfq.id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           price: Number(form.price),
           currency: form.currency,
           deliveryTimeline: form.deliveryTimeline,
           message: form.message,
-        },
-        vendorContact: {
-          phone: vendorContact.phone || "",
-          email: vendorContact.email || "",
-        },
-        status: "QUOTED",
-        respondedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        }),
       });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Failed to send quote.");
+      }
 
       onSent();
-    } catch (e) {
-      setError("Failed to send quote. Please try again.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to send quote. Please try again.",
+      );
     } finally {
       setLoading(false);
     }

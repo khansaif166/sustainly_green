@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cf:build": "next build --webpack && opennextjs-cloudflare build --skipNextBuild",
+    "preview": "npm run cf:build && opennextjs-cloudflare preview",
+    "deploy": "npm run cf:build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -22,7 +26,7 @@
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.561.0",
-    "next": "16.0.8",
+    "next": "^16.2.9",
     "nodemailer": "^6.9.0",
     "react": "19.2.1",
     "react-dom": "19.2.1",
@@ -36,6 +40,7 @@
     "zod": "^4.4.2"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.13.4",
     "@tailwindcss/postcss": "^4",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^20",
@@ -45,8 +50,9 @@
     "babel-plugin-react-compiler": "1.0.0",
     "baseline-browser-mapping": "^2.10.38",
     "eslint": "^9",
-    "eslint-config-next": "16.0.8",
+    "eslint-config-next": "^16.2.9",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.52.0"
   }
 }

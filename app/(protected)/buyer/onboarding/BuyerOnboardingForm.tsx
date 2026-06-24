@@ -4,9 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { getStoredSession } from "@/lib/supabaseAuth";
 import {
   buyerOnboardingSchema,
   BuyerOnboardingFormData,
@@ -34,10 +32,6 @@ const STEP_FIELDS: Record<number, readonly string[]> = {
   5: STEP5_FIELDS,
 };
 
-/**
- * Recursively removes keys whose value is `undefined` from an object.
- * Firestore throws on undefined values — this prevents that error.
- */
 function clean<T extends object>(obj: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(obj)
@@ -51,10 +45,130 @@ function clean<T extends object>(obj: T): Partial<T> {
   ) as Partial<T>;
 }
 
+function buildBuyerPayload(data: Partial<BuyerOnboardingFormData>, status: "draft" | "submitted") {
+  const { declarationAgreed, ...rest } = data;
+
+  return clean({
+    companyInfo: {
+      companyName: rest.companyName,
+      brandName: rest.brandName,
+      organisationType: rest.organisationType,
+      stockListed: rest.stockListed,
+      cinRegistration: rest.cinRegistration,
+      gstNumber: rest.gstNumber,
+      registeredAddress: rest.registeredAddress,
+      city: rest.city,
+      state: rest.state,
+      pinCode: rest.pinCode,
+      country: rest.country,
+      contactPerson: rest.contactPerson,
+      designation: rest.designation,
+      department: rest.department,
+      email: rest.email,
+      mobile: rest.mobile,
+      alternatePhone: rest.alternatePhone,
+      linkedin: rest.linkedin,
+      website: rest.website,
+    },
+    businessOverview: {
+      buyerSegment: rest.buyerSegment,
+      industry: rest.industry,
+      secondaryIndustry: rest.secondaryIndustry,
+      noOfEmployees: rest.noOfEmployees,
+      annualRevenue: rest.annualRevenue,
+      noOfLocations: rest.noOfLocations,
+      procurementBudget: rest.procurementBudget,
+      geographyOfOperation: rest.geographyOfOperation,
+      keyMarkets: rest.keyMarkets ?? [],
+    },
+    sustainability: {
+      sustainabilityPolicy: rest.sustainabilityPolicy,
+      esgReport: rest.esgReport,
+      sustainabilityDescription: rest.sustainabilityDescription,
+      certifications: rest.certifications ?? [],
+    },
+    procurement: {
+      categoriesNeeded: rest.categoriesNeeded ?? [],
+      secondaryCategories: rest.secondaryCategories ?? [],
+      procurementVolume: rest.procurementVolume,
+      vendorLocationPreference: rest.vendorLocationPreference,
+      preferredVendorSize: rest.preferredVendorSize,
+      minCertificationRequired: rest.minCertificationRequired,
+      pricingModel: rest.pricingModel,
+      orderFrequency: rest.orderFrequency,
+      typicalOrderValue: rest.typicalOrderValue,
+      paymentTerms: rest.paymentTerms,
+      communicationMode: rest.communicationMode,
+      siteAuditRequired: rest.siteAuditRequired,
+      ndaRequired: rest.ndaRequired,
+      multiLocationDelivery: rest.multiLocationDelivery,
+    },
+    segmentDetails: {
+      stockSymbol: rest.stockSymbol,
+      sustainabilityCommittee: rest.sustainabilityCommittee,
+      brsrCompliance: rest.brsrCompliance,
+      vendorDiversityPolicy: rest.vendorDiversityPolicy,
+      vendorCode: rest.vendorCode,
+      esgScore: rest.esgScore,
+      sustainabilityIndex: rest.sustainabilityIndex,
+      csrSpend: rest.csrSpend,
+      udyamNumber: rest.udyamNumber,
+      msmeCategory: rest.msmeCategory,
+      reasonForSustainableSourcing: rest.reasonForSustainableSourcing,
+      budgetSensitivity: rest.budgetSensitivity,
+      premiumWillingness: rest.premiumWillingness,
+      sourcingType: rest.sourcingType,
+      groupBuyingInterest: rest.groupBuyingInterest,
+      tradeAssociation: rest.tradeAssociation,
+      coverageArea: rest.coverageArea,
+      noOfRetailOutlets: rest.noOfRetailOutlets,
+      monthlyVolume: rest.monthlyVolume,
+      coldChainCapability: rest.coldChainCapability,
+      existingBrands: rest.existingBrands,
+      exclusiveInterest: rest.exclusiveInterest,
+      trackRecord: rest.trackRecord,
+      creditTermsPreferred: rest.creditTermsPreferred,
+      retailFormat: rest.retailFormat,
+      storeOrSkuCount: rest.storeOrSkuCount,
+      monthlyOrders: rest.monthlyOrders,
+      platformPresence: rest.platformPresence,
+    },
+    declaration: {
+      agreed: declarationAgreed,
+      name: rest.declarationName,
+      designation: rest.declarationDesignation,
+      date: rest.declarationDate,
+    },
+    status,
+  });
+}
+
+function flattenBuyerPayload(buyer: any, profile: any): Partial<BuyerOnboardingFormData> {
+  const ci = buyer?.companyInfo || {};
+  const bo = buyer?.businessOverview || {};
+  const sus = buyer?.sustainability || {};
+  const pro = buyer?.procurement || {};
+  const seg = buyer?.segmentDetails || {};
+  const decl = buyer?.declaration || {};
+
+  return {
+    ...ci,
+    ...bo,
+    ...sus,
+    ...pro,
+    ...seg,
+    declarationAgreed: Boolean(decl.agreed || decl.name),
+    declarationName: decl.name || profile?.name || "",
+    declarationDesignation: decl.designation || "",
+    declarationDate: decl.date || "",
+    email: ci.email || profile?.email || "",
+    contactPerson: ci.contactPerson || profile?.name || "",
+  };
+}
+
 export const BuyerOnboardingForm = () => {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
@@ -84,20 +198,44 @@ export const BuyerOnboardingForm = () => {
 
   // ─── Auth & Prefill ────────────────────────────────────────────────────────
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        setUser(u);
-        const snap = await getDoc(doc(db, "buyers", u.uid));
-        if (snap.exists()) {
-          const data = snap.data();
-          reset({ ...data } as any);
-        }
-        setLoading(false);
-      } else {
+    async function loadBuyer() {
+      const session = getStoredSession();
+
+      if (!session) {
         router.push("/login");
+        return;
       }
-    });
-    return () => unsub();
+
+      try {
+        const response = await fetch("/api/buyer/profile", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          router.push("/login");
+          return;
+        }
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || "Unable to load buyer profile.");
+        }
+
+        reset({
+          ...getValues(),
+          ...flattenBuyerPayload(payload.buyer, payload.profile),
+        } as any);
+      } catch (err) {
+        console.error("Buyer profile load failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadBuyer();
   }, [reset, router]);
 
   // ─── Step Navigation ───────────────────────────────────────────────────────
@@ -111,17 +249,28 @@ export const BuyerOnboardingForm = () => {
 
   // ─── Save Draft ────────────────────────────────────────────────────────────
   const saveDraft = async () => {
-    if (!user) return;
+    const session = getStoredSession();
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
     setSavingDraft(true);
     try {
-      const currentData = getValues();
-      // Strip undefined before writing — Firestore rejects undefined values
-      const payload = clean({
-        ...currentData,
-        status: "draft",
-        updatedAt: serverTimestamp(),
+      const response = await fetch("/api/buyer/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(buildBuyerPayload(getValues(), "draft")),
       });
-      await setDoc(doc(db, "buyers", user.uid), payload, { merge: true });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload?.error?.message || "Draft save failed.");
+      }
+
       setDraftSaved(true);
       setTimeout(() => setDraftSaved(false), 3000);
     } catch (err) {
@@ -133,133 +282,28 @@ export const BuyerOnboardingForm = () => {
 
   // ─── Final Submit ──────────────────────────────────────────────────────────
   const onSubmit = async (data: BuyerOnboardingFormData) => {
-    if (!user) return;
+    const session = getStoredSession();
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const { declarationAgreed, ...rest } = data;
+      const response = await fetch("/api/buyer/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(buildBuyerPayload(data, "submitted")),
+      });
 
-      const existing = await getDoc(doc(db, "buyers", user.uid));
-      const isNew = !existing.exists();
-
-      // Build structured payload then strip ALL undefined fields before writing
-      const rawPayload = {
-        uid: user.uid,
-        companyInfo: {
-          companyName: rest.companyName,
-          brandName: rest.brandName,
-          organisationType: rest.organisationType,
-          stockListed: rest.stockListed,
-          cinRegistration: rest.cinRegistration,
-          gstNumber: rest.gstNumber,
-          registeredAddress: rest.registeredAddress,
-          city: rest.city,
-          state: rest.state,
-          pinCode: rest.pinCode,
-          country: rest.country,
-          contactPerson: rest.contactPerson,
-          designation: rest.designation,
-          department: rest.department,
-          email: rest.email,
-          mobile: rest.mobile,
-          alternatePhone: rest.alternatePhone,
-          linkedin: rest.linkedin,
-          website: rest.website,
-        },
-        businessOverview: {
-          buyerSegment: rest.buyerSegment,
-          industry: rest.industry,
-          secondaryIndustry: rest.secondaryIndustry,
-          noOfEmployees: rest.noOfEmployees,
-          annualRevenue: rest.annualRevenue,
-          noOfLocations: rest.noOfLocations,
-          procurementBudget: rest.procurementBudget,
-          geographyOfOperation: rest.geographyOfOperation,
-          keyMarkets: rest.keyMarkets ?? [],
-        },
-        sustainability: {
-          sustainabilityPolicy: rest.sustainabilityPolicy,
-          esgReport: rest.esgReport,
-          sustainabilityDescription: rest.sustainabilityDescription,
-          certifications: rest.certifications ?? [],
-        },
-        procurement: {
-          categoriesNeeded: rest.categoriesNeeded ?? [],
-          secondaryCategories: rest.secondaryCategories ?? [],
-          procurementVolume: rest.procurementVolume,
-          vendorLocationPreference: rest.vendorLocationPreference,
-          preferredVendorSize: rest.preferredVendorSize,
-          minCertificationRequired: rest.minCertificationRequired,
-          pricingModel: rest.pricingModel,
-          orderFrequency: rest.orderFrequency,
-          typicalOrderValue: rest.typicalOrderValue,
-          paymentTerms: rest.paymentTerms,
-          communicationMode: rest.communicationMode,
-          siteAuditRequired: rest.siteAuditRequired,
-          ndaRequired: rest.ndaRequired,
-          multiLocationDelivery: rest.multiLocationDelivery,
-        },
-        // Only include segment fields that actually have a value
-        segmentDetails: {
-          // Corporate
-          stockSymbol: rest.stockSymbol,
-          sustainabilityCommittee: rest.sustainabilityCommittee,
-          brsrCompliance: rest.brsrCompliance,
-          vendorDiversityPolicy: rest.vendorDiversityPolicy,
-          vendorCode: rest.vendorCode,
-          esgScore: rest.esgScore,
-          sustainabilityIndex: rest.sustainabilityIndex,
-          csrSpend: rest.csrSpend,
-          // MSME
-          udyamNumber: rest.udyamNumber,
-          msmeCategory: rest.msmeCategory,
-          reasonForSustainableSourcing: rest.reasonForSustainableSourcing,
-          budgetSensitivity: rest.budgetSensitivity,
-          premiumWillingness: rest.premiumWillingness,
-          sourcingType: rest.sourcingType,
-          groupBuyingInterest: rest.groupBuyingInterest,
-          tradeAssociation: rest.tradeAssociation,
-          // Distributor
-          coverageArea: rest.coverageArea,
-          noOfRetailOutlets: rest.noOfRetailOutlets,
-          monthlyVolume: rest.monthlyVolume,
-          coldChainCapability: rest.coldChainCapability,
-          existingBrands: rest.existingBrands,
-          exclusiveInterest: rest.exclusiveInterest,
-          trackRecord: rest.trackRecord,
-          creditTermsPreferred: rest.creditTermsPreferred,
-          // Retailer
-          retailFormat: rest.retailFormat,
-          storeOrSkuCount: rest.storeOrSkuCount,
-          monthlyOrders: rest.monthlyOrders,
-          platformPresence: rest.platformPresence,
-        },
-        declaration: {
-          name: rest.declarationName,
-          designation: rest.declarationDesignation,
-          date: rest.declarationDate,
-        },
-        status: "submitted",
-        approved: false,
-        updatedAt: serverTimestamp(),
-        ...(isNew ? { createdAt: serverTimestamp() } : {}),
-      };
-
-      // Deep-strip undefined — Firestore throws on undefined values
-      const payload = clean(rawPayload);
-
-      await setDoc(doc(db, "buyers", user.uid), payload, { merge: true });
-
-      // Update user role
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          role: "BUYER",
-          buyerProfileComplete: true,
-          companyName: rest.companyName,
-        },
-        { merge: true }
-      );
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload?.error?.message || "Something went wrong.");
+      }
 
       router.push("/buyer/dashboard");
     } catch (err) {

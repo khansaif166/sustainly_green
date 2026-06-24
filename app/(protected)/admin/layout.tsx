@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -20,8 +20,7 @@ import {
   Megaphone,
   ShoppingCart,
 } from "lucide-react";
-import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
+import { fetchCurrentProfile, getCurrentUser, signOutSupabase } from "@/lib/supabaseAuth";
 
 /* ================= NAV CONFIG ================= */
 
@@ -53,10 +52,35 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    async function guardAdmin() {
+      const user = await getCurrentUser();
+      const profile = user ? await fetchCurrentProfile() : null;
+
+      if (!profile || profile.role !== "ADMIN") {
+        router.replace("/login");
+        return;
+      }
+
+      setCheckingAuth(false);
+    }
+
+    void guardAdmin();
+  }, [router]);
 
   async function logout() {
-    await signOut(auth);
+    await signOutSupabase();
     router.push("/");
+  }
+
+  if (checkingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">
+        Checking access...
+      </div>
+    );
   }
 
   return (

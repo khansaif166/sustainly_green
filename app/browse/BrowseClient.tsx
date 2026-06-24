@@ -1,19 +1,16 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-} from "firebase/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
+import {
+  fetchActiveCategories,
+  fetchApprovedProducts,
+  fetchApprovedVendors,
+  type PublicVendor,
+} from "@/lib/supabasePublic";
 import {
   FiSearch,
   FiSliders,
@@ -59,19 +56,9 @@ type Product = {
   tags?: string[];
 };
 
-type Vendor = {
-  id: string;
-  companyName?: string;
-  description?: string;
-  approved?: boolean;
-  category?: string;
-  location?: string;
-  ecoScore?: number;
+type Vendor = PublicVendor & {
   ecoTier?: string;
   GreenLensScore?: number;
-  certifications?: string[];
-  logoText?: string;
-  logoUrl?: string;
 };
 
 type Category = {
@@ -102,7 +89,13 @@ export default function BrowsePage() {
   const router = useRouter();
   const params = useSearchParams();
 
-  const type = params.get("type") || "Product";
+  const typeParam = params.get("type") || "Product";
+  const type =
+    typeParam.toLowerCase() === "vendor"
+      ? "Vendor"
+      : typeParam.toLowerCase() === "service"
+        ? "Service"
+        : "Product";
   const category = params.get("category") || "";
   const search = params.get("q") || "";
 
@@ -129,12 +122,10 @@ export default function BrowsePage() {
   useEffect(() => {
     async function loadCategories() {
       try {
-        const snap = await getDocs(collection(db, "categories"));
-        setCategories(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Category),
-        );
+        setCategories(await fetchActiveCategories());
       } catch (e) {
         console.error("BROWSE_CATEGORIES_ERROR", e);
+        setCategories([]);
       }
     }
     loadCategories();
@@ -146,22 +137,11 @@ export default function BrowsePage() {
       setLoading(true);
       try {
         if (type === "Product" || type === "Service") {
-          let qRef = query(
-            collection(db, "products"),
-            where("approved", "==", true),
-            where("listingType", "==", type),
-            orderBy("title"),
-            limit(100),
-          );
-
-          if (category) {
-            qRef = query(qRef, where("categoryId", "==", category));
-          }
-
-          const snap = await getDocs(qRef);
-          let list = snap.docs.map(
-            (d) => ({ id: d.id, ...d.data() }) as Product,
-          );
+          let list: Product[] = await fetchApprovedProducts({
+            listingType: type,
+            categoryId: category || undefined,
+            limit: 100,
+          });
 
           if (search) {
             const s = search.toLowerCase();
@@ -201,10 +181,7 @@ export default function BrowsePage() {
         }
 
         if (type === "Vendor") {
-          const snap = await getDocs(collection(db, "vendors"));
-          let list = snap.docs.map(
-            (d) => ({ id: d.id, ...d.data() }) as Vendor,
-          );
+          let list: Vendor[] = await fetchApprovedVendors();
 
           if (search) {
             const s = search.toLowerCase();
@@ -212,7 +189,8 @@ export default function BrowsePage() {
               (v) =>
                 (v.companyName || "").toLowerCase().includes(s) ||
                 (v.description || "").toLowerCase().includes(s) ||
-                (v.category || "").toLowerCase().includes(s),
+                (v.category || "").toLowerCase().includes(s) ||
+                (v.location || "").toLowerCase().includes(s),
             );
           }
 
@@ -587,19 +565,33 @@ export default function BrowsePage() {
     );
 
   /* ================= VENDOR CARD ================= */
+  const vendorText = (value: unknown, fallback = "") => {
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    return fallback;
+  };
+
+  const vendorLogoText = (v: Vendor) => {
+    if (typeof v.logoText === "string" && v.logoText.trim()) {
+      return v.logoText;
+    }
+
+    return (vendorText(v.companyName, "V").slice(0, 2) || "V").toUpperCase();
+  };
+
   const VendorCard = ({ v }: { v: Vendor }) =>
     viewMode === "grid" ? (
       <Link href={`/find-vendors/${v.id}`} className="browse-vendor-card">
         <div className="bvc-top">
           <div className="bvc-logo">
             {v.logoUrl ? (
-              <img src={v.logoUrl} alt={v.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={v.logoUrl} alt={vendorText(v.companyName, "Vendor")} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              v.logoText || (v.companyName || "V").slice(0, 2).toUpperCase()
+              vendorLogoText(v)
             )}
           </div>
           <div className="bvc-badges">
-            {v.ecoTier && (
+            {typeof v.ecoTier === "string" && v.ecoTier && (
               <span
                 className="bvc-tier"
                 style={{
@@ -610,33 +602,34 @@ export default function BrowsePage() {
                 {v.ecoTier.toUpperCase()}
               </span>
             )}
-            {v.GreenLensScore && (
+            {(typeof v.GreenLensScore === "number" || typeof v.GreenLensScore === "string") && (
               <span className="bvc-bl">
                 <HiOutlineShieldCheck size={11} />
-                BL {v.GreenLensScore}/5
+                BL {vendorText(v.GreenLensScore)}/5
               </span>
             )}
+            {v.isUnclaimed && <span className="bvc-bl">Listed</span>}
           </div>
         </div>
         <div className="bvc-body">
-          <h3 className="bvc-name">{v.companyName || "Unnamed Vendor"}</h3>
-          {v.category && <p className="bvc-cat">{v.category}</p>}
+          <h3 className="bvc-name">{vendorText(v.companyName, "Unnamed Vendor")}</h3>
+          {v.category && <p className="bvc-cat">{vendorText(v.category)}</p>}
           {v.description && (
             <p className="bvc-desc">
-              {v.description.replace(/<[^>]+>/g, "").slice(0, 90)}…
+              {vendorText(v.description).replace(/<[^>]+>/g, "").slice(0, 90)}…
             </p>
           )}
           {(v.certifications || []).length > 0 && (
             <div className="bpc-certs">
-              {v.certifications!.slice(0, 2).map((c) => (
-                <span key={c} className="bpc-cert-pill">
-                  {c}
+              {v.certifications!.slice(0, 2).map((c, index) => (
+                <span key={`${vendorText(c, "cert")}-${index}`} className="bpc-cert-pill">
+                  {vendorText(c)}
                 </span>
               ))}
             </div>
           )}
         </div>
-        {v.ecoScore && (
+        {typeof v.ecoScore === "number" && (
           <div className="bvc-score-wrap">
             <div className="bvc-score-label">
               <span>Eco Score</span>
@@ -653,14 +646,14 @@ export default function BrowsePage() {
           </div>
         )}
         <div className="bvc-footer">
-          {v.location && (
+              {v.location && (
             <span className="bvc-loc">
               <FiMapPin size={11} />
-              {v.location}
+              {vendorText(v.location)}
             </span>
           )}
           <span className="bpc-view-link">
-            View Profile <FiExternalLink size={11} />
+            {v.isUnclaimed ? "View Listing" : "View Profile"} <FiExternalLink size={11} />
           </span>
         </div>
       </Link>
@@ -668,24 +661,24 @@ export default function BrowsePage() {
       <Link href={`/find-vendors/${v.id}`} className="browse-product-row">
         <div className="bvc-logo" style={{ flexShrink: 0, width: 52, height: 52, fontSize: 16 }}>
           {v.logoUrl ? (
-            <img src={v.logoUrl} alt={v.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={v.logoUrl} alt={vendorText(v.companyName, "Vendor")} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            v.logoText || (v.companyName || "V").slice(0, 2).toUpperCase()
+            vendorLogoText(v)
           )}
         </div>
         <div className="bpr-body">
           <h3 className="bpc-title" style={{ fontSize: 14 }}>
-            {v.companyName}
+            {vendorText(v.companyName, "Unnamed Vendor")}
           </h3>
-          {v.category && <p className="bvc-cat">{v.category}</p>}
+          {v.category && <p className="bvc-cat">{vendorText(v.category)}</p>}
           {v.description && (
             <p className="bpc-desc">
-              {v.description.replace(/<[^>]+>/g, "").slice(0, 120)}…
+              {vendorText(v.description).replace(/<[^>]+>/g, "").slice(0, 120)}…
             </p>
           )}
         </div>
         <div className="bpr-right">
-          {v.ecoTier && (
+            {typeof v.ecoTier === "string" && v.ecoTier && (
             <span
               className="bvc-tier"
               style={{
@@ -696,14 +689,15 @@ export default function BrowsePage() {
               {v.ecoTier.toUpperCase()}
             </span>
           )}
+          {v.isUnclaimed && <span className="bvc-bl">Listed</span>}
           {v.location && (
             <span className="bvc-loc">
               <FiMapPin size={11} />
-              {v.location}
+              {vendorText(v.location)}
             </span>
           )}
           <span className="bpc-view-link">
-            View Profile <FiExternalLink size={11} />
+            {v.isUnclaimed ? "View Listing" : "View Profile"} <FiExternalLink size={11} />
           </span>
         </div>
       </Link>

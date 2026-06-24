@@ -2,17 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase";
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  collection,
-  getDocs,
-  serverTimestamp,
-} from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
-import { uploadFileWithProgress } from "@/lib/storage";
+import { getStoredSession } from "@/lib/supabaseAuth";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 /* ---------- CONSTANTS ---------- */
 const LISTING_TYPES = ["Product", "Service"];
@@ -26,7 +19,7 @@ export default function EditProductPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [error, setError] = useState("");
 
   const [categories, setCategories] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
@@ -46,7 +39,7 @@ export default function EditProductPage() {
   const [availableFor, setAvailableFor] = useState<string[]>([]);
   const [priceType, setPriceType] = useState("");
   const [price, setPrice] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("INR");
   const [moq, setMoq] = useState("");
   const [discount, setDiscount] = useState("");
 
@@ -58,48 +51,84 @@ export default function EditProductPage() {
 
   /* ---------- AUTH + LOAD ---------- */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) return router.push("/login");
-      setUser(u);
+    async function load() {
+      const session = getStoredSession();
+      if (!session) {
+        router.push("/login");
+        return;
+      }
 
-      const snap = await getDoc(doc(db, "products", id as string));
-      if (!snap.exists()) return router.push("/vendor/products");
+      try {
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+          throw new Error("Missing Supabase public environment variables.");
+        }
 
-      const p = snap.data();
-      if (p.vendorId !== u.uid) return router.push("/vendor/products");
+        const headers = {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        };
 
-      setListingType(
-        Array.isArray(p.listingType) ? p.listingType[0] : p.listingType || "",
-      );
+        const [productResponse, categoriesResponse, subcategoriesResponse, tagsResponse] =
+          await Promise.all([
+            fetch(`/api/vendor/products/${id}`, {
+              headers: { Authorization: `Bearer ${session.accessToken}` },
+            }),
+            fetch(`${SUPABASE_URL}/rest/v1/categories?select=id,name&active=eq.true&order=name.asc`, { headers }),
+            fetch(`${SUPABASE_URL}/rest/v1/subcategories?select=id,name,category_id&active=eq.true&order=name.asc`, { headers }),
+            fetch(`${SUPABASE_URL}/rest/v1/sustainability_tags?select=id,name&active=eq.true&order=name.asc`, { headers }),
+          ]);
 
-      setTitle(p.title || "");
-      setCategoryId(p.categoryId || "");
-      setSubCategoryId(p.subCategoryId || "");
-      setDescription(p.description || "");
-      setExistingImages(p.images || []);
-      setAvailableFor(p.availableFor || []);
-      setPriceType(p.priceType || "");
-      setPrice(p.price?.toString() || "");
-      setCurrency(p.currency || "USD");
-      setMoq(p.moq?.toString() || "");
-      setDiscount(p.discount || "");
-      setSelectedTags(p.sustainabilityTags || []);
-      setSustainabilityClaim(p.sustainabilityClaim || "");
-      setShipRegions(p.shipRegions || []);
-      setInStock(p.inStock ?? true);
+        const productPayload = await productResponse.json();
 
-      const c = await getDocs(collection(db, "categories"));
-      const s = await getDocs(collection(db, "subcategories"));
-      const t = await getDocs(collection(db, "tags"));
+        if (!productResponse.ok) {
+          throw new Error(productPayload?.error?.message || "Unable to load product.");
+        }
 
-      setCategories(c.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setSubCategories(s.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setTags(t.docs.map((d) => ({ id: d.id, ...d.data() })));
+        const p = productPayload.product;
+        setListingType(
+          Array.isArray(p.listingType) ? p.listingType[0] : p.listingType || "",
+        );
+        setTitle(p.title || "");
+        setCategoryId(p.categoryId || "");
+        setSubCategoryId(p.subCategoryId || "");
+        setDescription(p.description || "");
+        setExistingImages(p.images || []);
+        setAvailableFor(p.availableFor || []);
+        setPriceType(p.priceType || "");
+        setPrice(p.price?.toString() || "");
+        setCurrency(p.currency || "INR");
+        setMoq(p.moq?.toString() || "");
+        setDiscount(p.discount || "");
+        setSelectedTags(p.sustainabilityTagIds || []);
+        setSustainabilityClaim(p.sustainabilityClaim || "");
+        setShipRegions(p.shipRegions || []);
+        setInStock(p.inStock ?? true);
 
-      setLoading(false);
-    });
+        const [categoryRows, subcategoryRows, tagRows] = await Promise.all([
+          categoriesResponse.json(),
+          subcategoriesResponse.json(),
+          tagsResponse.json(),
+        ]);
 
-    return () => unsub();
+        setCategories(Array.isArray(categoryRows) ? categoryRows : []);
+        setSubCategories(
+          Array.isArray(subcategoryRows)
+            ? subcategoryRows.map((row) => ({
+                id: row.id,
+                name: row.name,
+                categoryId: row.category_id,
+              }))
+            : [],
+        );
+        setTags(Array.isArray(tagRows) ? tagRows : []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load product.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
   }, [id, router]);
 
   /* ---------- HELPERS ---------- */
@@ -121,56 +150,56 @@ export default function EditProductPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setError("");
 
     try {
-      const uploaded: string[] = [];
-      for (const file of newImages) {
-        const path = `products/${user.uid}/${Date.now()}_${file.name}`;
-        uploaded.push(await uploadFileWithProgress(file, path));
+      const session = getStoredSession();
+      if (!session) {
+        router.push("/login");
+        return;
       }
 
-      // map selected tag ids to names
-      const selectedTagObjects = tags
-        .filter((t) => selectedTags.includes(t.id))
-        .map((t) => ({
-          id: t.id,
-          name: t.name,
-        }));
-
-      const selectedTagNames = selectedTagObjects.map((t) => t.name);
-
-      const allImages = [...existingImages, ...uploaded];
+      const allImages = existingImages;
       const orderedImages = [
         allImages[coverIndex],
         ...allImages.filter((_, i) => i !== coverIndex),
       ].filter(Boolean); // remove undefined if no images
 
-      await updateDoc(doc(db, "products", id as string), {
-        listingType,
-        title,
-        description,
-        categoryId,
-        subCategoryId,
-        images: orderedImages,
-        availableFor,
-        priceType,
-        price: price ? Number(price) : null,
-        currency,
-        moq: moq ? Number(moq) : null,
-        discount,
-        sustainabilityTagIds: selectedTags,
-        sustainabilityTagNames: selectedTagNames,
-        sustainabilityClaim,
-        shipRegions,
-        inStock,
-        approved: false, // optional: require re-approval on edit?
-        updatedAt: serverTimestamp(),
+      const response = await fetch(`/api/vendor/products/${id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          listingType,
+          title,
+          description,
+          categoryId,
+          subCategoryId,
+          images: orderedImages,
+          availableFor,
+          priceType,
+          price,
+          currency,
+          moq,
+          discount,
+          sustainabilityTagIds: selectedTags,
+          sustainabilityClaim,
+          shipRegions,
+          inStock,
+        }),
       });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Update failed");
+      }
 
       router.push("/vendor/products");
     } catch (err) {
       console.error(err);
-      alert("Update failed");
+      setError(err instanceof Error ? err.message : "Update failed");
     } finally {
       setSaving(false);
     }
@@ -204,6 +233,12 @@ export default function EditProductPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          {error && (
+            <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* BASIC INFO */}
           <section className="bg-white rounded-2xl p-6 space-y-5">
             <h2 className="section">Basic Listing Info</h2>
@@ -319,7 +354,7 @@ export default function EditProductPage() {
               </label>
 
               <p className="help">
-                Upload up to 5 images total. Currently have {existingImages.length} saved images.
+                Supabase Storage upload is being migrated. Existing images can be reordered or removed; new selected files are preview-only for now.
               </p>
             </div>
           </section>

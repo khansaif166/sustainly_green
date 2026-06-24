@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Footer from "./components/layouts/Footer";
-import { Poppins, Plus_Jakarta_Sans, Instrument_Serif } from "next/font/google";
+import SessionTimeoutNotice from "./components/SessionTimeoutNotice";
+import SupabaseAuthCallback from "./components/SupabaseAuthCallback";
+import { Poppins, Plus_Jakarta_Sans } from "next/font/google";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -37,6 +38,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} font-sans antialiased`} suppressHydrationWarning>
+        <SupabaseAuthCallback />
+        <SessionTimeoutNotice />
         {children}
       </body>
     </html>

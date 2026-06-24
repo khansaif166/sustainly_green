@@ -2,16 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
 import { PlusCircle, Clock, CheckCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 type Product = {
   id: string;
@@ -26,31 +19,39 @@ export default function VendorProductsPage() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   /* ---------------- AUTH + LOAD PRODUCTS ---------------- */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
+    async function loadProducts() {
+      const session = getStoredSession();
+
+      if (!session) {
         router.push("/login");
         return;
       }
 
-      const q = query(
-        collection(db, "products"),
-        where("vendorId", "==", user.uid)
-      );
+      try {
+        const response = await fetch("/api/vendor/products", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+        const payload = await response.json();
 
-      const snap = await getDocs(q);
-      setProducts(
-        snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as any),
-        }))
-      );
-      setLoading(false);
-    });
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || "Unable to load products.");
+        }
 
-    return () => unsub();
+        setProducts(payload.products || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load products.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProducts();
   }, [router]);
 
   if (loading) {
@@ -106,6 +107,12 @@ export default function VendorProductsPage() {
           Add Product
         </button>
       </div>
+
+      {error && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* ================= EMPTY STATE ================= */}
       {products.length === 0 && (

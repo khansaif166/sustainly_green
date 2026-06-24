@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -12,8 +12,7 @@ import {
   X,
   BarChart3,
 } from "lucide-react";
-import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
+import { fetchCurrentProfile, getCurrentUser, signOutSupabase } from "@/lib/supabaseAuth";
 
 /* ================= NAV CONFIG ================= */
 
@@ -34,15 +33,40 @@ export default function BuyerLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    async function guardBuyer() {
+      const user = await getCurrentUser();
+      const profile = user ? await fetchCurrentProfile() : null;
+
+      if (!profile || (profile.role !== "BUYER" && profile.role !== "ADMIN")) {
+        router.replace("/login");
+        return;
+      }
+
+      setCheckingAuth(false);
+    }
+
+    void guardBuyer();
+  }, [router]);
 
   async function logout() {
   try {
-    await signOut(auth);
+    await signOutSupabase();
     window.location.href = "/login";
   } catch (err) {
     console.error("Logout failed", err);
   }
 }
+
+  if (checkingAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-gray-500">
+        Checking access...
+      </div>
+    );
+  }
 
 
   return (

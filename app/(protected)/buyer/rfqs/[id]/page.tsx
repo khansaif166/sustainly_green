@@ -2,13 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
 import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import { FiPhone, FiMail } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import Link from "next/link";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 /* ================= PAGE ================= */
 
@@ -18,54 +16,89 @@ export default function BuyerRFQDetailPage() {
 
   const [rfq, setRfq] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
 
   /* ================= LOAD RFQ ================= */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
+    async function loadRfq() {
+      const session = getStoredSession();
+
+      if (!session) {
         router.push("/login");
         return;
       }
 
-      const snap = await getDoc(doc(db, "rfqs", id as string));
+      try {
+        const response = await fetch(`/api/buyer/rfqs/${id}`, {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
 
-      if (!snap.exists()) {
-        router.push("/buyer/rfqs");
-        return;
+        if (response.status === 401 || response.status === 403) {
+          router.push("/login");
+          return;
+        }
+
+        if (response.status === 404) {
+          router.push("/buyer/rfqs");
+          return;
+        }
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || "Unable to load RFQ.");
+        }
+
+        setRfq(payload.rfq);
+      } catch (err) {
+        console.error("BUYER_RFQ_DETAIL_LOAD_ERROR", err);
+        setError(err instanceof Error ? err.message : "Unable to load RFQ.");
+      } finally {
+        setLoading(false);
       }
+    }
 
-      const data = snap.data();
-
-      if (data.buyerEmail !== u.email) {
-        router.push("/buyer/rfqs");
-        return;
-      }
-
-      setRfq({ id: snap.id, ...data });
-      setLoading(false);
-    });
-
-    return () => unsub();
+    void loadRfq();
   }, [id, router]);
 
   /* ================= ACTIONS ================= */
-  async function acceptQuote() {
-    await updateDoc(doc(db, "rfqs", id as string), {
-      status: "ACCEPTED",
-      contactShared: true,
-      updatedAt: serverTimestamp(),
-    });
+  async function updateQuote(action: "accept" | "reject") {
+    const session = getStoredSession();
 
-    setRfq((p: any) => ({ ...p, status: "ACCEPTED" }));
-  }
+    if (!session) {
+      router.push("/login");
+      return;
+    }
 
-  async function rejectQuote() {
-    await updateDoc(doc(db, "rfqs", id as string), {
-      status: "REJECTED",
-      updatedAt: serverTimestamp(),
-    });
+    setUpdating(true);
+    setError(null);
 
-    setRfq((p: any) => ({ ...p, status: "REJECTED" }));
+    try {
+      const response = await fetch(`/api/buyer/rfqs/${id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Unable to update RFQ.");
+      }
+
+      setRfq(payload.rfq);
+    } catch (err) {
+      console.error("BUYER_RFQ_DETAIL_UPDATE_ERROR", err);
+      setError(err instanceof Error ? err.message : "Unable to update RFQ.");
+    } finally {
+      setUpdating(false);
+    }
   }
 
   if (loading) {
@@ -121,6 +154,12 @@ export default function BuyerRFQDetailPage() {
       </section>
 
       {/* ================= RFQ DETAILS ================= */}
+      {error && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
+
       <section
         className="
           rounded-3xl p-6
@@ -134,7 +173,7 @@ export default function BuyerRFQDetailPage() {
         <Detail label="Delivery Location" value={rfq.deliveryCountry} />
         <Detail
           label="Timeline"
-          value={rfq.requiredTimeline.replaceAll("_", " ")}
+          value={rfq.requiredTimeline?.replaceAll("_", " ")}
         />
 
         {rfq.additionalDetails && (
@@ -172,13 +211,14 @@ export default function BuyerRFQDetailPage() {
 
           <div className="flex gap-3 pt-4">
             <button
-              onClick={acceptQuote}
+              onClick={() => updateQuote("accept")}
+              disabled={updating}
               className="
                 inline-flex items-center gap-2
                 px-5 py-2 rounded-full
                 bg-[var(--color-primary-green)]
                 text-white text-sm font-medium
-                hover:opacity-90
+                hover:opacity-90 disabled:opacity-60
               "
             >
               <CheckCircle className="h-4 w-4" />
@@ -186,13 +226,14 @@ export default function BuyerRFQDetailPage() {
             </button>
 
             <button
-              onClick={rejectQuote}
+              onClick={() => updateQuote("reject")}
+              disabled={updating}
               className="
                 inline-flex items-center gap-2
                 px-5 py-2 rounded-full
                 border border-red-300
                 text-red-600 text-sm font-medium
-                hover:bg-red-50
+                hover:bg-red-50 disabled:opacity-60
               "
             >
               <XCircle className="h-4 w-4" />

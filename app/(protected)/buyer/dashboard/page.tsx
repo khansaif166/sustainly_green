@@ -1,18 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  Timestamp,
-  getDoc,
-  doc,
-} from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import {
   LineChart,
@@ -27,17 +15,24 @@ import {
 } from "recharts";
 import Link from "next/link";
 import { ArrowLeft, ClipboardList, AlertTriangle } from "lucide-react";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 /* ================= TYPES ================= */
 
 type RFQ = {
   estimatedQuantity: string;
-  requiredTimeline: any;
+  requiredTimeline: string;
   deliveryCountry: string;
   id: string;
   requirementTitle: string;
   status: string;
-  createdAt: Timestamp;
+  createdAt: string;
+};
+
+type BuyerDashboardResponse = {
+  ok: boolean;
+  needsOnboarding: boolean;
+  rfqs: RFQ[];
 };
 
 /* ================= PAGE ================= */
@@ -47,37 +42,55 @@ export default function BuyerDashboardPage() {
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  /* ================= AUTH + REALTIME DATA ================= */
+  /* ================= AUTH + DATA ================= */
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
+    async function loadDashboard() {
+      const session = getStoredSession();
+
+      if (!session) {
         router.push("/login");
         return;
       }
 
-      // Check if buyer has completed onboarding
-      const userSnap = await getDoc(doc(db, "users", u.uid));
-      if (userSnap.exists() && !userSnap.data().buyerProfileComplete) {
-        setNeedsOnboarding(true);
-      }
+      try {
+        const response = await fetch("/api/buyer/dashboard", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
 
-      const q = query(
-        collection(db, "rfqs"),
-        where("buyerId", "==", u.uid),
-        orderBy("createdAt", "asc")
-      );
+        if (response.status === 401 || response.status === 403) {
+          router.push("/login");
+          return;
+        }
 
-      const unsubData = onSnapshot(q, (snap) => {
-        setRfqs(snap.docs.map((d) => ({ id: d.id, ...d.data() } as RFQ)));
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.error?.message || "Unable to load buyer dashboard.",
+          );
+        }
+
+        const data = payload as BuyerDashboardResponse;
+        setNeedsOnboarding(data.needsOnboarding);
+        setRfqs(data.rfqs || []);
+      } catch (err) {
+        console.error("BUYER_DASHBOARD_LOAD_ERROR", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load buyer dashboard.",
+        );
+      } finally {
         setLoading(false);
-      });
+      }
+    }
 
-      return () => unsubData();
-    });
-
-    return () => unsubAuth();
+    void loadDashboard();
   }, [router]);
 
   /* ================= KPIs ================= */
@@ -93,7 +106,8 @@ export default function BuyerDashboardPage() {
     const map: Record<string, number> = {};
 
     rfqs.forEach((r) => {
-      const d = r.createdAt.toDate();
+      const d = new Date(r.createdAt);
+      if (Number.isNaN(d.getTime())) return;
       const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
       map[key] = (map[key] || 0) + 1;
     });
@@ -115,13 +129,35 @@ export default function BuyerDashboardPage() {
   /* ================= RECENT ================= */
 
   const recentRfqs = [...rfqs]
-    .sort((a, b) => b.createdAt.seconds - a.createdAt.seconds)
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
     .slice(0, 5);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         Loading dashboard…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="max-w-md rounded-3xl border border-red-100 bg-white p-6 text-center shadow">
+          <h2 className="text-base font-semibold text-red-700">
+            Dashboard could not load
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">{error}</p>
+          <Link
+            href="/"
+            className="mt-5 inline-flex rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white"
+          >
+            Back to Home
+          </Link>
+        </div>
       </div>
     );
   }
@@ -276,7 +312,7 @@ export default function BuyerDashboardPage() {
                     </td>
 
                     <td className="px-4 py-3 text-[var(--color-text-secondary)]">
-                      {r.createdAt.toDate().toLocaleDateString()}
+                      {new Date(r.createdAt).toLocaleDateString()}
                     </td>
 
                     <td className="px-4 py-3 font-medium text-[var(--color-text-primary)] max-w-[240px] truncate">
@@ -286,7 +322,7 @@ export default function BuyerDashboardPage() {
                     <td className="px-4 py-3">{r.estimatedQuantity}</td>
 
                     <td className="px-4 py-3">
-                      {r.requiredTimeline.replaceAll("_", " ")}
+                      {r.requiredTimeline?.replaceAll("_", " ")}
                     </td>
 
                     <td className="px-4 py-3">{r.deliveryCountry}</td>

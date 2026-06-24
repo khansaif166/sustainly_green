@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 import {
   Package,
@@ -15,6 +13,7 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 // 🔥 EXPORT LIBRARIES
 import * as XLSX from "xlsx";
@@ -28,7 +27,6 @@ import autoTable from "jspdf-autotable";
 export type Product = {
   id: string;
   title: string;
-  vendorId: string;
   approved: boolean;
   active?: boolean;
   views?: number;
@@ -41,52 +39,61 @@ type Enquiry = {
 /* ================= PAGE ================= */
 
 export default function VendorReportsPage() {
-  const [vendorId, setVendorId] = useState<string | null>(null);
-
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  /* ================= AUTH ================= */
+  /* ================= LOAD REPORT DATA ================= */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) setVendorId(user.uid);
-    });
-    return () => unsub();
-  }, []);
+    async function loadReports() {
+      const session = getStoredSession();
 
-  /* ================= REALTIME PRODUCTS ================= */
-  useEffect(() => {
-    if (!vendorId) return;
+      if (!session) {
+        router.push("/login");
+        return;
+      }
 
-    const q = query(
-      collection(db, "products"),
-      where("vendorId", "==", vendorId),
-    );
+      try {
+        const headers = {
+          Authorization: `Bearer ${session.accessToken}`,
+        };
 
-    const unsub = onSnapshot(q, (snap) => {
-      setProducts(
-        snap.docs.map((d) => ({
-          ...(d.data() as Product),
-          id: d.id,
-        })),
-      );
-    });
+        const [productsResponse, enquiriesResponse] = await Promise.all([
+          fetch("/api/vendor/products", { headers }),
+          fetch("/api/vendor/rfqs", { headers }),
+        ]);
+        const [productsPayload, enquiriesPayload] = await Promise.all([
+          productsResponse.json(),
+          enquiriesResponse.json(),
+        ]);
 
-    return () => unsub();
-  }, [vendorId]);
+        if (!productsResponse.ok) {
+          throw new Error(
+            productsPayload?.error?.message || "Unable to load products report.",
+          );
+        }
 
-  /* ================= REALTIME ENQUIRIES ================= */
-  useEffect(() => {
-    if (!vendorId) return;
+        if (!enquiriesResponse.ok) {
+          throw new Error(
+            enquiriesPayload?.error?.message || "Unable to load enquiries report.",
+          );
+        }
 
-    const q = query(collection(db, "rfqs"), where("vendorId", "==", vendorId));
+        setProducts(productsPayload.products || []);
+        setEnquiries(enquiriesPayload.rfqs || []);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Unable to load vendor reports.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    const unsub = onSnapshot(q, (snap) => {
-      setEnquiries(snap.docs.map((d) => d.data() as Enquiry));
-    });
-
-    return () => unsub();
-  }, [vendorId]);
+    loadReports();
+  }, [router]);
 
   /* ================= AGGREGATIONS ================= */
 
@@ -172,6 +179,14 @@ export default function VendorReportsPage() {
 
   /* ================= UI ================= */
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
+        Loading vendor reports…
+      </div>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[var(--color-bg-soft)] p-4 space-y-8">
       <Link
@@ -245,6 +260,12 @@ export default function VendorReportsPage() {
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* KPI CARDS */}
      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
