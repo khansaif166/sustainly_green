@@ -4,7 +4,7 @@ import {
   supabaseServiceFetch,
   toAuthError,
   toConfigError,
-} from "@/lib/supabaseServer";
+} from "@/lib/supabaseServer"; 
 
 export const runtime = "edge";
 
