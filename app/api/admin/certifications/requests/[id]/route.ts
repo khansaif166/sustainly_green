@@ -6,7 +6,6 @@ import {
   toConfigError,
 } from "@/lib/supabaseServer";
 
-export const runtime = "edge";
 
 const ALLOWED_STATUSES = new Set(["NEW", "IN_REVIEW", "APPROVED", "REJECTED"]);
 

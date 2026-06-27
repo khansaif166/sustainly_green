@@ -6,7 +6,6 @@ import {
   toConfigError,
 } from "@/lib/supabaseServer";
 
-export const runtime = "edge";
 
 async function getBuyerProfileId(id: string) {
   const rows = await supabaseServiceFetch<Array<{ profile_id: string | null }>>(

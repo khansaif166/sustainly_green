@@ -11,7 +11,6 @@ import {
   type VendorRfqRow,
 } from "@/lib/vendorRfqsServer";
 
-export const runtime = "edge";
 
 export async function GET(request: Request) {
   try {

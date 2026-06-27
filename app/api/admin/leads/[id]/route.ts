@@ -6,7 +6,6 @@ import {
   toConfigError,
 } from "@/lib/supabaseServer";
 
-export const runtime = "edge";
 
 const ALLOWED_STATUSES = ["OPEN", "ACCEPTED", "REJECTED", "RFQ_REQUESTED"] as const;
 type AllowedStatus = typeof ALLOWED_STATUSES[number];

@@ -6,7 +6,6 @@ import {
   toConfigError,
 } from "@/lib/supabaseServer";
 
-export const runtime = "edge";
 
 type VendorRow = {
   company_name: string | null;

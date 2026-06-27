@@ -11,7 +11,6 @@ import {
   mapVendorRfq,
 } from "@/lib/vendorRfqsServer";
 
-export const runtime = "edge";
 
 function stringOrNull(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;

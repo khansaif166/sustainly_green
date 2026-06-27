@@ -6,7 +6,6 @@ import {
   toConfigError,
 } from "@/lib/supabaseServer";
 
-export const runtime = "edge";
 
 export async function DELETE(
   request: Request,

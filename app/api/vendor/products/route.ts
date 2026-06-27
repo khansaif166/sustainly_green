@@ -15,7 +15,6 @@ import {
   replaceTags,
 } from "@/lib/vendorProductsServer";
 
-export const runtime = "edge";
 
 export async function GET(request: Request) {
   try {

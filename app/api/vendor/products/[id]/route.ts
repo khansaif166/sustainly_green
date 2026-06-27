@@ -15,7 +15,6 @@ import {
   replaceTags,
 } from "@/lib/vendorProductsServer";
 
-export const runtime = "edge";
 
 async function loadOwnedProduct(id: string, vendorId: string) {
   const params = new URLSearchParams({
