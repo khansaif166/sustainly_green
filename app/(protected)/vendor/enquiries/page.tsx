@@ -22,6 +22,7 @@ interface RFQ {
   estimatedQuantity: string | number;
   requiredTimeline?: string;
   additionalDetails?: string;
+  productId?: string | null;
 }
 
 const STATUS_META: Record<RFQStatus, { label: string; bg: string; color: string; dot: string }> = {
@@ -188,6 +189,11 @@ export default function VendorEnquiriesPage() {
                   <div className="ve-card-top">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                       <div style={{ minWidth: 0 }}>
+                        {r.productId && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: "#15803d", background: "#dcfce7", padding: "2px 8px", borderRadius: 50, marginBottom: 5 }}>
+                            <Package size={9} />Product RFQ
+                          </span>
+                        )}
                         <h2 className="ve-card-title">{r.requirementTitle}</h2>
                         <p className="ve-card-buyer">{r.buyerName}</p>
                       </div>

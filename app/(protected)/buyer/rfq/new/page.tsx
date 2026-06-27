@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchCurrentProfile, getStoredSession } from "@/lib/supabaseAuth";
 import Link from "next/link";
 import {
   ArrowLeft, Send, Package, MapPin, AlarmClock,
   User, Mail, Phone, FileText, Layers, AlertTriangle, CheckCircle2,
-  ClipboardList, LockKeyhole,
+  ClipboardList, LockKeyhole, Search, X, ShoppingBag, ChevronRight,
 } from "lucide-react";
 
 const TIMELINES = [
@@ -16,6 +16,18 @@ const TIMELINES = [
   { value: "1_3_MONTHS",      label: "1–3 months" },
   { value: "3_MONTHS_PLUS",   label: "3 months or more" },
 ];
+
+type Product = {
+  id: string;
+  vendorId: string;
+  vendorName: string;
+  title: string;
+  description: string;
+  price: number | string | null;
+  currency: string;
+  moq: number | string | null;
+  imageUrl: string | null;
+};
 
 function FormField({ icon: Icon, label, required, children }: { icon: any; label: string; required?: boolean; children: React.ReactNode }) {
   return (
@@ -34,6 +46,133 @@ const inputStyle: React.CSSProperties = {
   color: "#111", background: "#fafafa", boxSizing: "border-box", transition: "border-color .15s",
 };
 
+function ProductPickerModal({ token, onSelect, onClose }: {
+  token: string;
+  onSelect: (p: Product) => void;
+  onClose: () => void;
+}) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    async function load() {
+      try {
+        const res = await fetch("/api/buyer/products", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const payload = await res.json();
+        setProducts(payload.products || []);
+      } catch {}
+      setLoading(false);
+    }
+    void load();
+  }, [token]);
+
+  const filtered = products.filter(p =>
+    !search ||
+    p.title.toLowerCase().includes(search.toLowerCase()) ||
+    p.vendorName.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1000,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+    }} onClick={onClose}>
+      <div style={{
+        background: "#fff", borderRadius: 20, width: "100%", maxWidth: 680,
+        maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.25)",
+      }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ flex: 1, position: "relative" }}>
+            <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+            <input
+              ref={inputRef}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search products or vendors…"
+              style={{ ...inputStyle, paddingLeft: 34, margin: 0 }}
+            />
+          </div>
+          <button onClick={onClose} style={{ background: "#f3f4f6", border: "none", borderRadius: 10, padding: "8px 10px", cursor: "pointer", color: "#6b7280", display: "flex", alignItems: "center" }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Product list */}
+        <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+          {loading && (
+            <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>
+              <div style={{ width: 28, height: 28, border: "3px solid #dcfce7", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
+            </div>
+          )}
+
+          {!loading && filtered.length === 0 && (
+            <div style={{ textAlign: "center", padding: "40px 20px", color: "#9ca3af" }}>
+              <Package size={32} style={{ opacity: .3, margin: "0 auto 10px" }} />
+              <p style={{ fontSize: 13, margin: 0 }}>{search ? "No products match your search" : "No products available yet"}</p>
+            </div>
+          )}
+
+          {!loading && filtered.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+              {filtered.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => onSelect(p)}
+                  style={{
+                    background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 14,
+                    padding: 0, cursor: "pointer", textAlign: "left", transition: "all .15s",
+                    overflow: "hidden", display: "flex", flexDirection: "column",
+                    fontFamily: "inherit",
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#16a34a";
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 16px rgba(22,163,74,0.12)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb";
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
+                  }}
+                >
+                  {/* Image */}
+                  <div style={{ width: "100%", height: 130, background: "#f9fafb", overflow: "hidden", position: "relative" }}>
+                    {p.imageUrl
+                      ? <img src={p.imageUrl} alt={p.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Package size={32} color="#d1d5db" />
+                        </div>
+                    }
+                  </div>
+                  {/* Info */}
+                  <div style={{ padding: "12px 14px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                    <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "#111", lineHeight: 1.35 }}>{p.title}</p>
+                    <p style={{ margin: 0, fontSize: 11.5, color: "#6b7280", fontWeight: 600 }}>by {p.vendorName}</p>
+                    {(p.price || p.moq) && (
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
+                        {p.price && <span style={{ fontSize: 12, fontWeight: 700, color: "#16a34a" }}>{p.currency} {p.price}</span>}
+                        {p.moq && <span style={{ fontSize: 11.5, color: "#9ca3af" }}>MOQ: {p.moq}</span>}
+                      </div>
+                    )}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: "auto", color: "#16a34a", fontSize: 12, fontWeight: 700 }}>
+                      Select <ChevronRight size={12} />
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CreateRFQPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -41,16 +180,21 @@ export default function CreateRFQPage() {
   const [onboardingRequired, setOnboardingRequired] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [token, setToken] = useState("");
   const [form, setForm] = useState({
     requirementTitle: "", requirementType: "PRODUCT", category: "",
     estimatedQuantity: "", deliveryCountry: "", requiredTimeline: "",
     additionalDetails: "", buyerName: "", buyerEmail: "", buyerPhone: "",
+    productId: "", vendorId: "",
   });
 
   useEffect(() => {
     async function loadProfile() {
       const session = getStoredSession();
       if (!session) { router.push("/login"); return; }
+      setToken(session.accessToken);
 
       try {
         const res = await fetch("/api/buyer/profile", {
@@ -73,7 +217,6 @@ export default function CreateRFQPage() {
           buyerEmail: profile?.email || session.user.email || "",
         }));
       } catch {
-        // fallback — let user try, backend will reject if not onboarded
         const profile = await fetchCurrentProfile(session.accessToken);
         setForm(f => ({
           ...f,
@@ -88,6 +231,23 @@ export default function CreateRFQPage() {
   }, [router]);
 
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  function handleProductSelect(p: Product) {
+    setSelectedProduct(p);
+    setForm(f => ({
+      ...f,
+      productId: p.id,
+      vendorId: p.vendorId,
+      requirementTitle: p.title,
+      requirementType: "PRODUCT",
+    }));
+    setShowPicker(false);
+  }
+
+  function clearProduct() {
+    setSelectedProduct(null);
+    setForm(f => ({ ...f, productId: "", vendorId: "", requirementTitle: "" }));
+  }
 
   async function submitRFQ() {
     setError("");
@@ -172,12 +332,10 @@ export default function CreateRFQPage() {
                 <div><p className="rfq-gate-step-title">Send RFQs to vendors</p><p className="rfq-gate-step-desc">Once active, you can submit unlimited requests for quotation to verified vendors.</p></div>
               </div>
             </div>
-
             <div className="rfq-gate-notice">
               <AlertTriangle size={14} color="#d97706" style={{ flexShrink: 0, marginTop: 1 }} />
               <p>This ensures vendors receive verified buyer requests, increasing your response rate.</p>
             </div>
-
             <div className="rfq-gate-cta">
               <Link href="/buyer/onboarding" className="rfq-gate-btn rfq-gate-btn-primary">
                 <ClipboardList size={15} />Complete Onboarding
@@ -199,7 +357,11 @@ export default function CreateRFQPage() {
           <CheckCircle2 size={26} color="#16a34a" />
         </div>
         <h2 style={{ fontSize: 18, fontWeight: 800, color: "#111", margin: "0 0 8px" }}>RFQ submitted!</h2>
-        <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>Vendors will review and respond shortly. Redirecting…</p>
+        <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
+          {selectedProduct
+            ? `Your RFQ has been sent to ${selectedProduct.vendorName} and the admin. Redirecting…`
+            : "Vendors will review and respond shortly. Redirecting…"}
+        </p>
       </div>
     </div>
   );
@@ -227,7 +389,30 @@ export default function CreateRFQPage() {
         .nrfq-submit:hover:not(:disabled) { background: #15803d; }
         .nrfq-submit:disabled { opacity: .6; cursor: not-allowed; }
         input:focus, select:focus, textarea:focus { border-color: #16a34a !important; background: #fff !important; box-shadow: 0 0 0 3px rgba(22,163,74,0.08); }
+
+        .npick-btn { display: inline-flex; align-items: center; gap: 8px; background: #f0fdf4; color: #15803d; border: 1.5px dashed #86efac; border-radius: 12px; padding: 13px 18px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; width: 100%; justify-content: center; }
+        .npick-btn:hover { background: #dcfce7; border-color: #4ade80; }
+        .npick-selected { display: flex; align-items: center; gap: 12px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; padding: 12px 14px; }
+        .npick-selected-img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: #e5e7eb; flex-shrink: 0; }
+        .npick-selected-img-placeholder { width: 56px; height: 56px; border-radius: 10px; background: #dcfce7; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .npick-selected-info { flex: 1; min-width: 0; }
+        .npick-selected-title { font-size: 13.5px; font-weight: 700; color: #111; margin: 0 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .npick-selected-vendor { font-size: 12px; color: #6b7280; margin: 0 0 4px; }
+        .npick-selected-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 50px; }
+        .npick-change { background: none; border: 1px solid #d1fae5; border-radius: 8px; padding: "6px 10px"; font-size: 12px; font-weight: 600; color: #15803d; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+        .npick-change:hover { background: #dcfce7; }
+        .npick-clear { background: none; border: none; color: #9ca3af; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; align-items: center; transition: color .15s; }
+        .npick-clear:hover { color: #ef4444; }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
+
+      {showPicker && token && (
+        <ProductPickerModal
+          token={token}
+          onSelect={handleProductSelect}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
 
       <div className="nrfq-page">
         <button className="nrfq-back" onClick={() => router.back()}><ArrowLeft size={14} />Back</button>
@@ -242,6 +427,43 @@ export default function CreateRFQPage() {
         {error && (
           <div className="nrfq-err"><AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />{error}</div>
         )}
+
+        {/* Product picker section */}
+        <div className="nrfq-card">
+          <p className="nrfq-section-title" style={{ margin: 0 }}>Select a product (optional)</p>
+          <p style={{ margin: "4px 0 0", fontSize: 12.5, color: "#6b7280", lineHeight: 1.55 }}>
+            Choose from our marketplace — your RFQ will be sent directly to that vendor and the admin.
+            Or skip this to submit a general RFQ.
+          </p>
+
+          {!selectedProduct ? (
+            <button className="npick-btn" onClick={() => setShowPicker(true)}>
+              <ShoppingBag size={15} />Browse Products
+            </button>
+          ) : (
+            <div className="npick-selected">
+              {selectedProduct.imageUrl
+                ? <img src={selectedProduct.imageUrl} alt={selectedProduct.title} className="npick-selected-img" />
+                : <div className="npick-selected-img-placeholder"><Package size={22} color="#16a34a" /></div>
+              }
+              <div className="npick-selected-info">
+                <p className="npick-selected-title">{selectedProduct.title}</p>
+                <p className="npick-selected-vendor">by {selectedProduct.vendorName}</p>
+                <span className="npick-selected-badge">
+                  <CheckCircle2 size={10} />RFQ will go to this vendor
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+                <button className="npick-clear" onClick={clearProduct} title="Remove product selection">
+                  <X size={15} />
+                </button>
+                <button className="npick-change" onClick={() => setShowPicker(true)}>
+                  Change
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Section 1: Requirement */}
         <div className="nrfq-card">
@@ -311,11 +533,10 @@ export default function CreateRFQPage() {
           <button className="nrfq-submit" onClick={submitRFQ} disabled={loading}>
             {loading
               ? <><div style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .7s linear infinite" }} />Submitting…</>
-              : <><Send size={14} />Submit RFQ</>}
+              : <><Send size={14} />{selectedProduct ? `Send RFQ to ${selectedProduct.vendorName}` : "Submit RFQ"}</>}
           </button>
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>
   );
 }
