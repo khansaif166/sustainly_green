@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
 import { useParams } from "next/navigation";
 import Footer from "@/app/components/layouts/Footer";
 import Header from "@/app/components/Header";
 import Link from "next/link";
+import { fetchPublishedBlogById } from "@/lib/supabasePublic";
 
 export default function BlogDetail() {
   const { id } = useParams();
@@ -14,12 +13,8 @@ export default function BlogDetail() {
 
   useEffect(() => {
     const fetchBlog = async () => {
-      const ref = doc(db, "blogs", id as string);
-      const snap = await getDoc(ref);
-
-      if (snap.exists()) {
-        setBlog({ id: snap.id, ...snap.data() });
-      }
+      const row = await fetchPublishedBlogById(id as string);
+      setBlog(row);
     };
 
     fetchBlog();

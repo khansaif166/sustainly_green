@@ -8,6 +8,7 @@ import {
   redirectForRole,
   requestPasswordReset,
   signInWithSupabase,
+  SupabaseAuthError,
 } from "@/lib/supabaseAuth";
 // React Icons
 import {
@@ -54,7 +55,17 @@ export default function LoginPage() {
 
       router.push(redirectForRole(profile));
     } catch (err: any) {
-      setError("Login failed. Please check your email and password.");
+      if (err instanceof SupabaseAuthError) {
+        if (err.code === "email_not_confirmed") {
+          setError("Please verify your email before signing in. Check your inbox for the confirmation link.");
+        } else if (err.status === 429) {
+          setError("Too many login attempts. Please wait a moment and try again.");
+        } else {
+          setError(err.message || "Login failed. Please check your email and password.");
+        }
+      } else {
+        setError("Login failed. Please check your email and password.");
+      }
     } finally {
       setLoading(false);
     }

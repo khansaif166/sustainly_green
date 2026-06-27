@@ -2,158 +2,101 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import {
   ArrowLeft, CheckCircle2, XCircle, Edit3, Save, X,
-  Building2, BarChart3, Leaf, ShoppingCart, Layers, Info, Trash2,
+  Building2, BarChart3, Leaf, ShoppingCart, Layers, Trash2,
 } from "lucide-react";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
-/* ── helpers ── */
 function clean<T extends object>(obj: T): Partial<T> {
   return Object.fromEntries(
-    Object.entries(obj)
-      .filter(([, v]) => v !== undefined)
-      .map(([k, v]) => [k, v !== null && typeof v === "object" && !Array.isArray(v) ? clean(v as object) : v])
+    Object.entries(obj).filter(([, v]) => v !== undefined).map(([k, v]) => [k, v !== null && typeof v === "object" && !Array.isArray(v) ? clean(v as object) : v])
   ) as Partial<T>;
 }
 
-/* ── sub-components ── */
-function SectionHeader({ icon: Icon, title, description, color = "bg-green-50 text-green-600" }: any) {
-  return (
-    <div className="flex items-center gap-3 mb-6">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
-        <Icon size={20} />
-      </div>
-      <div>
-        <h3 className="text-base font-bold text-gray-900">{title}</h3>
-        {description && <p className="text-xs text-gray-500">{description}</p>}
-      </div>
-    </div>
-  );
-}
-
-function DataItem({ label, value }: { label: string; value?: any }) {
-  return (
-    <div className="space-y-0.5">
-      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
-      <p className="text-sm font-medium text-gray-900">{value || <span className="text-gray-300 italic">—</span>}</p>
-    </div>
-  );
-}
-
-function EditField({ label, value, name, editing, data, setData, options, type = "text" }: any) {
-  if (!editing) return <DataItem label={label} value={value} />;
-  if (options) {
-    return (
-      <div className="space-y-1">
-        <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
-        <select
-          value={value ?? ""}
-          onChange={e => setData((prev: any) => ({ ...prev, [name]: e.target.value }))}
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
-        >
-          <option value="">Select…</option>
-          {options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-1">
-      <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
-      <input type={type} value={value ?? ""}
-        onChange={e => setData((prev: any) => ({ ...prev, [name]: e.target.value }))}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none"
-      />
-    </div>
-  );
-}
-
 function Tags({ items }: { items?: string[] }) {
-  if (!items?.length) return <span className="text-gray-300 italic text-xs">—</span>;
+  if (!items?.length) return <span style={{ fontSize: 12, color: "#d1d5db", fontStyle: "italic" }}>—</span>;
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {items.map(t => (
-        <span key={t} className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-semibold rounded-lg border border-green-100">{t}</span>
-      ))}
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+      {items.map(t => <span key={t} style={{ padding: "3px 10px", background: "#f0fdf4", color: "#15803d", fontSize: 11.5, fontWeight: 700, borderRadius: 50, border: "1px solid rgba(22,163,74,.12)" }}>{t}</span>)}
     </div>
   );
 }
 
-/* ── Page ── */
 export default function AdminBuyerDetailPage() {
   const router = useRouter();
   const { uid } = useParams();
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading,   setLoading]   = useState(true);
+  const [saving,    setSaving]    = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [buyerData, setBuyerData] = useState<any>(null);
 
-  // flat editable copies of each sub-document
-  const [ciDraft, setCiDraft] = useState<any>({});
-  const [boDraft, setBoDraft] = useState<any>({});
+  const [ciDraft,  setCiDraft]  = useState<any>({});
+  const [boDraft,  setBoDraft]  = useState<any>({});
   const [susDraft, setSusDraft] = useState<any>({});
   const [proDraft, setProDraft] = useState<any>({});
+
+  function getAuthHeaders() {
+    const session = getStoredSession();
+    if (!session) throw new Error("Please sign in again.");
+    return { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" };
+  }
 
   useEffect(() => {
     async function load() {
       if (!uid) return;
-      const snap = await getDoc(doc(db, "buyers", uid as string));
-      if (snap.exists()) {
-        const d = snap.data();
+      try {
+        const res     = await fetch(`/api/admin/buyers/${uid}`, { headers: { Authorization: getAuthHeaders().Authorization } });
+        const payload = await res.json();
+        if (!res.ok) throw new Error(payload?.error?.message || "Unable to load buyer.");
+        const d = payload.buyer;
         setBuyerData(d);
         setCiDraft(d.companyInfo ?? {});
         setBoDraft(d.businessOverview ?? {});
         setSusDraft(d.sustainability ?? {});
         setProDraft(d.procurement ?? {});
-      }
-      setLoading(false);
+      } catch (err) { console.error(err); } finally { setLoading(false); }
     }
     load();
   }, [uid]);
 
   const handleApprove = async () => {
-    if (!uid) return;
-    setSaving(true);
-    await updateDoc(doc(db, "buyers", uid as string), { approved: true });
-    await updateDoc(doc(db, "users", uid as string), { buyerApproved: true });
-    setBuyerData((p: any) => ({ ...p, approved: true }));
+    if (!uid) return; setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/buyers/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify({ approved: true }) });
+      if (!res.ok) throw new Error((await res.json())?.error?.message || "Unable to approve buyer.");
+      setBuyerData((p: any) => ({ ...p, approved: true }));
+    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
     setSaving(false);
   };
 
   const handleReject = async () => {
-    if (!uid) return;
-    setSaving(true);
-    await updateDoc(doc(db, "buyers", uid as string), { approved: false });
-    setBuyerData((p: any) => ({ ...p, approved: false }));
+    if (!uid) return; setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/buyers/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify({ approved: false }) });
+      if (!res.ok) throw new Error((await res.json())?.error?.message || "Unable to suspend buyer.");
+      setBuyerData((p: any) => ({ ...p, approved: false }));
+    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
     setSaving(false);
   };
 
   const handleDelete = async () => {
     if (!uid || !confirm("Permanently delete this buyer profile?")) return;
-    await deleteDoc(doc(db, "buyers", uid as string));
-    router.push("/admin/buyers");
+    const res = await fetch(`/api/admin/buyers/${uid}`, { method: "DELETE", headers: { Authorization: getAuthHeaders().Authorization } });
+    if (res.ok) router.push("/admin/buyers");
   };
 
   const handleSave = async () => {
-    if (!uid) return;
-    setSaving(true);
+    if (!uid) return; setSaving(true);
     try {
-      const payload = clean({
-        companyInfo: ciDraft,
-        businessOverview: boDraft,
-        sustainability: susDraft,
-        procurement: proDraft,
-      });
-      await updateDoc(doc(db, "buyers", uid as string), payload as any);
+      const payload = clean({ companyInfo: ciDraft, businessOverview: boDraft, sustainability: susDraft, procurement: proDraft });
+      const res  = await fetch(`/api/admin/buyers/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify(payload) });
+      const rp   = await res.json();
+      if (!res.ok) throw new Error(rp?.error?.message || "Save failed.");
       setBuyerData((p: any) => ({ ...p, ...payload }));
       setIsEditing(false);
-    } catch (e) {
-      console.error(e);
-      alert("Save failed.");
-    }
+    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
     setSaving(false);
   };
 
@@ -165,257 +108,273 @@ export default function AdminBuyerDetailPage() {
     setIsEditing(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 32, height: 32, border: "4px solid #dcfce7", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 
-  if (!buyerData) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <p className="text-gray-500 font-medium">Buyer profile not found.</p>
-        <button onClick={() => router.push("/admin/buyers")} className="mt-4 text-green-600 hover:underline text-sm">← Back to Buyers</button>
-      </div>
-    );
-  }
+  if (!buyerData) return (
+    <div style={{ minHeight: "40vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
+      <p style={{ color: "#6b7280" }}>Buyer profile not found.</p>
+      <button onClick={() => router.push("/admin/buyers")} style={{ color: "#16a34a", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}>← Back to Buyers</button>
+    </div>
+  );
 
-  const ci = isEditing ? ciDraft : (buyerData.companyInfo ?? {});
-  const bo = isEditing ? boDraft : (buyerData.businessOverview ?? {});
+  const ci  = isEditing ? ciDraft  : (buyerData.companyInfo ?? {});
+  const bo  = isEditing ? boDraft  : (buyerData.businessOverview ?? {});
   const sus = isEditing ? susDraft : (buyerData.sustainability ?? {});
   const pro = isEditing ? proDraft : (buyerData.procurement ?? {});
   const seg = buyerData.segmentDetails ?? {};
-  const decl = buyerData.declaration ?? {};
+  const decl= buyerData.declaration ?? {};
 
-  const SEGMENT_OPTS = [
-    { label: "Corporate / Listed", value: "corporate" },
-    { label: "MSME", value: "msme" },
-    { label: "Distributor", value: "distributor" },
-    { label: "Retailer", value: "retailer" },
-  ];
+  const D = ({ label, value }: { label: string; value?: any }) => (
+    <div>
+      <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 3px" }}>{label}</p>
+      <p style={{ fontSize: 13, fontWeight: 600, color: "#111", margin: 0 }}>{value || "—"}</p>
+    </div>
+  );
 
-  const updatedLabel = buyerData.updatedAt?.seconds
-    ? new Date(buyerData.updatedAt.seconds * 1000).toLocaleDateString()
-    : "—";
+  const EF = ({ label, value, name, setter, options, type = "text" }: any) => {
+    if (!isEditing) return <D label={label} value={value} />;
+    if (options) return (
+      <div>
+        <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 4px" }}>{label}</p>
+        <select value={value ?? ""} onChange={e => setter((p: any) => ({ ...p, [name]: e.target.value }))}
+          style={{ width: "100%", padding: "8px 11px", border: "1.5px solid rgba(0,0,0,.1)", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit", background: "#fff", appearance: "none", cursor: "pointer", boxSizing: "border-box" }}>
+          <option value="">Select…</option>
+          {options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+    );
+    return (
+      <div>
+        <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 4px" }}>{label}</p>
+        <input type={type} value={value ?? ""} onChange={e => setter((p: any) => ({ ...p, [name]: e.target.value }))}
+          style={{ width: "100%", padding: "8px 11px", border: "1.5px solid rgba(0,0,0,.1)", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit", background: "#fff", boxSizing: "border-box" }} />
+      </div>
+    );
+  };
+
+  const SH = ({ icon: Icon, title, desc, bg = "#f0fdf4", ic = "#16a34a" }: any) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+      <div style={{ width: 38, height: 38, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Icon size={18} color={ic} />
+      </div>
+      <div>
+        <p style={{ fontSize: 14, fontWeight: 800, color: "#111", margin: 0 }}>{title}</p>
+        {desc && <p style={{ fontSize: 11.5, color: "#9ca3af", margin: 0 }}>{desc}</p>}
+      </div>
+    </div>
+  );
+
+  const SEGMENT_OPTS = [{ label: "Corporate / Listed", value: "corporate" }, { label: "MSME", value: "msme" }, { label: "Distributor", value: "distributor" }, { label: "Retailer", value: "retailer" }];
 
   return (
-    <main className="min-h-screen bg-[#fafbfc] py-8 px-4">
-      <div className="w-full mx-auto space-y-8 max-w-7xl">
+    <>
+      <style>{`
+        .abd-page{display:flex;flex-direction:column;gap:20px;padding-bottom:40px}
+        .abd-hero{background:linear-gradient(135deg,#0a1a10 0%,#0f2318 60%,#0c1e13 100%);border-radius:22px;padding:20px 24px;position:relative;overflow:hidden}
+        .abd-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 380px 230px at 90% 50%,rgba(22,163,74,.18) 0%,transparent 65%);pointer-events:none}
+        .abd-hero-inner{position:relative;z-index:1}
+        .abd-back{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:rgba(255,255,255,.4);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;transition:color .15s;margin-bottom:12px}
+        .abd-back:hover{color:rgba(255,255,255,.75)}
+        .abd-avatar{width:48px;height:48px;border-radius:15px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#4ade80;flex-shrink:0}
+        .abd-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700}
+        .abd-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+        .abd-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:50px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;border:none}
+        .abd-btn-outline{background:rgba(255,255,255,.1);color:#fff;border:1.5px solid rgba(255,255,255,.18)}
+        .abd-btn-outline:hover{background:rgba(255,255,255,.18)}
+        .abd-btn-green{background:#16a34a;color:#fff}
+        .abd-btn-green:hover{background:#15803d}
+        .abd-btn-red{background:rgba(239,68,68,.15);color:#f87171;border:1.5px solid rgba(239,68,68,.2)}
+        .abd-btn-red:hover{background:rgba(239,68,68,.25)}
+        .abd-btn-ghost{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);border:1.5px solid rgba(255,255,255,.1)}
+        .abd-btn-ghost:hover{background:rgba(255,255,255,.15)}
 
-        {/* ── Top Bar ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => router.push("/admin/buyers")}
-              className="p-2 hover:bg-white rounded-full transition-colors border border-transparent hover:border-gray-200">
-              <ArrowLeft size={20} className="text-gray-600" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{ci.companyName || "Buyer"}</h1>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                  buyerData.status === "submitted" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                }`}>
-                  {buyerData.status === "submitted" ? <CheckCircle2 size={11} /> : <Info size={11} />}
-                  {buyerData.status === "submitted" ? "Submitted" : "Draft"}
-                </span>
-                {buyerData.approved && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
-                    <CheckCircle2 size={11} /> Approved
-                  </span>
+        .abd-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+        @media(max-width:900px){.abd-grid{grid-template-columns:1fr}}
+        .abd-card{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:20px;padding:20px 22px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+        .abd-data-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+        @media(max-width:600px){.abd-data-grid{grid-template-columns:repeat(2,1fr)}}
+        .abd-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+        .abd-spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+      `}</style>
+
+      <div className="abd-page">
+
+        {/* Hero */}
+        <div className="abd-hero">
+          <div className="abd-hero-inner">
+            <button onClick={() => router.push("/admin/buyers")} className="abd-back"><ArrowLeft size={13} />Back to Buyers</button>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div className="abd-avatar">{ci.companyName?.charAt(0)?.toUpperCase() || "B"}</div>
+                <div>
+                  <p style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 5px", letterSpacing: "-.02em" }}>{ci.companyName || "Buyer"}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                    <span className="abd-badge" style={buyerData.status === "submitted" ? { background: "rgba(74,222,128,.15)", color: "#4ade80" } : { background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>
+                      {buyerData.status === "submitted" ? "Submitted" : "Draft"}
+                    </span>
+                    {buyerData.approved && <span className="abd-badge" style={{ background: "rgba(59,130,246,.15)", color: "#60a5fa" }}><CheckCircle2 size={11} />Approved</span>}
+                    {buyerData.updatedAt && <span style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>Updated {new Date(buyerData.updatedAt).toLocaleDateString()}</span>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="abd-actions">
+                {isEditing ? (
+                  <>
+                    <button onClick={cancelEdit} className="abd-btn abd-btn-outline"><X size={13} />Cancel</button>
+                    <button onClick={handleSave} disabled={saving} className="abd-btn abd-btn-green">
+                      {saving ? <div className="abd-spinner" /> : <Save size={13} />}Save
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setIsEditing(true)} className="abd-btn abd-btn-outline"><Edit3 size={13} />Edit</button>
+                    {!buyerData.approved && <button onClick={handleApprove} disabled={saving} className="abd-btn abd-btn-green">{saving ? <div className="abd-spinner" /> : <CheckCircle2 size={13} />}Approve</button>}
+                    {buyerData.approved && <button onClick={handleReject} disabled={saving} className="abd-btn abd-btn-red"><XCircle size={13} />Suspend</button>}
+                    <button onClick={handleDelete} className="abd-btn abd-btn-ghost"><Trash2 size={13} /></button>
+                  </>
                 )}
-                <span className="text-xs text-gray-400">• Updated {updatedLabel}</span>
               </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {isEditing ? (
-              <>
-                <button onClick={cancelEdit} className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl font-medium transition-all">
-                  <X size={16} /> Cancel
-                </button>
-                <button onClick={handleSave} disabled={saving}
-                  className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all disabled:opacity-50">
-                  {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={16} />}
-                  Save Changes
-                </button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all shadow-sm">
-                  <Edit3 size={16} /> Edit Profile
-                </button>
-                {!buyerData.approved && (
-                  <button onClick={handleApprove} disabled={saving}
-                    className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all disabled:opacity-50">
-                    <CheckCircle2 size={16} /> Approve Buyer
-                  </button>
-                )}
-                {buyerData.approved && (
-                  <button onClick={handleReject} disabled={saving}
-                    className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 bg-red-50 rounded-xl font-medium hover:bg-red-100 transition-all">
-                    <XCircle size={16} /> Suspend
-                  </button>
-                )}
-                <button onClick={handleDelete}
-                  className="flex items-center gap-2 px-3 py-2 border border-red-200 text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-all">
-                  <Trash2 size={16} />
-                </button>
-              </>
-            )}
-          </div>
         </div>
 
-        {/* ── Main Grid ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main grid */}
+        <div className="abd-grid">
 
-          {/* Left — 2 columns */}
-          <div className="lg:col-span-2 space-y-8">
+          {/* Left */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
             {/* Identity */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <SectionHeader icon={Building2} title="Business Identity" description="Legal registration and contact details" color="bg-blue-50 text-blue-600" />
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                <EditField label="Company Name" value={ci.companyName} name="companyName" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="Brand Name" value={ci.brandName} name="brandName" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="Organisation Type" value={ci.organisationType} name="organisationType" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="Stock Listed" value={ci.stockListed} name="stockListed" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="CIN / Reg. No." value={ci.cinRegistration} name="cinRegistration" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="GST Number" value={ci.gstNumber} name="gstNumber" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <div className="col-span-full">
-                  <DataItem label="Address" value={[ci.registeredAddress, ci.city, ci.state, ci.pinCode, ci.country].filter(Boolean).join(", ")} />
-                </div>
+            <div className="abd-card">
+              <SH icon={Building2} title="Business Identity" desc="Legal registration and contact details" bg="#eff6ff" ic="#3b82f6" />
+              <div className={isEditing ? "abd-edit-grid" : "abd-data-grid"}>
+                <EF label="Company Name"       value={ci.companyName}       name="companyName"      setter={setCiDraft} />
+                <EF label="Brand Name"         value={ci.brandName}         name="brandName"        setter={setCiDraft} />
+                <EF label="Organisation Type"  value={ci.organisationType}  name="organisationType" setter={setCiDraft} />
+                <EF label="CIN / Reg. No."     value={ci.cinRegistration}   name="cinRegistration"  setter={setCiDraft} />
+                <EF label="GST Number"         value={ci.gstNumber}         name="gstNumber"        setter={setCiDraft} />
+                {!isEditing && <div style={{ gridColumn: "1/-1" }}><D label="Address" value={[ci.registeredAddress, ci.city, ci.state, ci.pinCode, ci.country].filter(Boolean).join(", ")} /></div>}
               </div>
-              <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-2 md:grid-cols-3 gap-6">
-                <EditField label="Contact Person" value={ci.contactPerson} name="contactPerson" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="Designation" value={ci.designation} name="designation" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="Department" value={ci.department} name="department" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="Email" value={ci.email} name="email" editing={isEditing} data={ciDraft} setData={setCiDraft} type="email" />
-                <EditField label="Mobile" value={ci.mobile} name="mobile" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="Alternate Phone" value={ci.alternatePhone} name="alternatePhone" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="LinkedIn" value={ci.linkedin} name="linkedin" editing={isEditing} data={ciDraft} setData={setCiDraft} />
-                <EditField label="Website" value={ci.website} name="website" editing={isEditing} data={ciDraft} setData={setCiDraft} />
+              <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 14, paddingTop: 14 }}>
+                <div className={isEditing ? "abd-edit-grid" : "abd-data-grid"}>
+                  <EF label="Contact Person"  value={ci.contactPerson}  name="contactPerson"  setter={setCiDraft} />
+                  <EF label="Designation"     value={ci.designation}    name="designation"    setter={setCiDraft} />
+                  <EF label="Email"           value={ci.email}          name="email"          setter={setCiDraft} type="email" />
+                  <EF label="Mobile"          value={ci.mobile}         name="mobile"         setter={setCiDraft} />
+                  <EF label="Website"         value={ci.website}        name="website"        setter={setCiDraft} />
+                </div>
               </div>
             </div>
 
             {/* Business Overview */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <SectionHeader icon={BarChart3} title="Business Overview" description="Scale, segment, and operations" color="bg-purple-50 text-purple-600" />
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                <EditField label="Buyer Segment" value={bo.buyerSegment} name="buyerSegment" editing={isEditing} data={boDraft} setData={setBoDraft} options={SEGMENT_OPTS} />
-                <EditField label="Primary Industry" value={bo.industry} name="industry" editing={isEditing} data={boDraft} setData={setBoDraft} />
-                <EditField label="Secondary Industry" value={bo.secondaryIndustry} name="secondaryIndustry" editing={isEditing} data={boDraft} setData={setBoDraft} />
-                <EditField label="No. of Employees" value={bo.noOfEmployees} name="noOfEmployees" editing={isEditing} data={boDraft} setData={setBoDraft} />
-                <EditField label="Annual Revenue" value={bo.annualRevenue} name="annualRevenue" editing={isEditing} data={boDraft} setData={setBoDraft} />
-                <EditField label="No. of Locations" value={bo.noOfLocations} name="noOfLocations" editing={isEditing} data={boDraft} setData={setBoDraft} />
-                <EditField label="Procurement Budget" value={bo.procurementBudget} name="procurementBudget" editing={isEditing} data={boDraft} setData={setBoDraft} />
-                <EditField label="Geography" value={bo.geographyOfOperation} name="geographyOfOperation" editing={isEditing} data={boDraft} setData={setBoDraft} />
+            <div className="abd-card">
+              <SH icon={BarChart3} title="Business Overview" desc="Scale, segment, and operations" bg="#faf5ff" ic="#9333ea" />
+              <div className={isEditing ? "abd-edit-grid" : "abd-data-grid"}>
+                <EF label="Buyer Segment"     value={bo.buyerSegment}         name="buyerSegment"         setter={setBoDraft} options={[{label:"Corporate",value:"corporate"},{label:"MSME",value:"msme"},{label:"Distributor",value:"distributor"},{label:"Retailer",value:"retailer"}]} />
+                <EF label="Primary Industry"  value={bo.industry}             name="industry"             setter={setBoDraft} />
+                <EF label="No. of Employees"  value={bo.noOfEmployees}        name="noOfEmployees"        setter={setBoDraft} />
+                <EF label="Annual Revenue"    value={bo.annualRevenue}        name="annualRevenue"        setter={setBoDraft} />
+                <EF label="Procurement Budget"value={bo.procurementBudget}    name="procurementBudget"    setter={setBoDraft} />
+                <EF label="Geography"         value={bo.geographyOfOperation} name="geographyOfOperation" setter={setBoDraft} />
               </div>
-              {bo.keyMarkets?.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Key Markets</p>
+              {bo.keyMarkets?.length > 0 && !isEditing && (
+                <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 14, paddingTop: 14 }}>
+                  <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 8px" }}>Key Markets</p>
                   <Tags items={bo.keyMarkets} />
                 </div>
               )}
             </div>
 
             {/* Sustainability */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <SectionHeader icon={Leaf} title="Sustainability" description="ESG commitments and certifications" color="bg-green-50 text-green-600" />
-              <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
-                <EditField label="Sustainability Policy" value={sus.sustainabilityPolicy} name="sustainabilityPolicy" editing={isEditing} data={susDraft} setData={setSusDraft} />
-                <EditField label="ESG Report" value={sus.esgReport} name="esgReport" editing={isEditing} data={susDraft} setData={setSusDraft} />
-                <div className="col-span-full">
-                  <DataItem label="Description" value={sus.sustainabilityDescription} />
-                </div>
+            <div className="abd-card">
+              <SH icon={Leaf} title="Sustainability" desc="ESG commitments and certifications" />
+              <div className={isEditing ? "abd-edit-grid" : "abd-data-grid"}>
+                <EF label="Sustainability Policy" value={sus.sustainabilityPolicy} name="sustainabilityPolicy" setter={setSusDraft} />
+                <EF label="ESG Report"            value={sus.esgReport}            name="esgReport"            setter={setSusDraft} />
               </div>
-              {sus.certifications?.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Certifications</p>
+              {sus.certifications?.length > 0 && !isEditing && (
+                <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 14, paddingTop: 14 }}>
+                  <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 8px" }}>Certifications</p>
                   <Tags items={sus.certifications} />
                 </div>
               )}
             </div>
 
             {/* Procurement */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <SectionHeader icon={ShoppingCart} title="Procurement Preferences" description="Sourcing needs and vendor requirements" color="bg-orange-50 text-orange-600" />
-              <div className="mb-4 space-y-3">
-                <div>
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Primary Categories</p>
-                  <Tags items={pro.categoriesNeeded} />
+            <div className="abd-card">
+              <SH icon={ShoppingCart} title="Procurement Preferences" desc="Sourcing needs and vendor requirements" bg="#fff7ed" ic="#f97316" />
+              {!isEditing && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div>
+                    <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 8px" }}>Primary Categories</p>
+                    <Tags items={pro.categoriesNeeded} />
+                  </div>
+                  <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 12 }}>
+                    <div className="abd-data-grid">
+                      <D label="Volume"             value={pro.procurementVolume} />
+                      <D label="Vendor Location"    value={pro.vendorLocationPreference} />
+                      <D label="Vendor Size"        value={pro.preferredVendorSize} />
+                      <D label="Min. Certification" value={pro.minCertificationRequired} />
+                      <D label="Pricing Model"      value={pro.pricingModel} />
+                      <D label="Order Frequency"    value={pro.orderFrequency} />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Secondary Categories</p>
-                  <Tags items={pro.secondaryCategories} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 pt-4 border-t border-gray-100">
-                <DataItem label="Volume" value={pro.procurementVolume} />
-                <DataItem label="Vendor Location" value={pro.vendorLocationPreference} />
-                <DataItem label="Vendor Size" value={pro.preferredVendorSize} />
-                <DataItem label="Min. Certification" value={pro.minCertificationRequired} />
-                <DataItem label="Pricing Model" value={pro.pricingModel} />
-                <DataItem label="Order Frequency" value={pro.orderFrequency} />
-                <DataItem label="Order Value" value={pro.typicalOrderValue} />
-                <DataItem label="Payment Terms" value={pro.paymentTerms} />
-                <DataItem label="Communication" value={pro.communicationMode} />
-                <DataItem label="Site Audit" value={pro.siteAuditRequired} />
-                <DataItem label="NDA Required" value={pro.ndaRequired} />
-                <DataItem label="Multi-loc Delivery" value={pro.multiLocationDelivery} />
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Right — Sidebar */}
-          <div className="space-y-8">
+          {/* Right sidebar */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
             {/* Segment Details */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-              <SectionHeader icon={Layers} title="Segment Details" description={`${bo.buyerSegment ? bo.buyerSegment.charAt(0).toUpperCase() + bo.buyerSegment.slice(1) : "N/A"} specific fields`} color="bg-pink-50 text-pink-600" />
-              <div className="space-y-4 text-sm">
-                {Object.entries(seg).filter(([, v]) => v && (typeof v === "string" || (Array.isArray(v) && v.length))).map(([key, val]) => (
-                  Array.isArray(val)
-                    ? <div key={key}><p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{key}</p><Tags items={val as string[]} /></div>
-                    : <DataItem key={key} label={key.replace(/([A-Z])/g, " $1").trim()} value={String(val)} />
-                ))}
-                {!Object.keys(seg).length && <p className="text-xs text-gray-400 italic">No segment data submitted.</p>}
+            {Object.keys(seg).length > 0 && (
+              <div className="abd-card">
+                <SH icon={Layers} title="Segment Details" bg="#fdf2f8" ic="#ec4899" />
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {Object.entries(seg).filter(([, v]) => v && (typeof v === "string" || (Array.isArray(v) && v.length))).map(([key, val]) =>
+                    Array.isArray(val)
+                      ? <div key={key}><p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 5px" }}>{key}</p><Tags items={val as string[]} /></div>
+                      : <D key={key} label={key.replace(/([A-Z])/g, " $1").trim()} value={String(val)} />
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Verification checklist */}
-            <div className="bg-gray-900 rounded-3xl p-6 text-white shadow-xl">
-              <h3 className="text-base font-bold mb-5">Verification Checklist</h3>
-              <div className="space-y-4">
+            {/* Verification Checklist */}
+            <div style={{ background: "linear-gradient(170deg,#0a1a10 0%,#0d2218 55%,#0b1e14 100%)", borderRadius: 20, padding: "20px 22px" }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: "0 0 16px" }}>Verification Checklist</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
-                  { label: "CIN / GST Provided", check: !!(ci.cinRegistration && ci.gstNumber) },
-                  { label: "Contact Details Complete", check: !!(ci.email && ci.mobile) },
-                  { label: "Sustainability Policy Set", check: !!sus.sustainabilityPolicy },
-                  { label: "Categories Specified", check: !!(pro.categoriesNeeded?.length) },
-                  { label: "Onboarding Submitted", check: buyerData.status === "submitted" },
-                  { label: "Admin Approved", check: !!buyerData.approved },
+                  { label: "CIN / GST Provided",         check: !!(ci.cinRegistration && ci.gstNumber) },
+                  { label: "Contact Details Complete",    check: !!(ci.email && ci.mobile) },
+                  { label: "Sustainability Policy Set",   check: !!sus.sustainabilityPolicy },
+                  { label: "Categories Specified",        check: !!(pro.categoriesNeeded?.length) },
+                  { label: "Onboarding Submitted",        check: buyerData.status === "submitted" },
+                  { label: "Admin Approved",              check: !!buyerData.approved },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${item.check ? "bg-green-500" : "bg-gray-700"}`}>
-                      <CheckCircle2 size={12} />
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", background: item.check ? "#16a34a" : "rgba(255,255,255,.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <CheckCircle2 size={12} color="#fff" />
                     </div>
-                    <span className={`text-sm ${item.check ? "text-white" : "text-gray-400"}`}>{item.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: item.check ? "#fff" : "rgba(255,255,255,.4)" }}>{item.label}</span>
                   </div>
                 ))}
               </div>
-
               {!buyerData.approved && buyerData.status === "submitted" && (
-                <div className="mt-6 pt-6 border-t border-gray-800">
-                  <p className="text-xs text-gray-400 mb-4">Once approved, the buyer will be able to access vendor discovery and send RFQs.</p>
-                  <button
-                    onClick={handleApprove}
-                    disabled={saving}
-                    className="w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    Approve & Activate Buyer
+                <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,.08)" }}>
+                  <p style={{ fontSize: 11.5, color: "rgba(255,255,255,.3)", margin: "0 0 12px" }}>Once approved, the buyer can access vendor discovery and send RFQs.</p>
+                  <button onClick={handleApprove} disabled={saving} style={{ width: "100%", padding: "11px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    {saving ? <div style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin .7s linear infinite" }} /> : <CheckCircle2 size={15} />}
+                    Approve &amp; Activate
                   </button>
                 </div>
               )}
@@ -423,18 +382,18 @@ export default function AdminBuyerDetailPage() {
 
             {/* Declaration */}
             {decl.name && (
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Declaration</h3>
-                <div className="space-y-3 text-sm">
-                  <DataItem label="Signatory" value={decl.name} />
-                  <DataItem label="Designation" value={decl.designation} />
-                  <DataItem label="Date" value={decl.date} />
+              <div className="abd-card">
+                <p style={{ fontSize: 13, fontWeight: 800, color: "#111", margin: "0 0 14px" }}>Declaration</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <D label="Signatory"   value={decl.name} />
+                  <D label="Designation" value={decl.designation} />
+                  <D label="Date"        value={decl.date} />
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
-    </main>
+    </>
   );
 }

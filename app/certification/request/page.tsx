@@ -1,19 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  doc,
-  getDoc,
-  getDocs,
-} from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
+import { getStoredSession } from "@/lib/supabaseAuth";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 /* ---------- TYPES ---------- */
 type Certification = {
@@ -25,7 +19,6 @@ export default function CertificationRequestPage() {
 
   const router = useRouter();
 
-  const [vendor,setVendor] = useState<any>(null);
   const [certifications,setCertifications] =
     useState<Certification[]>([]);
 
@@ -46,34 +39,37 @@ export default function CertificationRequestPage() {
   /* ================= LOAD DATA ================= */
   useEffect(()=>{
 
-    const unsub = onAuthStateChanged(auth, async(user)=>{
+    async function load() {
+      const session = getStoredSession();
 
-      if(!user){
+      if(!session){
         router.push("/login");
         return;
       }
 
-      const vendorSnap =
-        await getDoc(doc(db,"vendors",user.uid));
-
-      if(vendorSnap.exists()){
-        setVendor(vendorSnap.data());
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        return;
       }
 
-      const certSnap =
-        await getDocs(collection(db,"certifications_master"));
+      const params = new URLSearchParams({
+        select: "id,name",
+        status: "eq.Active",
+        order: "name.asc",
+      });
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/certifications?${params}`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      });
+      const rows = await response.json();
 
-      setCertifications(
-        certSnap.docs.map(d=>({
-          id:d.id,
-          ...(d.data() as any)
-        }))
-      );
-    });
+      setCertifications(Array.isArray(rows) ? rows : []);
+    }
 
-    return ()=>unsub();
+    load();
 
-  },[]);
+  },[router]);
 
   function update(
     key:string,
@@ -95,27 +91,35 @@ export default function CertificationRequestPage() {
 
     setLoading(true);
 
-    await addDoc(
-      collection(db,"certification_requests"),
-      {
-        vendorId:auth.currentUser?.uid,
-
-        companyName:vendor?.companyName,
-        email:vendor?.businessEmail,
-        phone:vendor?.phone,
-
-        ...form,
-
-        status:"NEW",
-        createdAt:serverTimestamp()
+    try {
+      const session = getStoredSession();
+      if (!session) {
+        router.push("/login");
+        return;
       }
-    );
 
-    setLoading(false);
+      const response = await fetch("/api/certification/requests", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+      const payload = await response.json();
 
-    alert("Certification request submitted ✅");
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Unable to submit request.");
+      }
 
-    router.push("/vendor/dashboard");
+      alert("Certification request submitted ✅");
+
+      router.push("/vendor/dashboard");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to submit request.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   /* ================= UI ================= */

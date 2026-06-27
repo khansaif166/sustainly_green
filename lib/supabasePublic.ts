@@ -45,6 +45,27 @@ type SupabaseProductRow = {
   product_images?: Array<{ url: string | null; sort_order: number | null }>;
 };
 
+type SupabaseBlogRow = {
+  id: string;
+  title: string | null;
+  excerpt: string | null;
+  content: string | null;
+  image_url: string | null;
+  created_at: string | null;
+  published: boolean | null;
+};
+
+type SupabaseCareerRow = {
+  id: string;
+  title: string | null;
+  department: string | null;
+  location: string | null;
+  employment_type: string | null;
+  description: string | null;
+  active: boolean | null;
+  created_at: string | null;
+};
+
 export type PublicVendor = {
   id: string;
   companyName: string;
@@ -97,6 +118,26 @@ export type PublicProduct = {
   featured: boolean;
 };
 
+export type PublicBlog = {
+  id: string;
+  title: string;
+  excerpt?: string;
+  content: string;
+  image?: string;
+  createdAt?: string;
+};
+
+export type PublicCareer = {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  type: string;
+  description: string;
+  active: boolean;
+  createdAt?: string;
+};
+
 export type VendorClaimInput = {
   vendorId: string;
   requesterName: string;
@@ -108,6 +149,8 @@ export type VendorClaimInput = {
   proofType?: string;
   proofDetails?: string;
   message?: string;
+  profileId?: string;
+  accessToken?: string;
 };
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -175,14 +218,18 @@ async function supabaseGet<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function supabasePostMinimal(path: string, payload: unknown): Promise<void> {
+async function supabasePostMinimal(
+  path: string,
+  payload: unknown,
+  accessToken?: string,
+): Promise<void> {
   requireSupabaseConfig();
 
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     method: "POST",
     headers: {
       apikey: SUPABASE_ANON_KEY!,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
       "Content-Type": "application/json",
       Prefer: "return=minimal",
     },
@@ -304,6 +351,30 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
   };
 }
 
+function mapBlog(row: SupabaseBlogRow): PublicBlog {
+  return {
+    id: row.id,
+    title: stringValue(row.title) || "Untitled Blog",
+    excerpt: stringValue(row.excerpt) || undefined,
+    content: stringValue(row.content) || "",
+    image: stringValue(row.image_url) || undefined,
+    createdAt: stringValue(row.created_at) || undefined,
+  };
+}
+
+function mapCareer(row: SupabaseCareerRow): PublicCareer {
+  return {
+    id: row.id,
+    title: stringValue(row.title) || "Untitled Role",
+    department: stringValue(row.department) || "",
+    location: stringValue(row.location) || "",
+    type: stringValue(row.employment_type) || "",
+    description: stringValue(row.description) || "",
+    active: Boolean(row.active),
+    createdAt: stringValue(row.created_at) || undefined,
+  };
+}
+
 export async function fetchApprovedVendors(limit = 1000): Promise<PublicVendor[]> {
   const params = new URLSearchParams({
     select: VENDOR_SELECT,
@@ -385,7 +456,7 @@ export async function fetchApprovedProductById(id: string): Promise<PublicProduc
 export async function submitVendorClaim(input: VendorClaimInput) {
   const payload = {
     vendor_id: input.vendorId,
-    profile_id: null,
+    profile_id: input.profileId || null,
     requester_name: input.requesterName,
     requester_email: input.requesterEmail,
     requester_phone: input.requesterPhone || null,
@@ -402,5 +473,57 @@ export async function submitVendorClaim(input: VendorClaimInput) {
     },
   };
 
-  await supabasePostMinimal("vendor_claims", payload);
+  await supabasePostMinimal("vendor_claims", payload, input.accessToken);
+}
+
+export async function fetchPublishedBlogs(options: {
+  limit?: number;
+  offset?: number;
+} = {}): Promise<PublicBlog[]> {
+  const params = new URLSearchParams({
+    select: "id,title,excerpt,content,image_url,created_at,published",
+    published: "eq.true",
+    order: "created_at.desc",
+    limit: String(options.limit || 10),
+    offset: String(options.offset || 0),
+  });
+
+  const rows = await supabaseGet<SupabaseBlogRow[]>(`blogs?${params}`);
+  return rows.map(mapBlog);
+}
+
+export async function fetchPublishedBlogById(id: string): Promise<PublicBlog | null> {
+  const params = new URLSearchParams({
+    select: "id,title,excerpt,content,image_url,created_at,published",
+    id: `eq.${id}`,
+    published: "eq.true",
+    limit: "1",
+  });
+
+  const rows = await supabaseGet<SupabaseBlogRow[]>(`blogs?${params}`);
+  return rows[0] ? mapBlog(rows[0]) : null;
+}
+
+export async function fetchActiveCareers(limit = 100): Promise<PublicCareer[]> {
+  const params = new URLSearchParams({
+    select: "id,title,department,location,employment_type,description,active,created_at",
+    active: "eq.true",
+    order: "created_at.desc",
+    limit: String(limit),
+  });
+
+  const rows = await supabaseGet<SupabaseCareerRow[]>(`careers?${params}`);
+  return rows.map(mapCareer);
+}
+
+export async function fetchActiveCareerById(id: string): Promise<PublicCareer | null> {
+  const params = new URLSearchParams({
+    select: "id,title,department,location,employment_type,description,active,created_at",
+    id: `eq.${id}`,
+    active: "eq.true",
+    limit: "1",
+  });
+
+  const rows = await supabaseGet<SupabaseCareerRow[]>(`careers?${params}`);
+  return rows[0] ? mapCareer(rows[0]) : null;
 }

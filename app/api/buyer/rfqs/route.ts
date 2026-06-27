@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     const actor = await requireRole(request, ["BUYER", "ADMIN"]);
 
     if (!actor.buyerId) {
-      return apiOk({ ok: true, rfqs: [] });
+      return apiOk({ ok: true, needsOnboarding: true, rfqs: [] });
     }
 
     const params = new URLSearchParams({
@@ -49,6 +49,7 @@ export async function GET(request: Request) {
 
     return apiOk({
       ok: true,
+      needsOnboarding: !actor.profile.buyer_profile_complete,
       rfqs: rows.map((row) => ({
         id: row.id,
         vendorId: row.vendor_id,
@@ -96,8 +97,8 @@ export async function POST(request: Request) {
     const estimatedQuantity = String(body.estimatedQuantity || "").trim();
     const deliveryCountry = String(body.deliveryCountry || "").trim();
     const requiredTimeline = String(body.requiredTimeline || "").trim();
-    const buyerName = String(body.buyerName || actor.profile.name || "").trim();
-    const buyerEmail = String(body.buyerEmail || actor.profile.email || "").trim();
+    const buyerName = String(actor.profile.name || "").trim();
+    const buyerEmail = String(actor.profile.email || "").trim();
 
     if (
       !requirementTitle ||

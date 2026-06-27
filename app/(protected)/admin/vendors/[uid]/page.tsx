@@ -3,51 +3,43 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm, FormProvider } from "react-hook-form";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { uploadFileWithProgress } from "@/lib/storage";
 import { OnboardingFormData } from "../../../vendor/onboarding/schema";
-import { 
-  ArrowLeft, 
-  CheckCircle2, 
-  XCircle, 
-  Edit3, 
-  Save, 
-  X, 
-  ExternalLink,
-  ShieldCheck,
-  Building2,
-  User,
-  ShoppingBag,
-  Info
+import {
+  ArrowLeft, CheckCircle2, XCircle, Edit3, Save, X,
+  ExternalLink, ShieldCheck, Building2, User, ShoppingBag,
 } from "lucide-react";
 import { Input, Select, TextArea, MultiSelect, Toggle, FileUpload } from "../../../vendor/onboarding/_components/FormFields";
+import { getStoredSession } from "@/lib/supabaseAuth";
+import { uploadFileToSupabaseStorage } from "@/lib/storage";
 
 export default function AdminVendorDetailsPage() {
   const router = useRouter();
   const { uid } = useParams();
 
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
+  const [loading,    setLoading]    = useState(true);
+  const [isEditing,  setIsEditing]  = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [vendorData, setVendorData] = useState<any>(null);
 
-  const methods = useForm<OnboardingFormData>({
-    mode: "onChange",
-  });
-
+  const methods = useForm<OnboardingFormData>({ mode: "onChange" });
   const { reset, handleSubmit } = methods;
+
+  function getAuthHeaders() {
+    const session = getStoredSession();
+    if (!session) throw new Error("Please sign in again.");
+    return { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" };
+  }
 
   useEffect(() => {
     async function load() {
       if (!uid) return;
-      const snap = await getDoc(doc(db, "vendors", uid as string));
-      if (snap.exists()) {
-        const data = snap.data();
-        setVendorData(data);
-        reset(data as any);
-      }
-      setLoading(false);
+      try {
+        const res     = await fetch(`/api/admin/vendors/${uid}`, { headers: { Authorization: getAuthHeaders().Authorization } });
+        const payload = await res.json();
+        if (!res.ok) throw new Error(payload?.error?.message || "Unable to load vendor.");
+        setVendorData(payload.vendor);
+        reset(payload.vendor as any);
+      } catch (err) { console.error(err); } finally { setLoading(false); }
     }
     load();
   }, [uid, reset]);
@@ -56,12 +48,11 @@ export default function AdminVendorDetailsPage() {
     if (!uid) return;
     setSubmitting(true);
     try {
-      await updateDoc(doc(db, "vendors", uid as string), { approved: true });
-      await updateDoc(doc(db, "users", uid as string), { vendorApproved: true });
-      setVendorData((prev: any) => ({ ...prev, approved: true }));
-    } catch (e) {
-      alert("Error approving vendor");
-    }
+      const res     = await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify({ approved: true }) });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error?.message || "Error approving vendor");
+      setVendorData((p: any) => ({ ...p, approved: true }));
+    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
     setSubmitting(false);
   };
 
@@ -69,11 +60,11 @@ export default function AdminVendorDetailsPage() {
     if (!uid) return;
     setSubmitting(true);
     try {
-      await updateDoc(doc(db, "vendors", uid as string), { approved: false });
-      setVendorData((prev: any) => ({ ...prev, approved: false }));
-    } catch (e) {
-      alert("Error rejecting vendor");
-    }
+      const res     = await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify({ approved: false }) });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error?.message || "Error rejecting vendor");
+      setVendorData((p: any) => ({ ...p, approved: false }));
+    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
     setSubmitting(false);
   };
 
@@ -81,436 +72,311 @@ export default function AdminVendorDetailsPage() {
     if (!uid) return;
     setSubmitting(true);
     try {
-      let logoUrl = "";
-      let certUrl = "";
-      let awardsUrl = "";
-
-      if (data.logoFile instanceof File) {
-        const path = `vendors/${uid}/logos/${Date.now()}_${data.logoFile.name}`;
-        logoUrl = await uploadFileWithProgress(data.logoFile, path);
-      }
-
-      if (data.certificateFile instanceof File) {
-        const path = `vendors/${uid}/certs/${Date.now()}_${data.certificateFile.name}`;
-        certUrl = await uploadFileWithProgress(data.certificateFile, path);
-      }
-      
-      if (data.awardsFile instanceof File) {
-        const path = `vendors/${uid}/awards/${Date.now()}_${data.awardsFile.name}`;
-        awardsUrl = await uploadFileWithProgress(data.awardsFile, path);
-      }
-
       const { logoFile, certificateFile, awardsFile, ...cleanData } = data;
-      
-      const payload: any = {
-        ...cleanData,
-        updatedAt: serverTimestamp(),
-      };
-      
-      // Handle Logo
-      if (logoUrl) {
-        payload.logoUrl = logoUrl;
-      } else if (data.logoFile === null) {
-        payload.logoUrl = ""; // Delete logo
-      }
-
-      // Handle Certificate
-      if (certUrl) {
-        payload.certificateFileUrl = certUrl;
-      } else if (data.certificateFile === null) {
-        payload.certificateFileUrl = ""; // Delete certificate
-      }
-
-      // Handle Awards
-      if (awardsUrl) {
-        payload.awardsImageUrl = awardsUrl;
-      } else if (data.awardsFile === null) {
-        payload.awardsImageUrl = ""; // Delete awards
-      }
-
-      await updateDoc(doc(db, "vendors", uid as string), payload);
-      setVendorData((prev: any) => ({ ...prev, ...payload }));
+      const session = getStoredSession();
+      if (!session) { router.push("/login"); return; }
+      const [logoUp, certUp, awardsUp] = await Promise.all([
+        logoFile instanceof File ? uploadFileToSupabaseStorage(logoFile, { bucket: "marketplace", folder: "vendors/logos", accessToken: session.accessToken }) : Promise.resolve(null),
+        certificateFile instanceof File ? uploadFileToSupabaseStorage(certificateFile, { bucket: "marketplace", folder: "vendors/certificates", accessToken: session.accessToken }) : Promise.resolve(null),
+        awardsFile instanceof File ? uploadFileToSupabaseStorage(awardsFile, { bucket: "marketplace", folder: "vendors/awards", accessToken: session.accessToken }) : Promise.resolve(null),
+      ]);
+      const payload = { ...cleanData, ...(logoUp ? { logoUrl: logoUp.url } : {}), ...(certUp ? { certificateFileUrl: certUp.url } : {}), ...(awardsUp ? { awardsImageUrl: awardsUp.url } : {}) };
+      const res = await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify(payload) });
+      const rp  = await res.json();
+      if (!res.ok) throw new Error(rp?.error?.message || "Error updating vendor profile");
+      setVendorData((p: any) => ({ ...p, ...payload }));
       setIsEditing(false);
-      alert("Vendor profile updated successfully!");
-    } catch (e) {
-      console.error(e);
-      alert("Error updating vendor profile");
-    }
+    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
     setSubmitting(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!vendorData) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-500 font-medium">Vendor profile not found.</p>
-        <button onClick={() => router.back()} className="mt-4 text-green-600 hover:underline">Go Back</button>
-      </div>
-    );
-  }
-
-  const SectionHeader = ({ icon: Icon, title, description }: any) => (
-    <div className="flex items-center gap-3 mb-6">
-      <div className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
-        <Icon size={20} />
-      </div>
-      <div>
-        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-        <p className="text-xs text-gray-500">{description}</p>
-      </div>
+  if (loading) return (
+    <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 32, height: 32, border: "4px solid #dcfce7", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
-  const DataItem = ({ label, value }: { label: string; value: any }) => (
-    <div className="space-y-1">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
-      <p className="text-sm font-medium text-gray-900">{value || "—"}</p>
+  if (!vendorData) return (
+    <div style={{ minHeight: "40vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
+      <p style={{ color: "#6b7280" }}>Vendor profile not found.</p>
+      <button onClick={() => router.back()} style={{ color: "#16a34a", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}>← Go Back</button>
+    </div>
+  );
+
+  const D = ({ label, value }: { label: string; value?: any }) => (
+    <div>
+      <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 3px" }}>{label}</p>
+      <p style={{ fontSize: 13, fontWeight: 600, color: "#111", margin: 0 }}>{value || "—"}</p>
+    </div>
+  );
+
+  const SH = ({ icon: Icon, title, desc, bg = "#f0fdf4", ic = "#16a34a" }: any) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+      <div style={{ width: 38, height: 38, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Icon size={18} color={ic} />
+      </div>
+      <div>
+        <p style={{ fontSize: 14, fontWeight: 800, color: "#111", margin: 0 }}>{title}</p>
+        {desc && <p style={{ fontSize: 11.5, color: "#9ca3af", margin: 0 }}>{desc}</p>}
+      </div>
     </div>
   );
 
   return (
-    <main className="min-h-screen bg-[#fafbfc] py-8 px-4 md:py-12">
-      <div className="w-full mx-auto space-y-8 px-4 md:px-8 lg:px-12">
-        
-        {/* Top Navigation & Status Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => router.push("/admin/vendors")}
-              className="p-2 hover:bg-white rounded-full transition-colors border border-transparent hover:border-gray-200"
-            >
-              <ArrowLeft size={20} className="text-gray-600" />
-            </button>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex items-center justify-center overflow-hidden shadow-sm">
-                {vendorData.logoUrl ? (
-                  <img src={vendorData.logoUrl} alt="Logo" className="w-full h-full object-cover" />
-                ) : (
-                  <Building2 className="text-green-600" size={32} />
-                )}
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{vendorData.companyName}</h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                    vendorData.approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {vendorData.approved ? <CheckCircle2 size={12} /> : <Info size={12} />}
-                    {vendorData.approved ? 'Verified Vendor' : 'Pending Verification'}
-                  </span>
-                  <span className="text-xs text-gray-400">• Updated {vendorData.updatedAt?.seconds ? new Date(vendorData.updatedAt.seconds * 1000).toLocaleDateString() : '—'}</span>
+    <>
+      <style>{`
+        .avd-page{display:flex;flex-direction:column;gap:20px;padding-bottom:40px}
+        .avd-hero{background:linear-gradient(135deg,#0a1a10 0%,#0f2318 60%,#0c1e13 100%);border-radius:22px;padding:20px 24px;position:relative;overflow:hidden}
+        .avd-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 380px 230px at 90% 50%,rgba(22,163,74,.18) 0%,transparent 65%);pointer-events:none}
+        .avd-hero-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+        .avd-back{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:rgba(255,255,255,.4);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;transition:color .15s;margin-bottom:10px}
+        .avd-back:hover{color:rgba(255,255,255,.75)}
+        .avd-logo{width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#4ade80;flex-shrink:0;overflow:hidden}
+        .avd-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:50px;font-size:11.5px;font-weight:700}
+        .avd-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .avd-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;border:none}
+        .avd-btn-outline{background:rgba(255,255,255,.1);color:#fff;border:1.5px solid rgba(255,255,255,.18)}
+        .avd-btn-outline:hover{background:rgba(255,255,255,.18)}
+        .avd-btn-green{background:#16a34a;color:#fff;box-shadow:0 3px 10px rgba(22,163,74,.35)}
+        .avd-btn-green:hover{background:#15803d}
+        .avd-btn-red{background:rgba(239,68,68,.15);color:#f87171;border:1.5px solid rgba(239,68,68,.2)}
+        .avd-btn-red:hover{background:rgba(239,68,68,.25)}
+
+        .avd-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+        @media(max-width:900px){.avd-grid{grid-template-columns:1fr}}
+        .avd-card{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:20px;padding:20px 22px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+        .avd-data-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+        @media(max-width:600px){.avd-data-grid{grid-template-columns:repeat(2,1fr)}}
+
+        .avd-checklist{display:flex;flex-direction:column;gap:10px}
+        .avd-check-item{display:flex;align-items:center;gap:10px}
+        .avd-check-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .avd-spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+      `}</style>
+
+      <div className="avd-page">
+
+        {/* Hero */}
+        <div className="avd-hero">
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <button onClick={() => router.push("/admin/vendors")} className="avd-back"><ArrowLeft size={13} />Back to Vendors</button>
+            <div className="avd-hero-inner">
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div className="avd-logo">
+                  {vendorData.logoUrl
+                    ? <img src={vendorData.logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : (vendorData.companyName?.charAt(0) || "V")
+                  }
                 </div>
+                <div>
+                  <p style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 5px", letterSpacing: "-.02em" }}>{vendorData.companyName}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span className="avd-badge" style={vendorData.approved ? { background: "rgba(74,222,128,.15)", color: "#4ade80" } : { background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>
+                      {vendorData.approved ? <CheckCircle2 size={12} /> : null}
+                      {vendorData.approved ? "Verified Vendor" : "Pending Verification"}
+                    </span>
+                    {vendorData.updatedAt && <span style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>Updated {new Date(vendorData.updatedAt).toLocaleDateString()}</span>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="avd-actions">
+                {isEditing ? (
+                  <>
+                    <button onClick={() => setIsEditing(false)} className="avd-btn avd-btn-outline"><X size={14} />Cancel</button>
+                    <button onClick={handleSubmit(onSubmit as any)} disabled={submitting} className="avd-btn avd-btn-green">
+                      {submitting ? <div className="avd-spinner" /> : <Save size={14} />}Save Changes
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setIsEditing(true)} className="avd-btn avd-btn-outline"><Edit3 size={14} />Edit</button>
+                    {!vendorData.approved && <button onClick={handleApprove} disabled={submitting} className="avd-btn avd-btn-green">{submitting ? <div className="avd-spinner" /> : <CheckCircle2 size={14} />}Approve</button>}
+                    {vendorData.approved && <button onClick={handleReject} disabled={submitting} className="avd-btn avd-btn-red"><XCircle size={14} />Suspend</button>}
+                  </>
+                )}
               </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-3">
-            {isEditing ? (
-              <>
-                <button 
-                  onClick={() => setIsEditing(false)}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl font-medium transition-all"
-                >
-                  <X size={18} /> Cancel
-                </button>
-                <button 
-                  onClick={handleSubmit(onSubmit as any)}
-                  disabled={submitting}
-                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-700 transition-all disabled:opacity-50"
-                >
-                  {submitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={18} />}
-                  Save Changes
-                </button>
-              </>
-            ) : (
-              <>
-                <button 
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all shadow-sm"
-                >
-                  <Edit3 size={18} /> Edit Profile
-                </button>
-                {!vendorData.approved && (
-                  <button 
-                    onClick={handleApprove}
-                    disabled={submitting}
-                    className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-700 transition-all disabled:opacity-50"
-                  >
-                    Approve Vendor
-                  </button>
-                )}
-                {vendorData.approved && (
-                  <button 
-                    onClick={handleReject}
-                    disabled={submitting}
-                    className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 bg-red-50 rounded-xl font-medium hover:bg-red-100 transition-all"
-                  >
-                    <XCircle size={18} /> Suspend Vendor
-                  </button>
-                )}
-              </>
-            )}
-          </div>
         </div>
 
+        {/* Main grid */}
         <FormProvider {...methods}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Left Column - Main Info */}
-            <div className="lg:col-span-2 space-y-8">
-              
-              {/* Identity Section */}
-              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-                <SectionHeader 
-                  icon={User} 
-                  title="Identity & Legal" 
-                  description="Company registration and contact details" 
-                />
-                
+          <div className="avd-grid">
+
+            {/* Left */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* Identity */}
+              <div className="avd-card">
+                <SH icon={User} title="Identity & Legal" desc="Company registration and contact details" />
                 {isEditing ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2 space-y-4">
-                      <div>
-                        <FileUpload name="logoFile" label="Company Logo" />
-                        {vendorData.logoUrl && !methods.watch("logoFile") && (
-                          <div className="mt-2 flex items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100 w-fit">
-                            <img src={vendorData.logoUrl} className="w-8 h-8 rounded object-cover border border-gray-200" alt="Current" />
-                            <span className="text-xs text-gray-500 font-medium italic">Current Logo</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div style={{ gridColumn: "1/-1" }}><FileUpload name="logoFile" label="Company Logo" /></div>
                     <Input name="companyName" label="Company Name *" />
-                    <Select name="registrationType" label="Registration Type *" options={[{label: "Pvt Ltd", value: "pvt-ltd"}, {label: "LLP", value: "llp"}, {label: "Sole Proprietorship", value: "sole-proprietorship"}]} />
+                    <Select name="registrationType" label="Registration Type *" options={[{label:"Pvt Ltd",value:"pvt-ltd"},{label:"LLP",value:"llp"},{label:"Sole Proprietorship",value:"sole-proprietorship"}]} />
                     <Input name="cinRegistration" label="CIN Number *" />
                     <Input name="gstNumber" label="GST Number *" />
                     <Input name="yearOfIncorporation" label="Year of Incorporation *" />
                     <Input name="businessEmail" label="Business Email *" />
-                    <Input name="whatsapp" label="WhatsApp/Mobile *" />
-                    <Input name="primaryContactName" label="Primary Contact Name *" />
+                    <Input name="whatsapp" label="WhatsApp / Mobile *" />
+                    <Input name="primaryContactName" label="Primary Contact *" />
                     <Input name="designation" label="Designation *" />
-                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <Input name="registeredAddress" label="Registered Address *" />
-                      <Input name="city" label="City *" />
-                      <Input name="state" label="State *" />
-                      <Input name="pinCode" label="PIN Code *" />
-                      <Input name="country" label="Country *" />
-                    </div>
+                    <Input name="city" label="City *" />
+                    <Input name="state" label="State *" />
+                    <Input name="pinCode" label="PIN Code *" />
+                    <Input name="country" label="Country *" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
-                    <DataItem label="Company Name" value={vendorData.companyName} />
-                    <DataItem label="Registration Type" value={vendorData.registrationType} />
-                    <DataItem label="CIN Number" value={vendorData.cinRegistration} />
-                    <DataItem label="GST Number" value={vendorData.gstNumber} />
-                    <DataItem label="Incorporation Year" value={vendorData.yearOfIncorporation} />
-                    <DataItem label="Business Email" value={vendorData.businessEmail} />
-                    <DataItem label="Primary Contact" value={vendorData.primaryContactName} />
-                    <DataItem label="Designation" value={vendorData.designation} />
-                    <DataItem label="WhatsApp/Mobile" value={vendorData.whatsapp} />
-                    <div className="col-span-full">
-                      <DataItem label="Registered Address" value={`${vendorData.registeredAddress}, ${vendorData.city}, ${vendorData.state}, ${vendorData.pinCode}, ${vendorData.country}`} />
+                  <div className="avd-data-grid">
+                    <D label="Company Name"       value={vendorData.companyName} />
+                    <D label="Registration Type"  value={vendorData.registrationType} />
+                    <D label="CIN Number"         value={vendorData.cinRegistration} />
+                    <D label="GST Number"         value={vendorData.gstNumber} />
+                    <D label="Established"        value={vendorData.yearOfIncorporation} />
+                    <D label="Business Email"     value={vendorData.businessEmail} />
+                    <D label="Primary Contact"    value={vendorData.primaryContactName} />
+                    <D label="Designation"        value={vendorData.designation} />
+                    <D label="WhatsApp"           value={vendorData.whatsapp} />
+                    <div style={{ gridColumn: "1/-1" }}>
+                      <D label="Registered Address" value={[vendorData.registeredAddress, vendorData.city, vendorData.state, vendorData.pinCode, vendorData.country].filter(Boolean).join(", ")} />
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Business Overview Section */}
-              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-                <SectionHeader 
-                  icon={Building2} 
-                  title="Business Overview" 
-                  description="Operations, scale and market reach" 
-                />
-                
+              {/* Business Overview */}
+              <div className="avd-card">
+                <SH icon={Building2} title="Business Overview" desc="Operations, scale and market reach" bg="#eff6ff" ic="#3b82f6" />
                 {isEditing ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Select name="businessType" label="Business Type *" options={[{label: "Manufacturer", value: "manufacturer"}, {label: "Trader", value: "trader"}]} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <Select name="businessType" label="Business Type *" options={[{label:"Manufacturer",value:"manufacturer"},{label:"Trader",value:"trader"}]} />
                     <Input name="primaryCategory" label="Primary Category *" />
-                    <div className="md:col-span-2">
-                      <MultiSelect name="subCategories" label="Sub-Categories" max={3} />
-                    </div>
-                    <div className="md:col-span-2">
-                      <TextArea name="shortDescription" label="Company Description *" rows={3} />
-                    </div>
+                    <div style={{ gridColumn: "1/-1" }}><MultiSelect name="subCategories" label="Sub-Categories" max={3} /></div>
+                    <div style={{ gridColumn: "1/-1" }}><TextArea name="shortDescription" label="Company Description *" rows={3} /></div>
                     <MultiSelect name="keyProducts" label="Key Products" max={5} />
                     <Toggle name="exportCapability" label="Export Capability" />
                     <Input name="exportMarkets" label="Export Markets" />
                   </div>
                 ) : (
-                  <div className="space-y-8">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
-                      <DataItem label="Business Type" value={vendorData.businessType} />
-                      <DataItem label="Primary Category" value={vendorData.primaryCategory} />
-                      <DataItem label="Export Capability" value={vendorData.exportCapability ? 'Yes' : 'No'} />
-                      <DataItem label="Export Markets" value={vendorData.exportMarkets} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div className="avd-data-grid">
+                      <D label="Business Type"      value={vendorData.businessType} />
+                      <D label="Primary Category"   value={vendorData.primaryCategory} />
+                      <D label="Export Capability"  value={vendorData.exportCapability ? "Yes" : "No"} />
+                      <D label="Export Markets"     value={vendorData.exportMarkets} />
                     </div>
-                    <div className="pt-6 border-t border-gray-50">
-                      <DataItem label="Company Description" value={vendorData.shortDescription} />
+                    <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
+                      <D label="Company Description" value={vendorData.shortDescription} />
                     </div>
-                    <div className="pt-6 border-t border-gray-50">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Key Products / Services</p>
-                      <div className="flex flex-wrap gap-2">
-                        {Array.isArray(vendorData.keyProducts) ? (
-                          vendorData.keyProducts.map((p: string) => (
-                            <span key={p} className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                              {p}
-                            </span>
-                          ))
-                        ) : vendorData.keyProducts ? (
-                          <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                            {vendorData.keyProducts}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-xs italic">No products listed</span>
-                        )}
+                    {Array.isArray(vendorData.keyProducts) && vendorData.keyProducts.length > 0 && (
+                      <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
+                        <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 8px" }}>Key Products</p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {vendorData.keyProducts.map((p: string) => <span key={p} style={{ padding: "3px 10px", background: "#f3f4f6", color: "#374151", fontSize: 12, fontWeight: 600, borderRadius: 50 }}>{p}</span>)}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Sustainability Section */}
-              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-                <SectionHeader 
-                  icon={ShieldCheck} 
-                  title="Sustainability Credentials" 
-                  description="Environmental compliance and certifications" 
-                />
-                
+              {/* Sustainability */}
+              <div className="avd-card">
+                <SH icon={ShieldCheck} title="Sustainability Credentials" desc="Environmental compliance and certifications" />
                 {isEditing ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                     <Input name="primarySustainabilityCert" label="Primary Certification *" />
                     <Input name="issuingBody" label="Issuing Body *" />
-                    <div className="md:col-span-2 space-y-4">
-                      <div>
-                        <FileUpload name="certificateFile" label="Sustainability Certificate (Update)" />
-                        {vendorData.certificateFileUrl && !methods.watch("certificateFile") && (
-                          <div className="mt-2 flex items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100 w-fit">
-                            <ShieldCheck size={16} className="text-green-600" />
-                            <span className="text-xs text-gray-500 font-medium italic truncate max-w-[200px]">Current Certificate</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="md:col-span-2">
-                      <TextArea name="sustainabilityPractice" label="Sustainability Description *" rows={3} />
-                    </div>
+                    <div style={{ gridColumn: "1/-1" }}><FileUpload name="certificateFile" label="Sustainability Certificate" /></div>
+                    <div style={{ gridColumn: "1/-1" }}><TextArea name="sustainabilityPractice" label="Sustainability Description *" rows={3} /></div>
                     <Input name="recycledContent" label="Recycled Content %" />
                     <Input name="carbonFootprint" label="Carbon Footprint" />
                     <Input name="socialCompliance" label="Social Compliance" />
                   </div>
                 ) : (
-                  <div className="space-y-8">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-green-50 rounded-2xl border border-green-100 gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-green-600 shadow-sm">
-                          <ShieldCheck size={20} />
-                        </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#f0fdf4", borderRadius: 14, gap: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 11, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><ShieldCheck size={18} color="#16a34a" /></div>
                         <div>
-                          <p className="text-sm font-bold text-gray-900">{vendorData.primarySustainabilityCert}</p>
-                          <p className="text-xs text-gray-500">Issued by {vendorData.issuingBody}</p>
+                          <p style={{ fontSize: 13, fontWeight: 800, color: "#111", margin: 0 }}>{vendorData.primarySustainabilityCert || "—"}</p>
+                          <p style={{ fontSize: 11.5, color: "#6b7280", margin: 0 }}>Issued by {vendorData.issuingBody || "—"}</p>
                         </div>
                       </div>
                       {vendorData.certificateFileUrl && (
-                        <a 
-                          href={vendorData.certificateFileUrl} 
-                          target="_blank" 
-                          className="flex items-center gap-2 px-4 py-2 bg-white text-green-600 text-sm font-bold rounded-xl border border-green-200 hover:bg-green-600 hover:text-white transition-all shadow-sm"
-                        >
-                          <ExternalLink size={16} /> View Certificate
+                        <a href={vendorData.certificateFileUrl} target="_blank" style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", background: "#fff", color: "#16a34a", fontSize: 12, fontWeight: 700, borderRadius: 50, border: "1.5px solid rgba(22,163,74,.2)", textDecoration: "none" }}>
+                          <ExternalLink size={12} />View Cert
                         </a>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
-                      <DataItem label="Recycled Content %" value={vendorData.recycledContent} />
-                      <DataItem label="Carbon Footprint" value={vendorData.carbonFootprint} />
-                      <DataItem label="Social Compliance" value={vendorData.socialCompliance} />
+                    <div className="avd-data-grid">
+                      <D label="Recycled Content %"  value={vendorData.recycledContent} />
+                      <D label="Carbon Footprint"    value={vendorData.carbonFootprint} />
+                      <D label="Social Compliance"   value={vendorData.socialCompliance} />
                     </div>
-                    <div className="pt-6 border-t border-gray-50">
-                      <DataItem label="Sustainability Practice" value={vendorData.sustainabilityPractice} />
+                    <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
+                      <D label="Sustainability Practice" value={vendorData.sustainabilityPractice} />
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Right Column - Sidebar Info */}
-            <div className="space-y-8">
-              
-              {/* Marketplace Preferences */}
-              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-                <SectionHeader 
-                  icon={ShoppingBag} 
-                  title="Marketplace" 
-                  description="Preferences & listing" 
-                />
-                
-                <div className="space-y-6">
-                  <div className="p-4 bg-gray-50 rounded-2xl space-y-4">
-                    <DataItem label="Listing Tier" value={vendorData.listingTier} />
-                    <DataItem label="Language" value={vendorData.language} />
-                    <DataItem label="Payment Terms" value={vendorData.paymentTerms} />
-                  </div>
-                  
-                  {vendorData.awardsImageUrl && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Awards & Recognitions</p>
-                      <a href={vendorData.awardsImageUrl} target="_blank" className="block relative group overflow-hidden rounded-2xl border border-gray-100">
-                        <img src={vendorData.awardsImageUrl} alt="Award" className="w-full h-auto grayscale group-hover:grayscale-0 transition-all duration-500" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <ExternalLink className="text-white" />
-                        </div>
-                      </a>
-                    </div>
-                  )}
+            {/* Right */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* Marketplace */}
+              <div className="avd-card">
+                <SH icon={ShoppingBag} title="Marketplace" desc="Preferences & listing" bg="#fefce8" ic="#f59e0b" />
+                <div style={{ background: "#f9fafb", borderRadius: 12, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+                  <D label="Listing Tier"   value={vendorData.listingTier} />
+                  <D label="Language"       value={vendorData.language} />
+                  <D label="Payment Terms"  value={vendorData.paymentTerms} />
                 </div>
+                {vendorData.awardsImageUrl && (
+                  <div style={{ marginTop: 14 }}>
+                    <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 8px" }}>Awards &amp; Recognitions</p>
+                    <a href={vendorData.awardsImageUrl} target="_blank" style={{ display: "block", borderRadius: 12, overflow: "hidden", border: "1px solid rgba(0,0,0,.07)" }}>
+                      <img src={vendorData.awardsImageUrl} alt="Award" style={{ width: "100%", display: "block" }} />
+                    </a>
+                  </div>
+                )}
               </div>
 
-              {/* Verification Checklist (Non-functional, for UI) */}
-              <div className="bg-gray-900 rounded-3xl p-8 text-white shadow-xl">
-                <h3 className="text-lg font-bold mb-4">Verification Checklist</h3>
-                <div className="space-y-4">
+              {/* Verification Checklist */}
+              <div style={{ background: "linear-gradient(170deg,#0a1a10 0%,#0d2218 55%,#0b1e14 100%)", borderRadius: 20, padding: "20px 22px" }}>
+                <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: "0 0 16px" }}>Verification Checklist</p>
+                <div className="avd-checklist">
                   {[
-                    { label: "Valid GST/CIN Registered", check: !!vendorData.gstNumber },
-                    { label: "Sustainability Certificate Provided", check: !!vendorData.certificateFileUrl },
-                    { label: "Contact Details Verified", check: !!vendorData.whatsapp },
-                    { label: "Eco-Score Evaluation", check: vendorData.approved },
+                    { label: "Valid GST / CIN Registered",          check: !!vendorData.gstNumber },
+                    { label: "Sustainability Certificate Provided",  check: !!vendorData.certificateFileUrl },
+                    { label: "Contact Details Verified",             check: !!vendorData.whatsapp },
+                    { label: "Admin Approved",                       check: vendorData.approved },
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${item.check ? 'bg-green-500' : 'bg-gray-700'}`}>
-                        <CheckCircle2 size={14} />
+                    <div key={i} className="avd-check-item">
+                      <div className="avd-check-dot" style={{ background: item.check ? "#16a34a" : "rgba(255,255,255,.1)" }}>
+                        <CheckCircle2 size={12} color="#fff" />
                       </div>
-                      <span className={`text-sm ${item.check ? 'text-white' : 'text-gray-400'}`}>{item.label}</span>
+                      <span style={{ fontSize: 13, color: item.check ? "#fff" : "rgba(255,255,255,.4)", fontWeight: 600 }}>{item.label}</span>
                     </div>
                   ))}
                 </div>
-                
                 {!vendorData.approved && (
-                  <div className="mt-8 pt-8 border-t border-gray-800">
-                    <p className="text-xs text-gray-400 mb-4">Once you approve, the vendor will be notified and their profile will be live on the marketplace.</p>
-                    <button 
-                      onClick={handleApprove}
-                      disabled={submitting}
-                      className="w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all active:scale-95"
-                    >
-                      Approve & Go Live
+                  <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,.08)" }}>
+                    <p style={{ fontSize: 11.5, color: "rgba(255,255,255,.3)", margin: "0 0 12px" }}>Once approved, the vendor's profile will be live on the marketplace.</p>
+                    <button onClick={handleApprove} disabled={submitting} style={{ width: "100%", padding: "11px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                      {submitting ? <div className="avd-spinner" /> : <CheckCircle2 size={15} />}Approve &amp; Go Live
                     </button>
                   </div>
                 )}
               </div>
-
             </div>
           </div>
         </FormProvider>
       </div>
-    </main>
+    </>
   );
 }

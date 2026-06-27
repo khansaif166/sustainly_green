@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useController } from "react-hook-form";
 import { LucideIcon, Upload, X, Check } from "lucide-react";
 
 // ─── INPUT ────────────────────────────────────────────────────────────────────
@@ -13,7 +13,8 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input: React.FC<InputProps> = ({ name, label, icon: Icon, required, ...props }) => {
-  const { register, formState: { errors } } = useFormContext();
+  const { control, formState: { errors } } = useFormContext();
+  const { field } = useController({ name, control, defaultValue: "" });
   const error = errors[name]?.message as string;
 
   return (
@@ -28,7 +29,8 @@ export const Input: React.FC<InputProps> = ({ name, label, icon: Icon, required,
           </div>
         )}
         <input
-          {...register(name)}
+          {...field}
+          value={field.value ?? ""}
           {...props}
           className={`w-full ${Icon ? "pl-10" : "px-4"} py-2.5 bg-white border ${
             error ? "border-red-400 bg-red-50" : "border-gray-200"
@@ -41,8 +43,9 @@ export const Input: React.FC<InputProps> = ({ name, label, icon: Icon, required,
 };
 
 // ─── TEXTAREA ─────────────────────────────────────────────────────────────────
-export const TextArea: React.FC<InputProps & { rows?: number }> = ({ name, label, required, ...props }) => {
-  const { register, formState: { errors } } = useFormContext();
+export const TextArea: React.FC<InputProps & { rows?: number }> = ({ name, label, required, rows, ...props }) => {
+  const { control, formState: { errors } } = useFormContext();
+  const { field } = useController({ name, control, defaultValue: "" });
   const error = errors[name]?.message as string;
 
   return (
@@ -51,7 +54,9 @@ export const TextArea: React.FC<InputProps & { rows?: number }> = ({ name, label
         {label}{required && <span className="text-green-500 ml-0.5">*</span>}
       </label>
       <textarea
-        {...register(name)}
+        {...field}
+        value={field.value ?? ""}
+        rows={rows}
         {...(props as any)}
         className={`w-full px-4 py-2.5 bg-white border ${
           error ? "border-red-400 bg-red-50" : "border-gray-200"
@@ -66,7 +71,8 @@ export const TextArea: React.FC<InputProps & { rows?: number }> = ({ name, label
 export const Select: React.FC<InputProps & { options: { label: string; value: string }[] }> = ({
   name, label, options, required,
 }) => {
-  const { register, formState: { errors } } = useFormContext();
+  const { control, formState: { errors } } = useFormContext();
+  const { field } = useController({ name, control, defaultValue: "" });
   const error = errors[name]?.message as string;
 
   return (
@@ -76,7 +82,8 @@ export const Select: React.FC<InputProps & { options: { label: string; value: st
       </label>
       <div className="relative">
         <select
-          {...register(name)}
+          {...field}
+          value={field.value ?? ""}
           className={`w-full px-4 py-2.5 bg-white border ${
             error ? "border-red-400 bg-red-50" : "border-gray-200"
           } rounded-xl outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 appearance-none text-sm pr-10`}

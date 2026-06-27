@@ -2,19 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import {
-  doc,
-  getDoc,
-  collection,
-  addDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db, storage } from "@/lib/firebase";
 import { Briefcase, MapPin, Clock, ArrowLeft, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { fetchActiveCareerById } from "@/lib/supabasePublic";
+import { uploadFileToSupabaseStorage } from "@/lib/storage";
 
 /* ================= TYPES ================= */
 
@@ -48,13 +41,8 @@ export default function JobDetailPage() {
 
   useEffect(() => {
     async function loadJob() {
-      const snap = await getDoc(doc(db, "careers", id as string));
-      if (snap.exists()) {
-        setJob({
-          id: snap.id,
-          ...(snap.data() as Omit<Job, "id">),
-        });
-      }
+      const row = await fetchActiveCareerById(id as string);
+      setJob(row);
       setLoading(false);
     }
 
@@ -64,37 +52,44 @@ export default function JobDetailPage() {
   /* ================= APPLY ================= */
 
   async function apply() {
-    if (!job || !form.name || !form.email || !resume) {
-      alert("Please fill all required fields and upload resume.");
+    if (!job || !form.name || !form.email) {
+      alert("Please fill all required fields.");
       return;
     }
 
     try {
       setSubmitting(true);
+      const uploadedResume = resume
+        ? await uploadFileToSupabaseStorage(resume, {
+            bucket: "resumes",
+            folder: `applications/${id}`,
+          })
+        : null;
 
-      /* ---------- UPLOAD RESUME ---------- */
-      const resumeRef = ref(
-        storage,
-        `resumes/${id}/${Date.now()}-${resume.name}`,
-      );
-
-      const uploadSnap = await uploadBytes(resumeRef, resume);
-      const resumeURL = await getDownloadURL(uploadSnap.ref);
-
-      /* ---------- SAVE APPLICATION ---------- */
-      await addDoc(collection(db, "jobApplications"), {
-        jobId: id,
-        jobTitle: job.title,
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        resumeURL,
-        createdAt: serverTimestamp(),
+      const response = await fetch("/api/careers/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          careerId: id,
+          jobTitle: job.title,
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          resumeUrl: "",
+          resumeStoragePath: uploadedResume?.path || "",
+        }),
       });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload?.error?.message || "Unable to submit application.");
+      }
 
       setSuccess(true);
       setForm({ name: "", email: "", phone: "" });
       setResume(null);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Unable to submit application.");
     } finally {
       setSubmitting(false);
     }
@@ -219,6 +214,9 @@ export default function JobDetailPage() {
                 />
               </label>
             </div>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              PDF, DOC, and DOCX files are accepted.
+            </p>
           </div>
 
           {/* ================= SUBMIT ================= */}

@@ -1,54 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  getDocs,
-  startAfter,
-} from "firebase/firestore";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
+import { fetchPublishedBlogs } from "@/lib/supabasePublic";
 
 export default function BlogsPage() {
   const [blogs, setBlogs] = useState<any[]>([]);
-  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   const fetchBlogs = async (next = false) => {
     setLoading(true);
 
-    let q;
-
-    if (next && lastDoc) {
-      q = query(
-        collection(db, "blogs"),
-        orderBy("createdAt", "desc"),
-        startAfter(lastDoc),
-        limit(10)
-      );
-    } else {
-      q = query(
-        collection(db, "blogs"),
-        orderBy("createdAt", "desc"),
-        limit(10)
-      );
-    }
-
-    const snap = await getDocs(q);
-
-    const data = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const nextOffset = next ? offset : 0;
+    const data = await fetchPublishedBlogs({ limit: 10, offset: nextOffset });
 
     setBlogs(next ? [...blogs, ...data] : data);
-
-    setLastDoc(snap.docs[snap.docs.length - 1]);
+    setOffset(nextOffset + data.length);
+    setHasMore(data.length === 10);
     setLoading(false);
   };
 
@@ -96,7 +68,7 @@ export default function BlogsPage() {
               </h2>
 
               <p className="text-gray-500 text-sm line-clamp-3">
-                {blog.content}
+                {blog.excerpt || blog.content}
               </p>
             </div>
 
@@ -107,12 +79,14 @@ export default function BlogsPage() {
 
       {/* Load More */}
       <div className="flex justify-center mt-12">
-        <button
-          onClick={() => fetchBlogs(true)}
-          className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800"
-        >
-          {loading ? "Loading..." : "Load More"}
-        </button>
+        {hasMore && (
+          <button
+            onClick={() => fetchBlogs(true)}
+            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800"
+          >
+            {loading ? "Loading..." : "Load More"}
+          </button>
+        )}
       </div>
 
     </div>

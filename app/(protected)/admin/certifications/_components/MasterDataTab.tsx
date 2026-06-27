@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { Table, THead, TBody, TH, TD, Badge, Button, Modal, cn } from "./UI";
 import { Edit2, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 interface MasterDataTabProps {
   collectionName: string;
@@ -19,11 +18,31 @@ export const MasterDataTab = ({ collectionName, title }: MasterDataTabProps) => 
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "", description: "", country: "", status: "Active" });
 
+  const resource =
+    collectionName === "certifyingBodies" ? "bodies" : "certifications";
+
+  function getAuthHeaders() {
+    const session = getStoredSession();
+    if (!session) throw new Error("Please sign in again.");
+    return {
+      Authorization: `Bearer ${session.accessToken}`,
+      "Content-Type": "application/json",
+    };
+  }
+
   const load = async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(query(collection(db, collectionName), orderBy("name", "asc")));
-      setData(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const response = await fetch(`/api/admin/certifications/master/${resource}`, {
+        headers: { Authorization: getAuthHeaders().Authorization },
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Unable to load master data.");
+      }
+
+      setData(payload.items || []);
     } catch (error) {
       console.error("Error loading master data:", error);
     } finally {
@@ -38,11 +57,24 @@ export const MasterDataTab = ({ collectionName, title }: MasterDataTabProps) => 
     if (!formData.name) return toast.error("Name is required");
 
     try {
+      const url = editingItem
+        ? `/api/admin/certifications/master/${resource}/${editingItem.id}`
+        : `/api/admin/certifications/master/${resource}`;
+
+      const response = await fetch(url, {
+        method: editingItem ? "PATCH" : "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(formData),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Error saving data");
+      }
+
       if (editingItem) {
-        await updateDoc(doc(db, collectionName, editingItem.id), formData);
         toast.success(`${title} updated successfully`);
       } else {
-        await addDoc(collection(db, collectionName), { ...formData, createdAt: new Date() });
         toast.success(`${title} added successfully`);
       }
       setIsModalOpen(false);
@@ -55,7 +87,16 @@ export const MasterDataTab = ({ collectionName, title }: MasterDataTabProps) => 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this?")) return;
     try {
-      await deleteDoc(doc(db, collectionName, id));
+      const response = await fetch(`/api/admin/certifications/master/${resource}/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: getAuthHeaders().Authorization },
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload?.error?.message || "Error deleting data");
+      }
+
       toast.success("Deleted successfully");
       load();
     } catch (error) {

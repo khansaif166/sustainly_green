@@ -160,7 +160,7 @@ function flattenBuyerPayload(buyer: any, profile: any): Partial<BuyerOnboardingF
     declarationAgreed: Boolean(decl.agreed || decl.name),
     declarationName: decl.name || profile?.name || "",
     declarationDesignation: decl.designation || "",
-    declarationDate: decl.date || "",
+    declarationDate: decl.date || new Date().toISOString().split("T")[0],
     email: ci.email || profile?.email || "",
     contactPerson: ci.contactPerson || profile?.name || "",
   };
@@ -176,7 +176,7 @@ export const BuyerOnboardingForm = () => {
 
   const methods = useForm<BuyerOnboardingFormData>({
     resolver: zodResolver(buyerOnboardingSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {
       categoriesNeeded: [],
       secondaryCategories: [],
@@ -185,16 +185,11 @@ export const BuyerOnboardingForm = () => {
       existingBrands: [],
       platformPresence: [],
       declarationAgreed: false,
+      declarationDate: new Date().toISOString().split("T")[0],
     },
   });
 
-  const {
-    handleSubmit,
-    trigger,
-    getValues,
-    reset,
-    formState: { isValid },
-  } = methods;
+  const { trigger, getValues, reset } = methods;
 
   // ─── Auth & Prefill ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -281,16 +276,30 @@ export const BuyerOnboardingForm = () => {
   };
 
   // ─── Final Submit ──────────────────────────────────────────────────────────
-  const onSubmit = async (data: BuyerOnboardingFormData) => {
-    const session = getStoredSession();
-    if (!session) {
-      router.push("/login");
-      return;
+  const handleFinalSubmit = async () => {
+    // Validate each step in order so errors are always on a visible step.
+    const stepChecks: [number, readonly string[]][] = [
+      [1, STEP1_FIELDS],
+      [2, STEP2_FIELDS],
+      [3, STEP3_FIELDS],
+      [4, STEP4_FIELDS],
+      [5, STEP5_FIELDS],
+    ];
+
+    for (const [stepNum, fields] of stepChecks) {
+      const valid = await trigger(fields as any);
+      if (!valid) {
+        setStep(stepNum);
+        return;
+      }
     }
 
-    setSubmitting(true);
+    const session = getStoredSession();
+    if (!session) { router.push("/login"); return; }
 
+    setSubmitting(true);
     try {
+      const data = getValues() as BuyerOnboardingFormData;
       const response = await fetch("/api/buyer/profile", {
         method: "PUT",
         headers: {
@@ -330,7 +339,7 @@ export const BuyerOnboardingForm = () => {
       <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
         <div className="p-8 md:p-12">
           <FormProvider {...methods}>
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <form onSubmit={(e) => e.preventDefault()}>
               {step === 1 && <Step1Identity />}
               {step === 2 && <Step2Overview />}
               {step === 3 && <Step3Sustainability />}
@@ -386,7 +395,8 @@ export const BuyerOnboardingForm = () => {
                     </button>
                   ) : (
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={handleFinalSubmit}
                       disabled={submitting}
                       className="flex items-center gap-2 px-10 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-700 hover:shadow-green-300 transition-all active:scale-95 disabled:opacity-50 disabled:shadow-none"
                     >

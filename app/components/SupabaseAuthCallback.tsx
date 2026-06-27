@@ -12,13 +12,31 @@ export default function SupabaseAuthCallback() {
     let cancelled = false;
 
     async function handleAuthHash() {
-      if (!window.location.hash.includes("access_token=")) return;
+      const hash = window.location.hash;
+
+      if (hash.includes("error=")) {
+        const params = new URLSearchParams(hash.replace(/^#/, ""));
+        const desc = params.get("error_description") || "email_verification_failed";
+        window.location.replace(`/login?error=${encodeURIComponent(desc)}`);
+        return;
+      }
+
+      if (!hash.includes("access_token=")) return;
 
       try {
         const session = await saveSessionFromAuthHash(window.location.hash);
         if (!session || cancelled) return;
 
-        const profile = await ensureCurrentProfile(session.accessToken);
+        // Retry once with a short delay to handle read-after-write race on profile upsert
+        let profile = null;
+        try {
+          profile = await ensureCurrentProfile(session.accessToken);
+        } catch {
+          await new Promise((r) => setTimeout(r, 1500));
+          if (cancelled) return;
+          profile = await ensureCurrentProfile(session.accessToken);
+        }
+
         if (cancelled) return;
 
         const target = redirectForRole(profile);
@@ -26,7 +44,7 @@ export default function SupabaseAuthCallback() {
         window.location.replace(target);
       } catch (error) {
         console.error("SUPABASE_AUTH_CALLBACK_ERROR", error);
-        window.history.replaceState(null, "", window.location.pathname);
+        window.location.replace("/login?error=profile_setup_failed");
       }
     }
 

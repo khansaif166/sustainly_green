@@ -224,64 +224,76 @@ export default function BuyerProfilePage() {
   ];
 
   return (
-    <main className="max-w-full space-y-6 pb-16">
-      {/* ── Back ── */}
-      <Link href="/buyer/dashboard" className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Dashboard
-      </Link>
+    <main className="max-w-full space-y-5 pb-16">
+      <style>{`
+        .prof-hero {
+          background: linear-gradient(135deg, #0a1a10 0%, #0f2318 60%, #0c1e13 100%);
+          border-radius: 20px; padding: 22px 24px; position: relative; overflow: hidden;
+        }
+        .prof-hero::before {
+          content: ''; position: absolute; inset: 0;
+          background: radial-gradient(ellipse 450px 260px at 90% 50%, rgba(22,163,74,0.15) 0%, transparent 65%);
+          pointer-events: none;
+        }
+        .prof-hero-inner { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+        .prof-hero-left { display: flex; align-items: center; gap: 14px; }
+        .prof-avatar { width: 52px; height: 52px; border-radius: 16px; background: linear-gradient(135deg,#16a34a,#15803d); color: #fff; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.12); flex-shrink: 0; }
+        .prof-hero-name { font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 3px; letter-spacing: -.02em; }
+        .prof-hero-sub { font-size: 12.5px; color: rgba(255,255,255,0.4); margin: 0; }
+        .prof-hero-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .prof-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; padding: 5px 12px; border-radius: 50px; }
+        .prof-edit-btn { display: inline-flex; align-items: center; gap: 7px; background: rgba(255,255,255,0.12); color: #fff; padding: 9px 18px; border-radius: 50px; font-size: 13px; font-weight: 700; border: 1px solid rgba(255,255,255,0.15); cursor: pointer; font-family: inherit; transition: background .15s; }
+        .prof-edit-btn:hover { background: rgba(255,255,255,0.18); }
+        .prof-save-btn { display: inline-flex; align-items: center; gap: 7px; background: #16a34a; color: #fff; padding: 9px 18px; border-radius: 50px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; transition: background .15s; box-shadow: 0 4px 14px rgba(22,163,74,0.35); }
+        .prof-save-btn:hover:not(:disabled) { background: #15803d; }
+        .prof-save-btn:disabled { opacity: .6; cursor: not-allowed; }
+        .prof-cancel-btn { display: inline-flex; align-items: center; gap: 7px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.65); padding: 9px 18px; border-radius: 50px; font-size: 13px; font-weight: 600; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-family: inherit; transition: background .15s; }
+        .prof-cancel-btn:hover { background: rgba(255,255,255,0.14); }
+        .prof-onboarding-link { display: inline-flex; align-items: center; gap: 6px; background: #d97706; color: #fff; padding: 9px 16px; border-radius: 50px; font-size: 12.5px; font-weight: 700; text-decoration: none; transition: background .15s; }
+        .prof-onboarding-link:hover { background: #b45309; }
+      `}</style>
 
-      {/* ── Header card ── */}
+      {/* ── Hero header ── */}
+      <div className="prof-hero">
+        <div className="prof-hero-inner">
+          <div className="prof-hero-left">
+            <div className="prof-avatar">
+              {(ci.companyName || "B").slice(0, 1).toUpperCase()}
+            </div>
+            <div>
+              <h1 className="prof-hero-name">{ci.companyName || "Buyer Profile"}</h1>
+              <p className="prof-hero-sub">
+                {ci.organisationType || "Organisation"}{(ci.city || ci.country) ? ` · ${[ci.city, ci.country].filter(Boolean).join(", ")}` : ""}
+              </p>
+            </div>
+          </div>
+          <div className="prof-hero-actions">
+            <span className="prof-status" style={status === "submitted" ? { background: "#f0fdf4", color: "#15803d" } : { background: "#fffbeb", color: "#92400e" }}>
+              {status === "submitted" ? <><CheckCircle2 size={13} />Submitted</> : <><Clock size={13} />Draft</>}
+            </span>
+            {!profileComplete && (
+              <Link href="/buyer/onboarding" className="prof-onboarding-link">Complete Onboarding</Link>
+            )}
+            {!editing ? (
+              <button onClick={() => setEditing(true)} className="prof-edit-btn"><Edit3 size={14} />Edit Profile</button>
+            ) : (
+              <>
+                <button onClick={handleCancel} className="prof-cancel-btn"><X size={14} />Cancel</button>
+                <button onClick={handleSave} disabled={saving} className="prof-save-btn">
+                  <Save size={14} />{saving ? "Saving…" : "Save changes"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Error ── */}
       {error && (
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "12px 16px", fontSize: 13, color: "#991b1b" }}>
           {error}
         </div>
       )}
-
-      <div className="rounded-3xl bg-white border border-gray-100 shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center">
-            <Building2 className="h-7 w-7 text-green-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">{ci.companyName || "Buyer Profile"}</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{ci.organisationType || "Organisation"} · {ci.city || ""}{ci.city && ci.country ? ", " : ""}{ci.country || ""}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Status badge */}
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
-            status === "submitted" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-          }`}>
-            {status === "submitted"
-              ? <><CheckCircle2 size={13} /> Profile Submitted</>
-              : <><Clock size={13} /> Draft</>
-            }
-          </span>
-
-          {!profileComplete && (
-            <Link href="/buyer/onboarding" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition">
-              Complete Onboarding
-            </Link>
-          )}
-
-          {!editing ? (
-            <button onClick={() => setEditing(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition">
-              <Edit3 size={15} /> Edit Profile
-            </button>
-          ) : (
-            <div className="flex gap-2">
-              <button onClick={handleCancel} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition">
-                <X size={15} /> Cancel
-              </button>
-              <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition disabled:opacity-60">
-                <Save size={15} /> {saving ? "Saving…" : "Save Changes"}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* ── SECTION 1: Business Identity ── */}
       <Section title="Business Identity" icon={Building2} color="bg-blue-50 text-blue-600">

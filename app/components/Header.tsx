@@ -287,12 +287,6 @@ export default function Header() {
             <Link href="/categories" className="nav-link">
               Categories
             </Link>
-            <Link href="/Green-lens" className="nav-link">
-              Green Lens
-            </Link>
-            <Link href="/pricing" className="nav-link">
-              Pricing
-            </Link>
           </div>
 
           <div className="nav-actions">

@@ -8,6 +8,7 @@ import {
   ArrowLeft, BarChart3, Leaf, ShoppingBag, Clock, CheckCircle2, Save, Edit3, X, Building2
 } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
+import { uploadFileToSupabaseStorage } from "@/lib/storage";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -309,7 +310,14 @@ export default function VendorProfilePage() {
     setSaving(true);
     setError("");
     try {
-      let logoUrl = draft.logoUrl || "";
+      const uploadedLogo = logoFile
+        ? await uploadFileToSupabaseStorage(logoFile, {
+            bucket: "marketplace",
+            folder: "vendors/logos",
+            accessToken: session.accessToken,
+          })
+        : null;
+      let logoUrl = uploadedLogo?.url || draft.logoUrl || "";
 
       const response = await fetch("/api/vendor/profile", {
         method: "PUT",
@@ -369,73 +377,88 @@ export default function VendorProfilePage() {
     { label: "Pro", value: "pro" },
   ];
 
+  const companyInitial = (data.companyName || "V").slice(0, 1).toUpperCase();
+
   return (
     <main className="max-w-full space-y-6 pb-16">
-      {/* Back */}
-      <Link href="/vendor/dashboard" className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Dashboard
-      </Link>
+      <style>{`
+        .vpf-hero{background:linear-gradient(135deg,#0a1a10 0%,#0f2318 60%,#0c1e13 100%);border-radius:22px;padding:24px 28px;position:relative;overflow:hidden}
+        .vpf-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 400px 280px at 90% 50%,rgba(22,163,74,.18) 0%,transparent 65%);pointer-events:none}
+        .vpf-hero-inner{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+        .vpf-avatar-wrap{width:58px;height:58px;border-radius:18px;overflow:hidden;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.12);flex-shrink:0;position:relative}
+        .vpf-avatar-letter{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff}
+        .vpf-avatar-upload{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;cursor:pointer}
+        .vpf-avatar-wrap:hover .vpf-avatar-upload{opacity:1}
+        .vpf-company-name{font-size:20px;font-weight:900;color:#fff;margin:0 0 4px;letter-spacing:-.02em}
+        .vpf-company-meta{font-size:12.5px;color:rgba(255,255,255,.42);margin:0 0 14px}
+        .vpf-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:50px}
+        .vpf-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+        .vpf-edit-btn{display:inline-flex;align-items:center;gap:6px;background:#16a34a;color:#fff;padding:9px 18px;border-radius:50px;font-size:12.5px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:background .15s;box-shadow:0 4px 14px rgba(22,163,74,.3)}
+        .vpf-edit-btn:hover{background:#15803d}
+        .vpf-cancel-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.75);padding:9px 18px;border-radius:50px;font-size:12.5px;font-weight:700;border:1.5px solid rgba(255,255,255,.12);cursor:pointer;font-family:inherit;transition:all .15s}
+        .vpf-cancel-btn:hover{background:rgba(255,255,255,.14)}
+        .vpf-save-btn{display:inline-flex;align-items:center;gap:6px;background:#16a34a;color:#fff;padding:9px 18px;border-radius:50px;font-size:12.5px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:background .15s;box-shadow:0 4px 14px rgba(22,163,74,.3)}
+        .vpf-save-btn:hover:not(:disabled){background:#15803d}
+        .vpf-save-btn:disabled{opacity:.55;cursor:not-allowed}
+      `}</style>
 
-      {/* Header card */}
       {error && (
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">
-          {error}
-        </div>
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-700">{error}</div>
       )}
 
-      <div className="rounded-3xl bg-white border border-gray-100 shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center overflow-hidden border border-gray-100 shadow-sm relative group">
-            {logoFile ? (
-              <img src={URL.createObjectURL(logoFile)} alt="New Logo" className="w-full h-full object-cover" />
-            ) : data.logoUrl ? (
-              <img src={data.logoUrl} alt="Logo" className="w-full h-full object-cover" />
-            ) : (
-              <Building2 className="h-8 w-8 text-green-600" />
-            )}
-            {editing && (
-              <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-not-allowed" title="Logo upload will be re-enabled after Supabase Storage migration.">
-                <Upload size={20} className="text-white" />
-              </label>
-            )}
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">{data.companyName || "Vendor Profile"}</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {data.businessType || "—"} · {data.primaryCategory || "—"} · {data.city || ""}{data.city && data.country ? ", " : ""}{data.country || ""}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Approval status */}
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
-            approved ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-          }`}>
-            {approved ? <><CheckCircle2 size={13} /> Approved</> : <><Clock size={13} /> Pending Approval</>}
-          </span>
-
-          {!data.vendorProfileComplete && (
-            <Link href="/vendor/onboarding" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition">
-              <AlertTriangle size={14} /> Complete Onboarding
-            </Link>
-          )}
-
-          {!editing ? (
-            <button onClick={() => setEditing(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition">
-              <Edit3 size={15} /> Edit Profile
-            </button>
-          ) : (
-            <div className="flex gap-2">
-              <button onClick={handleCancel} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition">
-                <X size={15} /> Cancel
-              </button>
-              <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition disabled:opacity-60">
-                <Save size={15} /> {saving ? "Saving…" : "Save Changes"}
-              </button>
+      {/* Dark hero header */}
+      <div className="vpf-hero">
+        <div className="vpf-hero-inner">
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+            {/* Avatar / logo */}
+            <div className="vpf-avatar-wrap">
+              {logoFile ? (
+                <img src={URL.createObjectURL(logoFile)} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : data.logoUrl ? (
+                <img src={data.logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <div className="vpf-avatar-letter">{companyInitial}</div>
+              )}
+              {editing && (
+                <label className="vpf-avatar-upload" title="Upload logo">
+                  <Upload size={18} color="rgba(255,255,255,.9)" />
+                  <input type="file" accept="image/*" hidden onChange={e => setLogoFile(e.target.files?.[0] || null)} />
+                </label>
+              )}
             </div>
-          )}
+
+            {/* Company info */}
+            <div>
+              <h1 className="vpf-company-name">{data.companyName || "Vendor Profile"}</h1>
+              <p className="vpf-company-meta">
+                {[data.businessType, data.primaryCategory, data.city && data.country ? `${data.city}, ${data.country}` : data.city || data.country].filter(Boolean).join(" · ") || "Complete your profile"}
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <span className="vpf-badge" style={approved ? { background: "rgba(74,222,128,.15)", color: "#4ade80" } : { background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>
+                  {approved ? <><CheckCircle2 size={12} /> Approved</> : <><Clock size={12} /> Pending Approval</>}
+                </span>
+                {!data.vendorProfileComplete && (
+                  <Link href="/vendor/onboarding" style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(251,191,36,.18)", color: "#fbbf24", padding: "4px 12px", borderRadius: "50px", fontSize: 11.5, fontWeight: 700, textDecoration: "none" }}>
+                    <AlertTriangle size={12} /> Complete Onboarding
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Edit / Save / Cancel buttons */}
+          <div className="vpf-actions">
+            {!editing ? (
+              <button className="vpf-edit-btn" onClick={() => setEditing(true)}><Edit3 size={14} />Edit Profile</button>
+            ) : (
+              <>
+                <button className="vpf-cancel-btn" onClick={handleCancel}><X size={14} />Cancel</button>
+                <button className="vpf-save-btn" onClick={handleSave} disabled={saving}>
+                  <Save size={14} />{saving ? "Saving…" : "Save Changes"}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

@@ -1,38 +1,37 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { Table, THead, TBody, TH, TD, Badge, Button, Drawer } from "./UI";
 import { ExternalLink, User, Phone, Mail, MapPin, Users, Briefcase, Calendar, Info } from "lucide-react";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 export const RequestsTab = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
+  function getAuthHeaders() {
+    const session = getStoredSession();
+    if (!session) throw new Error("Please sign in again.");
+    return {
+      Authorization: `Bearer ${session.accessToken}`,
+      "Content-Type": "application/json",
+    };
+  }
+
   useEffect(() => {
     const load = async () => {
       try {
-        const [newCerts, oldCerts] = await Promise.all([
-          getDocs(collection(db, "certificationsMaster")),
-          getDocs(collection(db, "certifications_master"))
-        ]);
+        const response = await fetch("/api/admin/certifications/requests", {
+          headers: { Authorization: getAuthHeaders().Authorization },
+        });
+        const payload = await response.json();
 
-        const certMap: any = {};
-        oldCerts.docs.forEach(d => { certMap[d.id] = d.data().name; });
-        newCerts.docs.forEach(d => { certMap[d.id] = d.data().name; });
+        if (!response.ok) {
+          throw new Error(payload?.error?.message || "Unable to load requests.");
+        }
 
-        const snap = await getDocs(query(collection(db, "certification_requests"), orderBy("createdAt", "desc")));
-        
-        setData(snap.docs.map(d => {
-          const item = d.data() as any;
-          return {
-            id: d.id,
-            ...item,
-            certificationName: certMap[item.certificationId] || certMap[item.primarySustainabilityCert] || item.certificationName || "—"
-          };
-        }));
+        setData(payload.requests || []);
       } catch (error) {
         console.error("Error loading requests:", error);
       } finally {
@@ -41,6 +40,28 @@ export const RequestsTab = () => {
     };
     load();
   }, []);
+
+  async function updateStatus(id: string, status: string) {
+    try {
+      const response = await fetch(`/api/admin/certifications/requests/${id}`, {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Unable to update request.");
+      }
+
+      setData((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status } : item)),
+      );
+      setSelectedRequest((prev: any) => prev ? { ...prev, status } : prev);
+    } catch (error) {
+      console.error("Error updating request:", error);
+    }
+  }
 
   const DetailItem = ({ icon: Icon, label, value, fullWidth = false }: any) => (
     <div className={`p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-start gap-3 ${fullWidth ? 'col-span-full' : ''}`}>
@@ -81,7 +102,7 @@ export const RequestsTab = () => {
               </TD>
               <TD>
                 <div className="text-gray-500">
-                  {r.createdAt?.seconds ? new Date(r.createdAt.seconds * 1000).toLocaleDateString() : "—"}
+                  {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-"}
                 </div>
               </TD>
               <TD>
@@ -112,7 +133,7 @@ export const RequestsTab = () => {
                   {selectedRequest.status}
                 </Badge>
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">
-                  {selectedRequest.createdAt?.seconds ? new Date(selectedRequest.createdAt.seconds * 1000).toLocaleDateString() : "—"}
+                  {selectedRequest.createdAt ? new Date(selectedRequest.createdAt).toLocaleDateString() : "-"}
                 </p>
               </div>
               <div>
@@ -163,7 +184,13 @@ export const RequestsTab = () => {
             </div>
 
             <div className="pt-12 pb-8 flex flex-col gap-3">
-              <Button variant="primary" className="w-full py-4 rounded-2xl shadow-lg shadow-green-100">Approve Request</Button>
+              <Button
+                variant="primary"
+                className="w-full py-4 rounded-2xl shadow-lg shadow-green-100"
+                onClick={() => updateStatus(selectedRequest.id, "APPROVED")}
+              >
+                Approve Request
+              </Button>
               <Button variant="outline" className="w-full py-4 rounded-2xl" onClick={() => setSelectedRequest(null)}>Close</Button>
             </div>
           </div>

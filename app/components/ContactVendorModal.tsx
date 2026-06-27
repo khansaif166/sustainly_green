@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { X } from "lucide-react";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
 
 export default function BuyerRFQModal({
@@ -53,43 +52,42 @@ export default function BuyerRFQModal({
     setLoading(true);
 
     try {
-      await addDoc(collection(db, "rfqs"), {
-        // Buyer RFQ data
-        buyerId: auth.currentUser!.uid,
-        requirementTitle: form.requirementTitle,
-        requirementType: form.requirementType,
-        estimatedQuantity: form.estimatedQuantity,
-        deliveryCountry: form.deliveryCountry,
-        requiredTimeline: form.requiredTimeline,
-        additionalDetails: form.additionalDetails,
+      const session = getStoredSession();
+      if (!session) {
+        setError("Please login as a buyer before sending an RFQ.");
+        return;
+      }
 
-        // Buyer contact
-        buyerName: form.buyerName,
-        buyerEmail: form.buyerEmail,
-        buyerPhone: form.buyerPhone || null,
-
-        // Relations
-        vendorId,
-        productId: productId || null,
-
-        // RFQ lifecycle
-        status: "RFQ_REQUESTED",
-
-        // Vendor response placeholder
-        vendorResponse: {
-          message: "",
-          respondedAt: null,
-          contactShared: false,
+      const response = await fetch("/api/buyer/rfqs", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json",
         },
-
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        body: JSON.stringify({
+          requirementTitle: form.requirementTitle,
+          requirementType: form.requirementType,
+          estimatedQuantity: form.estimatedQuantity,
+          deliveryCountry: form.deliveryCountry,
+          requiredTimeline: form.requiredTimeline,
+          additionalDetails: form.additionalDetails,
+          buyerName: form.buyerName,
+          buyerEmail: form.buyerEmail,
+          buyerPhone: form.buyerPhone || "",
+          vendorId,
+          productId: productId || null,
+        }),
       });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Something went wrong.");
+      }
 
       onClose();
       alert("RFQ sent successfully. Vendor will respond soon.");
-    } catch (e) {
-      setError("Something went wrong. Please try again.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

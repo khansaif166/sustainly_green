@@ -11,54 +11,41 @@ export default function AdminCertificationsPage() {
   const [activeTab, setActiveTab] = useState("my-certs");
 
   const tabs = [
-    { id: "my-certs", label: "My Certifications", icon: ShieldCheck },
-    { id: "cert-master", label: "Certification Master", icon: Database },
-    { id: "cert-bodies", label: "Certifying Bodies", icon: Building2 },
+    { id: "my-certs",    label: "My Certifications",    icon: ShieldCheck },
+    { id: "cert-master", label: "Certification Master", icon: Database    },
+    { id: "cert-bodies", label: "Certifying Bodies",    icon: Building2   },
   ];
 
   return (
-    <main className="min-h-screen bg-[#fafbfc] py-8 px-4 md:py-12">
+    <>
+      <style>{`
+        .acrt-page{display:flex;flex-direction:column;gap:18px;padding-bottom:40px}
+        .acrt-hero{background:linear-gradient(135deg,#0a1a10 0%,#0f2318 60%,#0c1e13 100%);border-radius:22px;padding:22px 26px;position:relative;overflow:hidden}
+        .acrt-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 380px 230px at 90% 50%,rgba(22,163,74,.18) 0%,transparent 65%);pointer-events:none}
+        .acrt-hero-inner{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+        .acrt-hero-title{font-size:21px;font-weight:900;color:#fff;margin:0 0 3px;letter-spacing:-.025em}
+        .acrt-hero-sub{font-size:13px;color:rgba(255,255,255,.38);margin:0}
+        .acrt-content{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:20px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+      `}</style>
       <Toaster position="top-right" richColors />
-      
-      {/* Background Decor */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="absolute top-0 right-0 w-[50%] h-[50%] bg-green-50 rounded-full blur-3xl opacity-30" />
-        <div className="absolute bottom-0 left-0 w-[50%] h-[50%] bg-blue-50 rounded-full blur-3xl opacity-30" />
-      </div>
 
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Certification Hub</h1>
-            <p className="text-sm text-gray-500">Manage sustainability credentials and verification master data.</p>
+      <div className="acrt-page">
+        <div className="acrt-hero">
+          <div className="acrt-hero-inner">
+            <div>
+              <h1 className="acrt-hero-title">Certification Hub</h1>
+              <p className="acrt-hero-sub">Manage sustainability credentials and verification master data</p>
+            </div>
+            <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
           </div>
-          
-          <Tabs 
-            tabs={tabs} 
-            activeTab={activeTab} 
-            onTabChange={setActiveTab} 
-          />
         </div>
 
-        {/* Tab Content */}
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {activeTab === "my-certs" && <RequestsTab />}
-          {activeTab === "cert-master" && (
-            <MasterDataTab collectionName="certificationsMaster" title="Certification" />
-          )}
-          {activeTab === "cert-bodies" && (
-            <MasterDataTab collectionName="certifyingBodies" title="Certifying Body" />
-          )}
-        </div>
-
-        {/* Footer info */}
-        <div className="text-center pt-12 border-t border-gray-100/50">
-          <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">
-            Sustainly Ecohub • Admin Control Panel
-          </p>
+        <div className="acrt-content" style={{ padding: 20 }}>
+          {activeTab === "my-certs"    && <RequestsTab />}
+          {activeTab === "cert-master" && <MasterDataTab collectionName="certificationsMaster" title="Certification" />}
+          {activeTab === "cert-bodies" && <MasterDataTab collectionName="certifyingBodies" title="Certifying Body" />}
         </div>
       </div>
-    </main>
+    </>
   );
 }

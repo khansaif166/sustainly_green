@@ -1,220 +1,146 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  serverTimestamp,
-  updateDoc,
-  deleteDoc,
-  doc,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { Tag, Pencil, Trash2 } from "lucide-react";
+import { getStoredSession } from "@/lib/supabaseAuth";
 
-/* ================= PAGE ================= */
-
-type Tag = {
-  id: string;
-  name: string;
-  active: boolean;
-};
+type TagType = { id: string; name: string; active: boolean };
 
 export default function AdminTagsPage() {
-  const [name, setName] = useState("");
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [name,      setName]      = useState("");
+  const [tags,      setTags]      = useState<TagType[]>([]);
+  const [loading,   setLoading]   = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  /* ---------------- LOAD ---------------- */
   async function load() {
-    const snap = await getDocs(collection(db, "tags"));
-    setTags(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+    const session = getStoredSession();
+    if (!session) return;
+    const res = await fetch("/api/admin/master/tags", { headers: { Authorization: `Bearer ${session.accessToken}` } });
+    const payload = await res.json();
+    if (res.ok) setTags(payload.items || []);
   }
 
-  /* ---------------- ADD / UPDATE ---------------- */
   async function saveTag() {
     if (!name.trim()) return;
-
+    setLoading(true);
     try {
-      setLoading(true);
-
+      const session = getStoredSession();
+      if (!session) return;
       if (editingId) {
-        await updateDoc(doc(db, "tags", editingId), {
-          name,
-          updatedAt: serverTimestamp(),
+        await fetch(`/api/admin/master/tags/${editingId}`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
         });
       } else {
-        await addDoc(collection(db, "tags"), {
-          name,
-          active: true,
-          createdAt: serverTimestamp(),
+        await fetch("/api/admin/master/tags", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ name, active: true }),
         });
       }
-
       resetForm();
       load();
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
-  /* ---------------- EDIT ---------------- */
-  function startEdit(tag: Tag) {
-    setName(tag.name);
-    setEditingId(tag.id);
-  }
-
-  /* ---------------- DELETE ---------------- */
   async function deleteTag(id: string) {
     if (!confirm("Delete this tag permanently?")) return;
-
-    await deleteDoc(doc(db, "tags", id));
-    setTags((prev) => prev.filter((t) => t.id !== id));
+    const session = getStoredSession();
+    if (!session) return;
+    await fetch(`/api/admin/master/tags/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${session.accessToken}` } });
+    setTags(prev => prev.filter(t => t.id !== id));
   }
 
-  function resetForm() {
-    setName("");
-    setEditingId(null);
-  }
+  function startEdit(t: TagType) { setName(t.name); setEditingId(t.id); }
+  function resetForm() { setName(""); setEditingId(null); }
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   return (
-    <main className="max-w-full mx-auto space-y-8">
+    <>
+      <style>{`
+        .atg-page{display:flex;flex-direction:column;gap:18px;padding-bottom:40px}
+        .atg-hero{background:linear-gradient(135deg,#0a1a10 0%,#0f2318 60%,#0c1e13 100%);border-radius:22px;padding:22px 26px;position:relative;overflow:hidden}
+        .atg-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 380px 230px at 90% 50%,rgba(22,163,74,.18) 0%,transparent 65%);pointer-events:none}
+        .atg-hero-inner{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+        .atg-hero-title{font-size:21px;font-weight:900;color:#fff;margin:0 0 3px;letter-spacing:-.025em}
+        .atg-hero-sub{font-size:13px;color:rgba(255,255,255,.38);margin:0}
+        .atg-stat-val{font-size:26px;font-weight:900;color:#4ade80;letter-spacing:-.03em;line-height:1;margin:0;text-align:right}
+        .atg-stat-label{font-size:10.5px;color:rgba(255,255,255,.3);margin:3px 0 0;font-weight:600;text-transform:uppercase;letter-spacing:.05em;text-align:right}
 
-      {/* ================= HEADER ================= */}
-      <section>
-        <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
-          Tags
-        </h1>
-        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-          Manage reusable tags for products and listings
-        </p>
-      </section>
+        .atg-form-card{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:20px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+        .atg-form-title{font-size:14px;font-weight:800;color:#111;margin:0 0 14px}
+        .atg-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+        .atg-input{flex:1;min-width:200px;padding:10px 14px;border:1.5px solid rgba(0,0,0,.1);border-radius:12px;font-size:13px;outline:none;font-family:inherit;background:#fff;color:#111;transition:border .15s}
+        .atg-input:focus{border-color:#16a34a}
+        .atg-save{padding:10px 20px;border-radius:50px;font-size:13px;font-weight:700;background:#16a34a;color:#fff;border:none;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(22,163,74,.2);white-space:nowrap;transition:all .15s}
+        .atg-save:disabled{opacity:.6;cursor:not-allowed}
+        .atg-cancel{padding:10px 18px;border-radius:50px;font-size:13px;font-weight:700;border:1.5px solid rgba(0,0,0,.1);background:#fff;color:#374151;cursor:pointer;font-family:inherit;white-space:nowrap}
 
-      {/* ================= ADD / EDIT TAG ================= */}
-      <section
-        className="
-          rounded-3xl
-          bg-[var(--color-bg-white)]
-          border border-[var(--color-border)]
-          shadow-[0_10px_30px_rgba(0,0,0,0.06)]
-          p-6
-        "
-      >
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-          {editingId ? "Edit Tag" : "Add Tag"}
-        </h2>
+        .atg-list-card{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:20px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+        .atg-list-title{font-size:14px;font-weight:800;color:#111;margin:0 0 14px}
+        .atg-chips{display:flex;flex-wrap:wrap;gap:10px}
+        .atg-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:50px;background:#f0fdf4;border:1.5px solid rgba(22,163,74,.12);font-size:13px;font-weight:600;color:#15803d}
+        .atg-chip-name{color:#15803d}
+        .atg-chip-hash{color:rgba(22,163,74,.5);font-size:11px}
+        .atg-chip-btns{display:flex;gap:5px;margin-left:3px}
+        .atg-chip-edit{display:inline-flex;align-items:center;background:rgba(59,130,246,.1);color:#3b82f6;border:none;border-radius:6px;padding:3px;cursor:pointer;transition:all .15s}
+        .atg-chip-edit:hover{background:rgba(59,130,246,.2)}
+        .atg-chip-del{display:inline-flex;align-items:center;background:rgba(220,38,38,.08);color:#dc2626;border:none;border-radius:6px;padding:3px;cursor:pointer;transition:all .15s}
+        .atg-chip-del:hover{background:rgba(220,38,38,.15)}
+        .atg-empty{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:16px;padding:32px 24px;text-align:center;font-size:13.5px;color:#9ca3af}
+      `}</style>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Tag name (e.g. Eco Friendly)"
-            className="
-              flex-1 rounded-xl
-              border border-[var(--color-border)]
-              px-4 py-2.5 text-sm
-              bg-[var(--color-bg-white)]
-              focus:outline-none
-              focus:ring-2 focus:ring-[var(--color-ocean-blue)]/30
-            "
-          />
+      <div className="atg-page">
 
-          <button
-            onClick={saveTag}
-            disabled={loading}
-            className="
-              inline-flex items-center justify-center gap-2
-              rounded-full
-              px-5 py-2.5
-              text-sm font-medium text-white
-              bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-              hover:opacity-90
-              disabled:opacity-50
-            "
-          >
-            <PlusCircle className="h-4 w-4" />
-            {loading
-              ? "Saving..."
-              : editingId
-              ? "Update Tag"
-              : "Add Tag"}
-          </button>
-
-          {editingId && (
-            <button
-              onClick={resetForm}
-              className="
-                rounded-full
-                px-5 py-2.5
-                text-sm border
-                border-[var(--color-border)]
-              "
-            >
-              Cancel
-            </button>
-          )}
+        {/* Hero */}
+        <div className="atg-hero">
+          <div className="atg-hero-inner">
+            <div>
+              <h1 className="atg-hero-title">Tags</h1>
+              <p className="atg-hero-sub">Manage sustainability tags for products and listings</p>
+            </div>
+            <div>
+              <p className="atg-stat-val">{tags.length}</p>
+              <p className="atg-stat-label">Total</p>
+            </div>
+          </div>
         </div>
-      </section>
 
-      {/* ================= TAG LIST ================= */}
-      <section
-        className="
-          rounded-3xl
-          bg-[var(--color-bg-white)]
-          border border-[var(--color-border)]
-          shadow-[0_10px_30px_rgba(0,0,0,0.06)]
-          p-6
-        "
-      >
-        <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-          Existing Tags
-        </h2>
+        {/* Form */}
+        <div className="atg-form-card">
+          <p className="atg-form-title">{editingId ? "Edit Tag" : "Add Tag"}</p>
+          <div className="atg-row">
+            <input className="atg-input" placeholder="Tag name (e.g. Eco Friendly)" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === "Enter" && saveTag()} />
+            <button onClick={saveTag} disabled={loading} className="atg-save">
+              <Tag size={13} style={{ display: "inline", marginRight: 6 }} />{loading ? "Saving…" : editingId ? "Update Tag" : "Add Tag"}
+            </button>
+            {editingId && <button onClick={resetForm} className="atg-cancel">Cancel</button>}
+          </div>
+        </div>
 
+        {/* Tag chips */}
         {tags.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            No tags created yet.
-          </p>
+          <div className="atg-empty">No tags yet. Add your first one above.</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {tags.map((t) => (
-              <div
-                key={t.id}
-                className="
-                  flex items-center justify-between
-                  rounded-xl border border-[var(--color-border)]
-                  px-4 py-2
-                "
-              >
-                <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                  #{t.name}
+          <div className="atg-list-card">
+            <p className="atg-list-title">All Tags</p>
+            <div className="atg-chips">
+              {tags.map(t => (
+                <span key={t.id} className="atg-chip">
+                  <span className="atg-chip-hash">#</span>
+                  <span className="atg-chip-name">{t.name}</span>
+                  <span className="atg-chip-btns">
+                    <button className="atg-chip-edit" onClick={() => startEdit(t)}><Pencil size={11} /></button>
+                    <button className="atg-chip-del" onClick={() => deleteTag(t.id)}><Trash2 size={11} /></button>
+                  </span>
                 </span>
-
-                <div className="flex gap-3 text-xs">
-                  <button
-                    onClick={() => startEdit(t)}
-                    className="text-[var(--color-ocean-blue)] hover:underline flex items-center gap-1"
-                  >
-                    <Pencil className="h-3 w-3" /> Edit
-                  </button>
-
-                  <button
-                    onClick={() => deleteTag(t.id)}
-                    className="text-red-600 hover:underline flex items-center gap-1"
-                  >
-                    <Trash2 className="h-3 w-3" /> Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
-      </section>
-    </main>
+      </div>
+    </>
   );
 }

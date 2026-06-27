@@ -1,14 +1,20 @@
 "use client";
 import { ReactNode, useEffect, useState } from "react";
-import { getCurrentUser } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getCurrentUser().finally(() => {
-      setLoading(false);
+    let cancelled = false;
+
+    getValidSession().finally(() => {
+      if (!cancelled) setLoading(false);
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) return <div>Loading...</div>;

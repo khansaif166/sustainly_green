@@ -42,23 +42,14 @@ Set these in Cloudflare, because `.env.local` is local only:
 ```text
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
 ```
 
-While the app still uses Firebase, also set:
-
-```text
-NEXT_PUBLIC_FIREBASE_API_KEY
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-NEXT_PUBLIC_FIREBASE_PROJECT_ID
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-NEXT_PUBLIC_FIREBASE_APP_ID
-```
-
-Do not expose service-role database keys as public variables. Backend-only secrets should be configured as Cloudflare Worker secrets when server APIs are added.
+Do not expose service-role database keys as public variables. `SUPABASE_SERVICE_ROLE_KEY` must be configured only as a Cloudflare Worker secret.
 
 ## Notes
 
 - Next.js is built with `next build --webpack` before OpenNext packaging. This avoids the Turbopack build hang seen locally.
 - `output: "standalone"` is required for the OpenNext Cloudflare packaging step.
-- Current app has no `app/api` routes yet. Future Next route handlers can be deployed through this Worker setup.
+- The app now uses `app/api` route handlers for authenticated Supabase-backed APIs.
+- Supabase Storage uploads are still the remaining migration step for real file uploads.

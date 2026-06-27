@@ -224,8 +224,8 @@ function buildPayload(body: Record<string, unknown>, profileId: string) {
       name: body.declarationName || "",
       date: body.declarationDate || "",
     },
-    approved: Boolean(body.approved),
-    status: stringOrNull(body.status) || "submitted",
+    status: "submitted",
+    claim_status: "CLAIMED",
   };
 }
 

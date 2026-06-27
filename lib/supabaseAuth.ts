@@ -124,20 +124,30 @@ function dispatchAuthEvent(name: string, detail?: Record<string, unknown>) {
   window.dispatchEvent(new CustomEvent(name, { detail }));
 }
 
-function getJwtExpiryMs(accessToken?: string) {
-  if (!accessToken || typeof window === "undefined") return undefined;
-
+function decodeJwtPayload(accessToken: string): Record<string, unknown> {
   try {
     const [, payload] = accessToken.split(".");
-    if (!payload) return undefined;
-
+    if (!payload) return {};
     const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const decoded = JSON.parse(window.atob(normalizedPayload)) as { exp?: number };
-
-    return decoded.exp ? decoded.exp * 1000 : undefined;
+    const json =
+      typeof window !== "undefined"
+        ? window.atob(normalizedPayload)
+        : Buffer.from(normalizedPayload, "base64").toString();
+    return JSON.parse(json) as Record<string, unknown>;
   } catch {
-    return undefined;
+    return {};
   }
+}
+
+function getJwtExpiryMs(accessToken?: string) {
+  if (!accessToken) return undefined;
+  const decoded = decodeJwtPayload(accessToken);
+  return typeof decoded.exp === "number" ? decoded.exp * 1000 : undefined;
+}
+
+function getJwtSubject(accessToken: string): string | null {
+  const decoded = decodeJwtPayload(accessToken);
+  return typeof decoded.sub === "string" ? decoded.sub : null;
 }
 
 function getResponseExpiryMs(response: SupabaseAuthResponse) {
@@ -211,6 +221,44 @@ export function getStoredSession(): SupabaseSession | null {
 
     return { ...session, expiresAt };
   } catch {
+    return null;
+  }
+}
+
+// Async version: returns a valid session, refreshing via refresh_token if expired.
+// Use this in async contexts (useEffect, route handlers) instead of getStoredSession().
+export async function getValidSession(): Promise<SupabaseSession | null> {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+
+    const session = JSON.parse(raw) as SupabaseSession;
+    const expiresAt = session.expiresAt || getJwtExpiryMs(session.accessToken);
+
+    // Session still valid
+    if (!expiresAt || Date.now() < expiresAt) {
+      return { ...session, expiresAt };
+    }
+
+    // Expired — attempt refresh
+    if (!session.refreshToken) {
+      clearStoredSession("expired");
+      return null;
+    }
+
+    const response = await authFetch<SupabaseAuthResponse>(
+      "/auth/v1/token?grant_type=refresh_token",
+      {
+        method: "POST",
+        body: JSON.stringify({ refresh_token: session.refreshToken }),
+      },
+    );
+
+    return saveSession(response);
+  } catch {
+    clearStoredSession("expired");
     return null;
   }
 }
@@ -325,6 +373,11 @@ export async function fetchCurrentProfile(accessToken?: string) {
     limit: "1",
   });
 
+  // Always filter by the JWT subject so admins (who can read all profiles via RLS)
+  // don't accidentally receive another user's row when LIMIT 1 is applied.
+  const sub = getJwtSubject(token);
+  if (sub) params.set("auth_user_id", `eq.${sub}`);
+
   const rows = await authFetch<SupabaseProfile[]>(`/rest/v1/profiles?${params}`, {
     accessToken: token,
   });
@@ -404,5 +457,8 @@ export function redirectForRole(profile: SupabaseProfile | null) {
   if (profile?.role === "VENDOR") {
     return profile.vendor_profile_complete ? "/vendor/dashboard" : "/vendor/onboarding";
   }
-  return "/";
+  if (profile?.role === "BUYER") {
+    return profile.buyer_profile_complete ? "/buyer/dashboard" : "/buyer/onboarding";
+  }
+  return "/login";
 }

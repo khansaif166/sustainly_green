@@ -228,8 +228,6 @@ export const Step5SegmentAndSubmit = () => {
 
   const declarationError = errors["declarationAgreed"]?.message as string;
 
-  const today = new Date().toISOString().split("T")[0];
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -311,7 +309,6 @@ export const Step5SegmentAndSubmit = () => {
               name="declarationDate"
               label="Date"
               type="date"
-              defaultValue={today}
               icon={CalendarDays}
               required
             />

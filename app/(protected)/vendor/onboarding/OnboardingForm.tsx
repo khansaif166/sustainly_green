@@ -5,6 +5,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { getStoredSession } from "@/lib/supabaseAuth";
+import { uploadFileToSupabaseStorage } from "@/lib/storage";
 import { onboardingSchema, OnboardingFormData } from "./schema";
 import { Stepper } from "./_components/Stepper";
 import { Step1Identity } from "./_components/Step1Identity";
@@ -109,6 +110,34 @@ export const OnboardingForm = () => {
 
     try {
       const { logoFile, certificateFile, awardsFile, ...cleanData } = data;
+
+      // Upload files to storage and attach URLs before sending to API
+      if (logoFile instanceof File) {
+        const result = await uploadFileToSupabaseStorage(logoFile, {
+          bucket: "marketplace",
+          folder: "vendors/logos",
+          accessToken: session.accessToken,
+        });
+        (cleanData as Record<string, unknown>).logoUrl = result.url;
+      }
+
+      if (certificateFile instanceof File) {
+        const result = await uploadFileToSupabaseStorage(certificateFile, {
+          bucket: "marketplace",
+          folder: "vendors/certificates",
+          accessToken: session.accessToken,
+        });
+        (cleanData as Record<string, unknown>).certificateFileUrl = result.url;
+      }
+
+      if (awardsFile instanceof File) {
+        const result = await uploadFileToSupabaseStorage(awardsFile, {
+          bucket: "marketplace",
+          folder: "vendors/awards",
+          accessToken: session.accessToken,
+        });
+        (cleanData as Record<string, unknown>).awardsImageUrl = result.url;
+      }
 
       const response = await fetch("/api/vendor/profile", {
         method: "PUT",

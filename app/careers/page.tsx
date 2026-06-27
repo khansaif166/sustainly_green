@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { Briefcase, MapPin, Clock, Mail, ArrowLeft } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import Link from "next/link";
+import { fetchActiveCareers } from "@/lib/supabasePublic";
 
 /* ================= TYPES ================= */
 
@@ -27,14 +26,8 @@ export default function CareersPage() {
 
   useEffect(() => {
     async function loadJobs() {
-      const q = query(
-        collection(db, "careers"),
-        where("active", "==", true),
-        orderBy("createdAt", "desc")
-      );
-
-      const snap = await getDocs(q);
-      setJobs(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+      const rows = await fetchActiveCareers();
+      setJobs(rows);
       setLoading(false);
     }
 

@@ -101,7 +101,6 @@ export async function PUT(request: Request) {
       procurement: objectValue(body.procurement),
       segment_details: objectValue(body.segmentDetails),
       declaration: objectValue(body.declaration),
-      approved: Boolean(body.approved),
       status,
     };
 

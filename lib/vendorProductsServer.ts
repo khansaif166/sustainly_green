@@ -91,7 +91,7 @@ export function stringArray(value: unknown) {
 function numberOrNull(value: unknown) {
   if (value === "" || value === null || value === undefined) return null;
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 export function mapProduct(row: ProductRow) {

@@ -1,5 +1,7 @@
 # Sustainly Firebase Data Schema
 
+> Legacy reference: the app has been migrated to Supabase-backed APIs. Keep this document only for understanding the old Firebase shape, legacy field names, and reconciliation/import work.
+
 This document defines the recommended canonical Firebase schema for the current app. It is based on the existing Firestore and Storage usage in the codebase, but tightens naming, types, indexes, and ownership rules so the data is fast to query and clean to migrate later.
 
 ## Architecture Position
