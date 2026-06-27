@@ -23,3 +23,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NEXT_PUBLIC_SUPABASE_URL: https://nhrnynmkvbovwwradvgq.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocm55bm1rdmJvdnd3cmFkdmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxODkzMDMsImV4cCI6MjA5Nzc2NTMwM30.BOOOICozCmu-ViqvbDD19MPO-NbBJFL9kD_t4dcBO7I
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
