@@ -10,6 +10,7 @@ import {
   BookOpen, Inbox,
 } from "lucide-react";
 import { fetchCurrentProfile, getCurrentUser, signOutSupabase } from "@/lib/supabaseAuth";
+import SessionTimeoutNotice from "@/app/components/SessionTimeoutNotice";
 
 const NAV_SECTIONS = [
   {
@@ -159,6 +160,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <>
+      <SessionTimeoutNotice />
       <style>{`
         .al-sidebar{position:fixed;top:0;bottom:0;left:0;width:220px;background:linear-gradient(170deg,#0a1a10 0%,#0d2218 55%,#0b1e14 100%);z-index:50;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
         @media(min-width:768px){.al-sidebar{transform:translateX(0)}}

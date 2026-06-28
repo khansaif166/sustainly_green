@@ -8,6 +8,7 @@ import {
   ChevronRight, Leaf,
 } from "lucide-react";
 import { fetchCurrentProfile, getCurrentUser, getStoredSession, signOutSupabase } from "@/lib/supabaseAuth";
+import SessionTimeoutNotice from "@/app/components/SessionTimeoutNotice";
 
 const nav = [
   { name: "Dashboard", href: "/buyer/dashboard", icon: LayoutDashboard },
@@ -114,6 +115,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
 
   return (
     <>
+      <SessionTimeoutNotice />
       <style>{`
         .bl-sidebar {
           width: 220px; flex-shrink: 0;

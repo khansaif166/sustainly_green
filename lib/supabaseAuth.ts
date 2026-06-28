@@ -204,6 +204,23 @@ export async function saveSessionFromAuthHash(hash: string) {
   return session;
 }
 
+export async function forceRefreshSession(): Promise<SupabaseSession | null> {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw) as SupabaseSession;
+    if (!session.refreshToken) return null;
+    const response = await authFetch<SupabaseAuthResponse>(
+      "/auth/v1/token?grant_type=refresh_token",
+      { method: "POST", body: JSON.stringify({ refresh_token: session.refreshToken }) },
+    );
+    return saveSession(response);
+  } catch {
+    return null;
+  }
+}
+
 export function getStoredSession(): SupabaseSession | null {
   if (typeof window === "undefined") return null;
 
