@@ -57,8 +57,10 @@ type SupplierCard = {
   id: string;
   name: string;
   country: string;
+  subcategories?: string[];
   rating: string;
   mark: string;
+  badge: string;
   isUnclaimed?: boolean;
 };
 
@@ -79,26 +81,28 @@ const quickActions = [
   {
     title: "Post Requirement",
     text: "Share your need and get quotes from verified suppliers.",
+    action: "popup",
   },
   {
     title: "Request a Quote",
     text: "Compare offers and choose the best deal.",
+    href: "/buyer/rfq/new",
   },
   {
     title: "List Your Business",
     text: "Showcase your products and grow your reach.",
+    href: "/register?role=VENDOR",
   },
   {
     title: "Supplier Verification",
     text: "Build trust with verified business badge.",
+    href: "/contact",
   },
 ];
 
 const topTabs = [
   "Products",
   "Suppliers",
-  "Deals",
-  "Green Directory",
   "Certifications",
   "Services",
 ];
@@ -209,10 +213,10 @@ const staticFeaturedProducts: ProductCard[] = [
 ];
 
 const staticSuppliers: SupplierCard[] = [
-  { id: "ecovolt", name: "EcoVolt Solutions", country: "India", rating: "4.8", mark: "EV" },
-  { id: "greenbuild", name: "GreenBuild Exim", country: "Germany", rating: "4.7", mark: "GB" },
-  { id: "purewater", name: "PureWater Tech", country: "India", rating: "4.9", mark: "PW" },
-  { id: "sustainpack", name: "SustainPack Ltd.", country: "United Kingdom", rating: "4.6", mark: "SP" },
+  { id: "ecovolt", name: "EcoVolt Solutions", country: "India", rating: "4.8", mark: "EV", badge: "Verified" },
+  { id: "greenbuild", name: "GreenBuild Exim", country: "Germany", rating: "4.7", mark: "GB", badge: "Verified" },
+  { id: "purewater", name: "PureWater Tech", country: "India", rating: "4.9", mark: "PW", badge: "Verified" },
+  { id: "sustainpack", name: "SustainPack Ltd.", country: "United Kingdom", rating: "4.6", mark: "SP", badge: "Verified" },
 ];
 
 function iconForCategory(icon: string) {
@@ -257,6 +261,7 @@ export default function HomePage() {
   const [bestSellers, setBestSellers] = useState<ProductCard[]>(staticProducts);
   const [featuredProducts, setFeaturedProducts] = useState<ProductCard[]>(staticFeaturedProducts);
   const [featuredSuppliers, setFeaturedSuppliers] = useState<SupplierCard[]>(staticSuppliers);
+  const [requirementNoticeOpen, setRequirementNoticeOpen] = useState(false);
 
   useEffect(() => {
     async function loadAuth() {
@@ -346,8 +351,10 @@ export default function HomePage() {
                 id: vendor.id,
                 name: companyName,
                 country: vendor.country || vendor.location || "India",
+                subcategories: vendor.subCategories,
                 rating: vendor.isUnclaimed ? "Listed" : "4.8",
                 mark: vendor.logoText,
+                badge: vendor.isUnclaimed ? "Listed" : vendor.listingVerified ? "Verified" : "Approved",
                 isUnclaimed: vendor.isUnclaimed,
               };
             }),
@@ -380,6 +387,20 @@ export default function HomePage() {
   }
 
   const dashboardLink = profile ? redirectForRole(profile) : "/login";
+  const certificationCategory = categoryOptions.find((item) =>
+    /certification|esg|advisory/i.test(item.name),
+  );
+
+  function hrefForTopTab(tab: string) {
+    if (tab === "Suppliers") return "/browse?type=vendor";
+    if (tab === "Services") return "/browse?type=Service";
+    if (tab === "Certifications") {
+      const params = new URLSearchParams({ type: "Service" });
+      if (certificationCategory) params.set("category", certificationCategory.id);
+      return `/browse?${params.toString()}`;
+    }
+    return "/browse";
+  }
 
   return (
     <main className="market-home">
@@ -478,7 +499,7 @@ export default function HomePage() {
               {topTabs.map((tab) => (
                 <Link
                   key={tab}
-                  href={tab === "Suppliers" ? "/browse?type=vendor" : "/browse"}
+                  href={hrefForTopTab(tab)}
                   className="menu-tab"
                 >
                   {tab}
@@ -567,12 +588,9 @@ export default function HomePage() {
           </aside>
 
           <div className="quick-action-grid">
-            {quickActions.map((item) => (
-              <Link
-                key={item.title}
-                href={item.title === "List Your Business" ? "/register?role=VENDOR" : "/browse"}
-                className={`quick-action-card${item.title === "Supplier Verification" ? " verification-card" : ""}`}
-              >
+            {quickActions.map((item) => {
+              const content = (
+                <>
                 <div className="quick-action-icon">
                   <BadgeCheck size={20} />
                 </div>
@@ -581,8 +599,32 @@ export default function HomePage() {
                   <p>{item.text}</p>
                 </div>
                 <ArrowRight size={16} />
-              </Link>
-            ))}
+                </>
+              );
+
+              if (item.action === "popup") {
+                return (
+                  <button
+                    key={item.title}
+                    type="button"
+                    className="quick-action-card quick-action-button"
+                    onClick={() => setRequirementNoticeOpen(true)}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.title}
+                  href={item.href || "/browse"}
+                  className={`quick-action-card${item.title === "Supplier Verification" ? " verification-card" : ""}`}
+                >
+                  {content}
+                </Link>
+              );
+            })}
           </div>
         </section>
 
@@ -647,8 +689,11 @@ export default function HomePage() {
                   <div className={`supplier-mark mark-${index % 4}`}>{supplier.mark}</div>
                   <h3>{supplier.name}</h3>
                   <p className="supplier-country">{supplier.country}</p>
+                  {supplier.subcategories?.length ? (
+                    <p className="supplier-subcats">{supplier.subcategories.slice(0, 2).join(", ")}</p>
+                  ) : null}
                   <p className="verified-label">
-                    {supplier.isUnclaimed ? "Listed Supplier" : "Verified Supplier"}
+                    {supplier.badge}
                   </p>
                   <div className="supplier-rating">
                     <span>{supplier.rating}</span>
@@ -732,6 +777,34 @@ export default function HomePage() {
 
       <Footer />
 
+      {requirementNoticeOpen && (
+        <div className="notice-backdrop" role="dialog" aria-modal="true" aria-labelledby="requirement-notice-title">
+          <div className="notice-card">
+            <button
+              type="button"
+              className="notice-close"
+              aria-label="Close"
+              onClick={() => setRequirementNoticeOpen(false)}
+            >
+              ×
+            </button>
+            <div className="notice-icon">
+              <BadgeCheck size={22} />
+            </div>
+            <h2 id="requirement-notice-title">Requirement posting is opening soon</h2>
+            <p>
+              We are setting up the guided requirement form. For now, contact Sustainly Green and our team will help you raise the request with matching vendors.
+            </p>
+            <div className="notice-actions">
+              <Link href="/contact" className="notice-primary">Contact team</Link>
+              <button type="button" className="notice-secondary" onClick={() => setRequirementNoticeOpen(false)}>
+                Continue browsing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .market-home {
           background: #fcfdfb;
@@ -744,6 +817,116 @@ export default function HomePage() {
           max-width: none;
           margin: 0;
           padding: 0 0 48px;
+        }
+
+        .quick-action-button {
+          border: 0;
+          text-align: left;
+          width: 100%;
+          font: inherit;
+          cursor: pointer;
+        }
+
+        .supplier-subcats {
+          margin: 2px 0 0;
+          color: #516257;
+          font-size: 12px;
+          line-height: 1.35;
+        }
+
+        .notice-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 80;
+          display: grid;
+          place-items: center;
+          padding: 20px;
+          background: rgba(7, 22, 14, 0.48);
+          backdrop-filter: blur(6px);
+        }
+
+        .notice-card {
+          position: relative;
+          width: min(440px, 100%);
+          border-radius: 22px;
+          background: #fff;
+          border: 1px solid #dfe9e2;
+          box-shadow: 0 24px 70px rgba(7, 22, 14, 0.24);
+          padding: 28px;
+          color: #10241b;
+        }
+
+        .notice-close {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          width: 32px;
+          height: 32px;
+          border: 1px solid #dfe9e2;
+          border-radius: 50%;
+          background: #fff;
+          color: #516257;
+          font-size: 20px;
+          line-height: 1;
+          cursor: pointer;
+        }
+
+        .notice-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 16px;
+          display: grid;
+          place-items: center;
+          color: #147a3d;
+          background: #ecfdf3;
+          margin-bottom: 18px;
+        }
+
+        .notice-card h2 {
+          margin: 0 0 10px;
+          font-size: 24px;
+          line-height: 1.15;
+          letter-spacing: 0;
+        }
+
+        .notice-card p {
+          margin: 0;
+          color: #5b6b61;
+          font-size: 14px;
+          line-height: 1.65;
+        }
+
+        .notice-actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 22px;
+        }
+
+        .notice-primary,
+        .notice-secondary {
+          min-height: 42px;
+          border-radius: 999px;
+          padding: 0 18px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 13px;
+          font-weight: 800;
+          text-decoration: none;
+        }
+
+        .notice-primary {
+          background: #147a3d;
+          color: #fff;
+        }
+
+        .notice-secondary {
+          border: 1px solid #dfe9e2;
+          background: #fff;
+          color: #10241b;
+          cursor: pointer;
+          font-family: inherit;
         }
 
         .market-header {

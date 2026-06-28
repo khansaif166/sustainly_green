@@ -170,6 +170,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         @media(min-width:768px){.al-mobile-bar{display:none}}
         .al-main{margin-left:0;padding:68px 16px 32px;min-height:100vh;background:#f8faf9}
         @media(min-width:768px){.al-main{margin-left:220px;padding:28px 28px 32px}}
+        .al-main input,
+        .al-main select,
+        .al-main textarea {
+          border-color: #cbd5d1 !important;
+          color: #10241b !important;
+        }
+        .al-main input::placeholder,
+        .al-main textarea::placeholder {
+          color: #6b7b71 !important;
+        }
+        .al-main label {
+          color: #37483d;
+        }
       `}</style>
 
       {/* Mobile bar */}

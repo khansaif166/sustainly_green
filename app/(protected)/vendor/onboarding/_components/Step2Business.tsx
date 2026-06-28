@@ -4,9 +4,33 @@ import React from "react";
 import { Input, Select, MultiSelect, TextArea, Toggle } from "./FormFields";
 import { useFormContext } from "react-hook-form";
 
-export const Step2Business = () => {
-  const { watch } = useFormContext();
+type CategoryOption = { id: string; name: string };
+type SubcategoryOption = { id: string; name: string; categoryId: string };
+
+type Step2BusinessProps = {
+  categories?: CategoryOption[];
+  subcategories?: SubcategoryOption[];
+};
+
+export const Step2Business = ({ categories = [], subcategories = [] }: Step2BusinessProps) => {
+  const { watch, setValue } = useFormContext();
   const exportEnabled = watch("exportCapability");
+  const primaryCategory = watch("primaryCategory");
+  const selectedCategory = categories.find((category) => category.name === primaryCategory || category.id === primaryCategory);
+  const subcategoryOptions = selectedCategory
+    ? subcategories.filter((item) => item.categoryId === selectedCategory.id).map((item) => item.name)
+    : subcategories.map((item) => item.name);
+
+  React.useEffect(() => {
+    const selected = watch("subCategories") || [];
+    if (!selectedCategory || !Array.isArray(selected) || selected.length === 0) return;
+
+    const allowed = new Set(subcategoryOptions);
+    const next = selected.filter((item) => allowed.has(item));
+    if (next.length !== selected.length) {
+      setValue("subCategories", next, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [primaryCategory, selectedCategory, setValue, subcategoryOptions, watch]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -27,15 +51,24 @@ export const Step2Business = () => {
             { label: "Distributor", value: "distributor" },
           ]} 
         />
-        <Input 
-          name="primaryCategory" 
-          label="Primary Category *" 
-          placeholder="e.g. Renewable Energy" 
-        />
+        {categories.length > 0 ? (
+          <Select
+            name="primaryCategory"
+            label="Primary Category *"
+            options={categories.map((category) => ({ label: category.name, value: category.name }))}
+          />
+        ) : (
+          <Input
+            name="primaryCategory"
+            label="Primary Category *"
+            placeholder="e.g. Renewable Energy"
+          />
+        )}
         
         <MultiSelect 
           name="subCategories" 
           label="Sub Categories" 
+          options={subcategoryOptions}
           max={3}
         />
 

@@ -77,6 +77,19 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         .vl-main{margin-left:0;padding:68px 16px 32px;min-height:100vh;background:#f8faf9}
         @media(min-width:768px){.vl-main{margin-left:240px;padding:28px 28px 32px}}
         .vl-portal-tag{padding:10px 10px 6px;display:flex;align-items:center;gap:8px}
+        .vl-main input,
+        .vl-main select,
+        .vl-main textarea {
+          border-color: #cbd5d1 !important;
+          color: #10241b !important;
+        }
+        .vl-main input::placeholder,
+        .vl-main textarea::placeholder {
+          color: #6b7b71 !important;
+        }
+        .vl-main label {
+          color: #37483d;
+        }
       `}</style>
 
       {/* Mobile top bar */}

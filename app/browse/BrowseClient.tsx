@@ -25,21 +25,21 @@ type Product = {
   price?: number; vendorName?: string; ecoScore?: number;
   certifications?: string[]; tags?: string[];
 };
-type Vendor = PublicVendor & { ecoTier?: string; GreenLensScore?: number };
+type Vendor = PublicVendor & { GreenLensScore?: number };
 type Category = { id: string; name: string; imageUrl?: string };
-interface FilterState { ecoTier: string; location: string; sortBy: string; }
-const DEFAULT_FILTERS: FilterState = { ecoTier: "", location: "", sortBy: "newest" };
+interface FilterState { badge: string; location: string; sortBy: string; }
+const DEFAULT_FILTERS: FilterState = { badge: "", location: "", sortBy: "newest" };
 
-const ECO_TIERS = [
-  { val: "", label: "All Tiers", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
-  { val: "platinum", label: "💎 Platinum", color: "#7c3aed", bg: "rgba(124,58,237,0.1)" },
-  { val: "gold", label: "🥇 Gold", color: "#d97706", bg: "rgba(217,119,6,0.1)" },
-  { val: "silver", label: "🥈 Silver", color: "#64748b", bg: "rgba(100,116,135,0.1)" },
-  { val: "bronze", label: "🥉 Bronze", color: "#b45309", bg: "rgba(180,83,9,0.1)" },
+const BADGES = [
+  { val: "", label: "All Badges", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
+  { val: "verified", label: "Verified", color: "#15803d", bg: "rgba(22,163,74,0.12)" },
+  { val: "approved", label: "Approved", color: "#0369a1", bg: "rgba(3,105,161,0.1)" },
+  { val: "listed", label: "Listed", color: "#b45309", bg: "rgba(180,83,9,0.1)" },
+  { val: "claim_requested", label: "Claim Requested", color: "#7c3aed", bg: "rgba(124,58,237,0.1)" },
 ];
 
-function ecoTierStyle(tier?: string) {
-  const t = ECO_TIERS.find(e => e.val === tier?.toLowerCase());
+function badgeStyle(badge?: string) {
+  const t = BADGES.find(e => e.val === badge?.toLowerCase());
   return t ? { color: t.color, background: t.bg } : { color: "#64748b", background: "rgba(100,116,135,0.1)" };
 }
 
@@ -47,6 +47,31 @@ function vt(v: unknown, fb = "") {
   if (typeof v === "string") return v;
   if (typeof v === "number" || typeof v === "boolean") return String(v);
   return fb;
+}
+
+function vendorBadge(v: Vendor) {
+  if (v.isClaimRequested) return "claim_requested";
+  if (v.isUnclaimed) return "listed";
+  if (v.listingVerified) return "verified";
+  return "approved";
+}
+
+function vendorBadgeLabel(v: Vendor) {
+  const badge = BADGES.find((item) => item.val === vendorBadge(v));
+  return badge?.label || "Approved";
+}
+
+function vendorSearchText(v: Vendor) {
+  return [
+    v.companyName,
+    v.description,
+    v.category,
+    v.location,
+    v.city,
+    v.state,
+    v.country,
+    ...(v.subCategories || []),
+  ].map((value) => vt(value)).join(" ").toLowerCase();
 }
 
 /* ============================================================
@@ -87,14 +112,17 @@ export default function BrowsePage() {
             const s = search.toLowerCase();
             list = list.filter(p => (p.title || "").toLowerCase().includes(s) || (p.description || "").toLowerCase().includes(s) || (p.tags || []).some(t => t.toLowerCase().includes(s)));
           }
-          if (filters.ecoTier) list = list.filter(p => (p.certifications || []).some(c => c.toLowerCase().includes(filters.ecoTier)));
+          if (filters.badge) list = list.filter(p => (p.certifications || []).some(c => c.toLowerCase().includes(filters.badge)));
           if (filters.sortBy === "eco_score") list = list.sort((a, b) => (b.ecoScore || 0) - (a.ecoScore || 0));
           setProducts(list); setVendors([]); setTotalCount(list.length);
         } else {
           let list: Vendor[] = await fetchApprovedVendors();
-          if (search) { const s = search.toLowerCase(); list = list.filter(v => (vt(v.companyName) + vt(v.description) + vt(v.category) + vt(v.location)).toLowerCase().includes(s)); }
-          if (filters.ecoTier) list = list.filter(v => (v.ecoTier || "").toLowerCase() === filters.ecoTier);
-          if (filters.location) list = list.filter(v => vt(v.location).toLowerCase().includes(filters.location.toLowerCase()));
+          if (search) { const s = search.toLowerCase(); list = list.filter(v => vendorSearchText(v).includes(s)); }
+          if (filters.badge) list = list.filter(v => vendorBadge(v) === filters.badge);
+          if (filters.location) {
+            const loc = filters.location.toLowerCase();
+            list = list.filter(v => [v.location, v.city, v.state, v.country].map(value => vt(value)).join(" ").toLowerCase().includes(loc));
+          }
           if (filters.sortBy === "eco_score") list = list.sort((a, b) => (b.ecoScore || 0) - (a.ecoScore || 0));
           setVendors(list); setProducts([]); setTotalCount(list.length);
         }
@@ -119,7 +147,7 @@ export default function BrowsePage() {
 
   function resetAll() { setFilters(DEFAULT_FILTERS); router.push(`/browse?type=${type}`); }
 
-  const activeCount = [filters.ecoTier, filters.location].filter(Boolean).length;
+  const activeCount = [filters.badge, filters.location].filter(Boolean).length;
 
   /* ---- Sidebar ---- */
   const Sidebar = () => (
@@ -166,15 +194,15 @@ export default function BrowsePage() {
         </div>
       )}
 
-      {/* Eco Tier */}
+      {/* Badge */}
       <div className="bs-section">
         <button className="bs-section-btn" onClick={() => setExpanded(e => ({ ...e, eco: !e.eco }))}>
-          <span>Eco Tier</span>{expanded.eco ? <FiChevronUp size={13} /> : <FiChevronDown size={13} />}
+          <span>Badges</span>{expanded.eco ? <FiChevronUp size={13} /> : <FiChevronDown size={13} />}
         </button>
         {expanded.eco && (
           <div className="bs-opts">
-            {ECO_TIERS.map(({ val, label }) => (
-              <button key={val} className={`bs-opt${filters.ecoTier === val ? " bs-opt-active" : ""}`} onClick={() => setFilters(f => ({ ...f, ecoTier: val }))}>{label}</button>
+            {BADGES.map(({ val, label }) => (
+              <button key={val} className={`bs-opt${filters.badge === val ? " bs-opt-active" : ""}`} onClick={() => setFilters(f => ({ ...f, badge: val }))}>{label}</button>
             ))}
           </div>
         )}
@@ -271,9 +299,7 @@ export default function BrowsePage() {
           <h3 className="bs-vc-name">{vt(v.companyName, "Unnamed Vendor")}</h3>
           {v.category && <p className="bs-vc-cat">{vt(v.category)}</p>}
         </div>
-        {typeof v.ecoTier === "string" && v.ecoTier && (
-          <span className="bs-vc-tier" style={ecoTierStyle(v.ecoTier)}>{v.ecoTier.toUpperCase()}</span>
-        )}
+        <span className="bs-vc-tier" style={badgeStyle(vendorBadge(v))}>{vendorBadgeLabel(v)}</span>
       </div>
 
       {v.description && <p className="bs-card-desc">{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 100)}…</p>}
@@ -282,6 +308,7 @@ export default function BrowsePage() {
         {(typeof v.GreenLensScore === "number" || typeof v.GreenLensScore === "string") && (
           <span className="bs-tag bs-tag-green"><HiOutlineShieldCheck size={10} />BL {vt(v.GreenLensScore)}/5</span>
         )}
+        {(v.subCategories || []).slice(0, 3).map((item, i) => <span key={`sub-${i}`} className="bs-tag">{vt(item)}</span>)}
         {(v.certifications || []).slice(0, 2).map((c, i) => <span key={i} className="bs-tag">{vt(c)}</span>)}
       </div>
 
@@ -295,7 +322,7 @@ export default function BrowsePage() {
       )}
 
       <div className="bs-vc-foot">
-        {v.location && <span className="bs-vc-loc"><FiMapPin size={11} />{vt(v.location)}</span>}
+        {(v.state || v.location) && <span className="bs-vc-loc"><FiMapPin size={11} />{vt(v.state || v.location)}</span>}
         <span className="bs-view-cta">{v.isUnclaimed ? "View Listing" : "View Profile"} <FiExternalLink size={10} /></span>
       </div>
     </Link>
@@ -307,13 +334,16 @@ export default function BrowsePage() {
       <div className="bs-row-body">
         <h3 className="bs-row-title">{vt(v.companyName, "Unnamed Vendor")}</h3>
         {v.category && <p className="bs-card-vendor" style={{ marginBottom: 4 }}>{vt(v.category)}</p>}
+        {(v.subCategories || []).length > 0 && (
+          <div className="bs-card-tags" style={{ marginTop: 6 }}>
+            {v.subCategories!.slice(0, 3).map((item, i) => <span key={i} className="bs-tag">{vt(item)}</span>)}
+          </div>
+        )}
         {v.description && <p className="bs-card-desc">{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 110)}…</p>}
       </div>
       <div className="bs-row-right">
-        {typeof v.ecoTier === "string" && v.ecoTier && (
-          <span className="bs-vc-tier" style={ecoTierStyle(v.ecoTier)}>{v.ecoTier.toUpperCase()}</span>
-        )}
-        {v.location && <span className="bs-vc-loc"><FiMapPin size={11} />{vt(v.location)}</span>}
+        <span className="bs-vc-tier" style={badgeStyle(vendorBadge(v))}>{vendorBadgeLabel(v)}</span>
+        {(v.state || v.location) && <span className="bs-vc-loc"><FiMapPin size={11} />{vt(v.state || v.location)}</span>}
         <span className="bs-view-cta">{v.isUnclaimed ? "View Listing" : "View Profile"} <FiExternalLink size={10} /></span>
       </div>
     </Link>
@@ -699,9 +729,13 @@ export default function BrowsePage() {
             </div>
 
             {/* Active filter chips */}
-            {(filters.ecoTier || filters.location) && (
+            {(filters.badge || filters.location) && (
               <div className="bs-active-chips">
-                {filters.ecoTier && <button className="bs-chip" onClick={() => setFilters(f => ({ ...f, ecoTier: "" }))}>{filters.ecoTier} <FiX size={10} /></button>}
+                {filters.badge && (
+                  <button className="bs-chip" onClick={() => setFilters(f => ({ ...f, badge: "" }))}>
+                    {BADGES.find((item) => item.val === filters.badge)?.label || filters.badge} <FiX size={10} />
+                  </button>
+                )}
                 {filters.location && <button className="bs-chip" onClick={() => setFilters(f => ({ ...f, location: "" }))}>{filters.location} <FiX size={10} /></button>}
               </div>
             )}

@@ -159,7 +159,7 @@ export default function CareersPage() {
           </p>
 
           <a
-            href="mailto:support@sustainlygreen.com"
+            href="mailto:grow@sustainlygreen.com"
             className="
             inline-flex items-center gap-2
             mt-2
@@ -171,7 +171,7 @@ export default function CareersPage() {
           "
           >
             <Mail className="h-4 w-4" />
-            support@sustainlygreen.com
+            grow@sustainlygreen.com
           </a>
         </section>
       </main>

@@ -8,6 +8,7 @@ type SupabaseVendorRow = {
   country: string | null;
   business_email: string | null;
   primary_category: string | null;
+  sub_categories: string[] | null;
   short_description: string | null;
   primary_sustainability_cert: string | null;
   eco_score: number | null;
@@ -77,6 +78,7 @@ export type PublicVendor = {
   state?: string;
   country?: string;
   category?: string;
+  subCategories?: string[];
   ecoScore?: number;
   certifications?: string[];
   approved: boolean;
@@ -166,6 +168,7 @@ const VENDOR_SELECT = [
   "country",
   "business_email",
   "primary_category",
+  "sub_categories",
   "short_description",
   "primary_sustainability_cert",
   "eco_score",
@@ -287,6 +290,7 @@ function mapVendor(row: SupabaseVendorRow): PublicVendor {
     state: state || undefined,
     country: country || undefined,
     category: stringValue(row.primary_category) || undefined,
+    subCategories: stringArray(row.sub_categories),
     ecoScore: row.eco_score ?? undefined,
     certifications,
     approved: Boolean(row.approved),

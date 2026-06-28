@@ -14,11 +14,16 @@ import { Step3Sustainability } from "./_components/Step3Sustainability";
 import { Step4Marketplace } from "./_components/Step4Marketplace";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 
+type CatalogCategory = { id: string; name: string };
+type CatalogSubcategory = { id: string; name: string; categoryId: string };
+
 export const OnboardingForm = () => {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [categories, setCategories] = useState<CatalogCategory[]>([]);
+  const [subcategories, setSubcategories] = useState<CatalogSubcategory[]>([]);
 
   const methods = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingSchema) as any,
@@ -64,6 +69,18 @@ export const OnboardingForm = () => {
 
         if (payload.vendor) {
           reset({ ...payload.vendor } as any);
+        }
+
+        const catalogResponse = await fetch("/api/vendor/catalog", {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+
+        if (catalogResponse.ok) {
+          const catalog = await catalogResponse.json();
+          setCategories(catalog.categories || []);
+          setSubcategories(catalog.subcategories || []);
         }
       } catch (error) {
         console.error("Vendor profile load failed:", error);
@@ -179,7 +196,7 @@ export const OnboardingForm = () => {
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)}>
               {step === 1 && <Step1Identity />}
-              {step === 2 && <Step2Business />}
+              {step === 2 && <Step2Business categories={categories} subcategories={subcategories} />}
               {step === 3 && <Step3Sustainability />}
               {step === 4 && <Step4Marketplace />}
 

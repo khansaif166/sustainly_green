@@ -125,6 +125,19 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         }
         @media (max-width: 767px) { .bl-sidebar { display: none; } }
         .bl-content { flex: 1; overflow-y: auto; background: #f3f5f4; }
+        .bl-content input,
+        .bl-content select,
+        .bl-content textarea {
+          border-color: #cbd5d1 !important;
+          color: #10241b !important;
+        }
+        .bl-content input::placeholder,
+        .bl-content textarea::placeholder {
+          color: #6b7b71 !important;
+        }
+        .bl-content label {
+          color: #37483d;
+        }
         .bl-topbar {
           display: none; position: sticky; top: 0; z-index: 40;
           background: #fff; border-bottom: 1px solid rgba(0,0,0,0.07);

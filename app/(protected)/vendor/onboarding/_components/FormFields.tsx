@@ -60,6 +60,7 @@ export const Select: React.FC<InputProps & { options: { label: string; value: st
       <label className="text-sm font-medium text-gray-700 ml-1">{label}</label>
       <select
         {...register(name)}
+        {...(props as any)}
         className={`w-full px-4 py-2.5 bg-white border ${error ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-xl outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 appearance-none`}
       >
         <option value="">Select {label}</option>
@@ -74,14 +75,14 @@ export const Select: React.FC<InputProps & { options: { label: string; value: st
 
 export const Toggle: React.FC<{ name: string; label: string }> = ({ name, label }) => {
   const { register, watch, setValue } = useFormContext();
-  const checked = watch(name);
+  const checked = Boolean(watch(name));
 
   return (
     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
       <span className="text-sm font-medium text-gray-700">{label}</span>
       <button
         type="button"
-        onClick={() => setValue(name, !checked)}
+        onClick={() => setValue(name, !checked, { shouldDirty: true, shouldValidate: true })}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${checked ? 'bg-green-600' : 'bg-gray-200'}`}
       >
         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -100,14 +101,16 @@ export const MultiSelect: React.FC<{ name: string; label: string; options?: stri
   const handleAdd = (val: string) => {
     const trimmed = val.trim();
     if (trimmed && !selected.includes(trimmed) && selected.length < max) {
-      setValue(name, [...selected, trimmed]);
+      setValue(name, [...selected, trimmed], { shouldDirty: true, shouldValidate: true });
       setInputValue("");
     }
   };
 
   const handleRemove = (val: string) => {
-    setValue(name, selected.filter(s => s !== val));
+    setValue(name, selected.filter(s => s !== val), { shouldDirty: true, shouldValidate: true });
   };
+
+  const availableOptions = (options || []).filter((option) => !selected.includes(option));
 
   return (
     <div className="space-y-1.5 flex-1">
@@ -129,11 +132,25 @@ export const MultiSelect: React.FC<{ name: string; label: string; options?: stri
                 handleAdd(inputValue);
               }
             }}
-            placeholder={selected.length === 0 ? `Type and press Enter...` : ""}
+            placeholder={selected.length === 0 ? (options?.length ? "Select from options..." : "Type and press Enter...") : ""}
             className="flex-1 outline-none text-sm text-gray-900 min-w-[100px]"
           />
         )}
       </div>
+      {availableOptions.length > 0 && selected.length < max && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {availableOptions.slice(0, 12).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => handleAdd(option)}
+              className="px-2.5 py-1 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:border-green-500 hover:text-green-700 hover:bg-green-50 transition-colors"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
       {error && <p className="text-xs text-red-500 ml-1">{error}</p>}
     </div>
   );

@@ -192,7 +192,7 @@ export default function VendorProfilePage() {
               </div>
 
               <Link
-                href={`/rfq/${vendorId}`}
+                href="/buyer/rfq/new"
                 className="mt-4 inline-block w-full text-center rounded-full bg-black text-white py-2 text-sm"
               >
                 Contact Vendor
