@@ -67,17 +67,28 @@
 }
 
 /* ================= BASE ================= */
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
 
 body {
   background: var(--background);
   color: black;
   font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 a { text-decoration: none; color: inherit; }
 button { font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; border: none; }
+img, svg, video, canvas { max-width: 100%; }
+body > * { min-width: 0; max-width: 100%; }
 
 /* Hide scrollbar */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -154,9 +165,14 @@ html, body {
   font-size: 12.5px;
   color: rgba(255,255,255,0.7);
   letter-spacing: 0.15px;
+  max-width: 100%;
+  width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+  white-space: normal;
 }
 .ann b { color: #fff; }
-.ann a { color: #5EE89A; margin-left: 6px; font-weight: 600; }
+.ann a { color: #5EE89A; margin-left: 6px; font-weight: 600; white-space: nowrap; }
 
 /* ═══════════════════════════════════════
    NAVBAR — frosted glass Apple-style
@@ -170,8 +186,12 @@ html, body {
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(0,0,0,0.08);
   transition: background 0.3s, box-shadow 0.3s;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 .nav-inner {
+  width: 100%;
   max-width: 1280px;
   margin: 0 auto;
   display: flex;
@@ -180,6 +200,8 @@ html, body {
   padding: 0 40px;
   height: 64px;
   gap: 24px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .nav-logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
 .nav-logo-icon {
@@ -897,6 +919,8 @@ footer { background: #050A06; padding: 60px 0 0; }
   max-width: 1280px; margin: 0 auto; padding: 0 40px 48px;
   display: grid; grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr; gap: 40px;
 }
+.footer-logo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.footer-logo-img { width: 118px; height: auto; object-fit: contain; border-radius: 8px; background: #fff; padding: 4px 7px; }
 .footer-brand-name { font-family: 'Instrument Serif', serif; font-size: 24px; color: #fff; letter-spacing: -0.5px; }
 .footer-brand-name span { color: var(--g); }
 .footer-brand-sub { font-size: 13px; color: rgba(255,255,255,0.35); line-height: 1.7; margin: 14px 0 20px; max-width: 260px; }
@@ -938,6 +962,9 @@ footer { background: #050A06; padding: 60px 0 0; }
 @media (max-width: 900px) {
   .nav-links { display: none; }
   .nav-search { display: none; }
+  .nav-inner { gap: 12px; }
+  .nav-actions { gap: 6px; min-width: 0; }
+  .nbtn { padding: 8px 12px; font-size: 12.5px; }
   .hero-h1 { font-size: 44px; }
   .hero-content { padding: 60px 20px 40px; }
   .hero-sub { font-size: 16px; }
@@ -957,6 +984,26 @@ footer { background: #050A06; padding: 60px 0 0; }
   .cat-icon { height: 160px; }
 }
 @media (max-width: 640px) {
+  .ann {
+    padding: 8px 12px;
+    font-size: 11.5px;
+  }
+  .ann a {
+    display: inline-flex;
+    margin-left: 4px;
+    white-space: normal;
+  }
+  .nav-inner {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .nav-logo img {
+    width: 112px !important;
+    height: auto;
+  }
+  .nav-actions .nbtn {
+    display: none;
+  }
   .hero { min-height: 85vh; }
   .hero-content { padding: 40px 16px 30px; }
   .hero-h1 { font-size: 32px; margin-bottom: 16px; }

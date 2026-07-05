@@ -23,17 +23,22 @@ import Footer from "./components/layouts/Footer";
 import {
   ArrowRight,
   BadgeCheck,
+  BarChart3,
+  Box,
+  Building2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
+  Droplets,
   Globe,
   Leaf,
   Menu,
+  Recycle,
   Search,
   ShieldCheck,
-  ShoppingBag,
-  Tractor,
+  Sprout,
+  Sun,
+  Truck,
   UserRound,
   Zap,
 } from "lucide-react";
@@ -81,7 +86,7 @@ const quickActions = [
   {
     title: "Post Requirement",
     text: "Share your need and get quotes from verified suppliers.",
-    action: "popup",
+    action: "buyerRequirement",
   },
   {
     title: "Request a Quote",
@@ -224,25 +229,27 @@ function iconForCategory(icon: string) {
 
   switch (icon) {
     case "sun":
+      return <Sun {...commonProps} />;
+    case "zap":
       return <Zap {...commonProps} />;
     case "drop":
-      return <Leaf {...commonProps} />;
+      return <Droplets {...commonProps} />;
     case "recycle":
-      return <ShieldCheck {...commonProps} />;
+      return <Recycle {...commonProps} />;
     case "building":
-      return <ShoppingBag {...commonProps} />;
+      return <Building2 {...commonProps} />;
     case "hex":
       return <BadgeCheck {...commonProps} />;
     case "box":
-      return <ShoppingBag {...commonProps} />;
+      return <Box {...commonProps} />;
     case "truck":
-      return <ArrowRight {...commonProps} />;
+      return <Truck {...commonProps} />;
     case "sprout":
-      return <Tractor {...commonProps} />;
+      return <Sprout {...commonProps} />;
     case "chart":
-      return <CircleHelp {...commonProps} />;
+      return <BarChart3 {...commonProps} />;
     default:
-      return <Zap {...commonProps} />;
+      return <Leaf {...commonProps} />;
   }
 }
 
@@ -261,7 +268,6 @@ export default function HomePage() {
   const [bestSellers, setBestSellers] = useState<ProductCard[]>(staticProducts);
   const [featuredProducts, setFeaturedProducts] = useState<ProductCard[]>(staticFeaturedProducts);
   const [featuredSuppliers, setFeaturedSuppliers] = useState<SupplierCard[]>(staticSuppliers);
-  const [requirementNoticeOpen, setRequirementNoticeOpen] = useState(false);
 
   useEffect(() => {
     async function loadAuth() {
@@ -411,7 +417,7 @@ export default function HomePage() {
             <div className="utility-links">
               <Link href="/buyer/dashboard">Buyer</Link>
               <Link href="/vendor/dashboard">Supplier</Link>
-              <Link href="/blogs">Resources</Link>
+              <Link href="/resources">Resources</Link>
               <button type="button" className="utility-link globe-link">
                 <Globe size={14} />
                 EN
@@ -424,6 +430,17 @@ export default function HomePage() {
             <Link href="/" className="brand-lockup" aria-label="SustainlyGreen home">
               <Image src="/log.webp" alt="SustainlyGreen" width={270} height={70} priority />
             </Link>
+
+            <div className="mobile-menu-slot">
+              <button
+                type="button"
+                className="mobile-menu-toggle"
+                onClick={() => setMobileMenuOpen((value) => !value)}
+                aria-label="Toggle menu"
+              >
+                <Menu size={20} />
+              </button>
+            </div>
 
             <div className="search-bar">
               <Search size={18} />
@@ -479,14 +496,6 @@ export default function HomePage() {
                   </Link>
                 </>
               )}
-              <button
-                type="button"
-                className="mobile-menu-toggle"
-                onClick={() => setMobileMenuOpen((value) => !value)}
-                aria-label="Toggle menu"
-              >
-                <Menu size={20} />
-              </button>
             </div>
           </div>
 
@@ -602,13 +611,21 @@ export default function HomePage() {
                 </>
               );
 
-              if (item.action === "popup") {
+              if (item.action === "buyerRequirement") {
                 return (
                   <button
                     key={item.title}
                     type="button"
                     className="quick-action-card quick-action-button"
-                    onClick={() => setRequirementNoticeOpen(true)}
+                    onClick={() => {
+                      if (profile?.role === "BUYER") {
+                        router.push("/buyer/rfq/new");
+                      } else if (profile) {
+                        router.push(redirectForRole(profile));
+                      } else {
+                        router.push("/register?role=BUYER");
+                      }
+                    }}
                   >
                     {content}
                   </button>
@@ -777,39 +794,13 @@ export default function HomePage() {
 
       <Footer />
 
-      {requirementNoticeOpen && (
-        <div className="notice-backdrop" role="dialog" aria-modal="true" aria-labelledby="requirement-notice-title">
-          <div className="notice-card">
-            <button
-              type="button"
-              className="notice-close"
-              aria-label="Close"
-              onClick={() => setRequirementNoticeOpen(false)}
-            >
-              ×
-            </button>
-            <div className="notice-icon">
-              <BadgeCheck size={22} />
-            </div>
-            <h2 id="requirement-notice-title">Requirement posting is opening soon</h2>
-            <p>
-              We are setting up the guided requirement form. For now, contact Sustainly Green and our team will help you raise the request with matching vendors.
-            </p>
-            <div className="notice-actions">
-              <Link href="/contact" className="notice-primary">Contact team</Link>
-              <button type="button" className="notice-secondary" onClick={() => setRequirementNoticeOpen(false)}>
-                Continue browsing
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <style>{`
         .market-home {
           background: #fcfdfb;
           color: #10241b;
           width: 100%;
+          max-width: 100%;
+          overflow-x: hidden;
         }
 
         .market-shell {
@@ -817,6 +808,7 @@ export default function HomePage() {
           max-width: none;
           margin: 0;
           padding: 0 0 48px;
+          overflow-x: hidden;
         }
 
         .quick-action-button {
@@ -939,6 +931,8 @@ export default function HomePage() {
           box-shadow: 0 10px 24px rgba(17, 48, 33, 0.04);
           padding: 14px 24px 0;
           margin-bottom: 18px;
+          max-width: 100%;
+          overflow-x: hidden;
         }
 
         .utility-bar {
@@ -995,27 +989,45 @@ export default function HomePage() {
         }
 
         .header-main {
-          display: grid;
-          grid-template-columns: auto minmax(320px, 1fr) auto;
+          display: flex;
+          flex-wrap: wrap;
           align-items: center;
-          gap: 22px;
+          gap: 12px;
           padding-bottom: 14px;
+          min-width: 0;
+          width: 100%;
+          max-width: 100%;
+        }
+
+        .brand-lockup {
+          display: inline-flex;
+          align-items: center;
+          flex: 1 1 auto;
+          min-width: 0;
+          max-width: calc(100% - 54px);
         }
 
         .brand-lockup img {
           height: auto;
-          width: 230px;
+          width: min(156px, 48vw);
+          max-width: 100%;
         }
 
         .search-bar {
           display: grid;
-          grid-template-columns: auto minmax(0, 1fr) auto auto;
+          order: 3;
+          flex: 1 0 100%;
+          width: 100%;
+          max-width: calc(100vw - 48px);
+          grid-template-columns: auto minmax(0, 1fr) auto;
           align-items: center;
           border: 1px solid #d8e4dc;
           border-radius: 14px;
           overflow: hidden;
           min-height: 48px;
           background: #fff;
+          min-width: 0;
+          max-width: 100%;
         }
 
         .search-bar svg {
@@ -1038,6 +1050,7 @@ export default function HomePage() {
         }
 
         .search-bar select {
+          display: none;
           border-left: 1px solid #e1e8e3;
           padding: 0 16px;
           min-height: 48px;
@@ -1065,9 +1078,10 @@ export default function HomePage() {
         }
 
         .account-actions {
-          display: flex;
+          display: none;
           align-items: center;
           gap: 12px;
+          min-width: 0;
         }
 
         .sign-in-link {
@@ -1142,12 +1156,20 @@ export default function HomePage() {
         }
 
         .mobile-menu-toggle {
-          display: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           width: 42px;
           height: 42px;
           border-radius: 12px;
           background: #eef5f0;
           color: #173326;
+        }
+
+        .mobile-menu-slot {
+          display: flex;
+          flex: 0 0 auto;
+          justify-content: flex-end;
         }
 
         .menu-row {
@@ -1224,6 +1246,47 @@ export default function HomePage() {
           transform: scaleX(1);
         }
 
+        @media (min-width: 981px) {
+          .header-main {
+            display: grid;
+            grid-template-columns: auto minmax(320px, 1fr) auto;
+            gap: 22px;
+            width: auto;
+          }
+
+          .brand-lockup {
+            max-width: none;
+          }
+
+          .brand-lockup img {
+            width: 230px;
+          }
+
+          .search-bar {
+            order: initial;
+            flex: initial;
+            width: auto;
+            max-width: 100%;
+            grid-template-columns: auto minmax(0, 1fr) auto auto;
+          }
+
+          .search-bar select {
+            display: block;
+          }
+
+          .account-actions {
+            display: flex;
+          }
+
+          .mobile-menu-slot {
+            display: none;
+          }
+
+          .mobile-menu-toggle {
+            display: none;
+          }
+        }
+
         .hero-composition {
           display: grid;
           grid-template-columns: 250px minmax(0, 1fr) 190px;
@@ -1233,6 +1296,8 @@ export default function HomePage() {
           align-items: start;
           padding: 0 24px;
           margin-top: 0;
+          min-width: 0;
+          max-width: 100%;
         }
 
         .sidebar-card,
@@ -1399,6 +1464,7 @@ export default function HomePage() {
           grid-row: 1;
           height: auto;
           margin-top: 16px;
+          min-width: 0;
         }
 
         .hero-banner {
@@ -1410,6 +1476,7 @@ export default function HomePage() {
           gap: 14px;
           overflow: hidden;
           min-height: 300px;
+          min-width: 0;
         }
 
         .hero-copy {
@@ -1419,6 +1486,7 @@ export default function HomePage() {
           flex-direction: column;
           justify-content: center;
           gap: 10px;
+          min-width: 0;
         }
 
         .hero-kicker {
@@ -1433,6 +1501,7 @@ export default function HomePage() {
           line-height: 1.02;
           letter-spacing: -0.04em;
           margin: 0;
+          overflow-wrap: anywhere;
         }
 
         .hero-text {
@@ -1490,6 +1559,8 @@ export default function HomePage() {
         .hero-visual {
           position: relative;
           min-height: 220px;
+          min-width: 0;
+          max-width: 100%;
         }
 
         .hero-arc {
@@ -1714,6 +1785,7 @@ export default function HomePage() {
           gap: 14px;
           align-items: center;
           min-height: 112px;
+          min-width: 0;
           border: 1px solid #e5ede7;
           box-shadow: 0 10px 24px rgba(18, 46, 32, 0.055);
           transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
@@ -1762,6 +1834,7 @@ export default function HomePage() {
         .section-block {
           margin-top: 28px;
           padding: 0 24px;
+          min-width: 0;
         }
 
         .section-head {
@@ -1855,6 +1928,7 @@ export default function HomePage() {
           gap: 18px;
           margin-top: 22px;
           padding: 0 24px;
+          min-width: 0;
         }
 
         .split-panel {
@@ -2403,12 +2477,63 @@ export default function HomePage() {
             padding: 0 0 40px;
           }
 
+          .market-header {
+            width: 100%;
+            max-width: 100vw;
+            box-sizing: border-box;
+          }
+
           .header-main {
-            grid-template-columns: 1fr;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 100%;
+          }
+
+          .brand-lockup {
+            order: 1;
+            flex: 1 1 auto;
+            max-width: calc(100% - 54px);
+          }
+
+          .brand-lockup img {
+            width: min(156px, 48vw);
+          }
+
+          .search-bar {
+            order: 3;
+            flex: 1 0 100%;
+            width: 100%;
+            max-width: calc(100vw - 48px);
+            min-width: 0;
+            box-sizing: border-box;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            min-height: 44px;
+          }
+
+          .search-bar select {
+            display: none;
           }
 
           .account-actions {
-            justify-content: space-between;
+            order: 2;
+            flex: 0 0 auto;
+            justify-content: flex-end;
+            gap: 0;
+          }
+
+          .mobile-menu-slot {
+            order: 2;
+            display: flex;
+            flex: 0 0 auto;
+            justify-content: flex-end;
+          }
+
+          .join-button,
+          .sign-in-link {
+            display: none;
           }
 
           .mobile-menu-toggle {
@@ -2423,12 +2548,31 @@ export default function HomePage() {
 
           .menu-row-open {
             display: grid;
-            justify-items: start;
+            justify-items: stretch;
+            gap: 8px;
+            padding: 10px 0 12px;
+          }
+
+          .menu-categories-button {
+            width: 100%;
+            min-width: 0;
           }
 
           .menu-tabs {
             display: grid;
-            gap: 2px;
+            gap: 4px;
+            min-height: 0;
+            padding-left: 0;
+            width: 100%;
+          }
+
+          .menu-tab {
+            width: 100%;
+            border-radius: 10px;
+          }
+
+          .menu-tab::after {
+            display: none;
           }
 
           .hero-composition {
@@ -2469,7 +2613,7 @@ export default function HomePage() {
           }
 
           .hero-visual {
-            min-height: 240px;
+            min-height: 210px;
           }
 
           .quick-action-grid {
@@ -2494,6 +2638,9 @@ export default function HomePage() {
         @media (max-width: 720px) {
           .market-header {
             padding: 14px 14px 0;
+            width: 100%;
+            max-width: 100vw;
+            box-sizing: border-box;
           }
 
           .utility-bar {
@@ -2501,11 +2648,75 @@ export default function HomePage() {
           }
 
           .brand-lockup img {
-            width: 190px;
+            width: min(156px, 48vw);
+          }
+
+          .header-main {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 100%;
+            padding-bottom: 12px;
+          }
+
+          .brand-lockup {
+            order: 1;
+            flex: 1 1 auto;
+            max-width: calc(100% - 54px);
           }
 
           .search-bar {
+            order: 3;
+            flex: 1 0 100%;
+            width: 100%;
+            max-width: calc(100vw - 28px);
+            min-width: 0;
+            box-sizing: border-box;
             grid-template-columns: auto minmax(0, 1fr) auto;
+            min-height: 44px;
+            border-radius: 14px;
+          }
+
+          .search-bar svg {
+            margin-left: 12px;
+          }
+
+          .search-bar input {
+            padding: 0 10px;
+            font-size: 14px;
+          }
+
+          .search-button {
+            min-width: 46px;
+            min-height: 44px;
+          }
+
+          .search-button svg {
+            margin-left: 0;
+          }
+
+          .hero-banner {
+            padding: 22px 16px 18px;
+            border-radius: 18px;
+          }
+
+          .hero-copy h1 {
+            font-size: clamp(30px, 8.5vw, 34px);
+            line-height: 1.03;
+            letter-spacing: -0.02em;
+          }
+
+          .hero-text {
+            max-width: 100%;
+            font-size: 14px;
+          }
+
+          .hero-visual {
+            min-height: 180px;
+            transform: scale(0.92);
+            transform-origin: center top;
           }
 
           .search-bar select {
@@ -2513,12 +2724,46 @@ export default function HomePage() {
           }
 
           .account-actions {
-            gap: 10px;
+            order: 2;
+            flex: 0 0 auto;
+            gap: 0;
           }
 
           .join-button,
           .sign-in-link {
-            font-size: 13px;
+            display: none;
+          }
+
+          .mobile-menu-toggle {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+          }
+
+          .menu-row {
+            border-top: 1px solid #edf2ee;
+            margin-top: 2px;
+          }
+
+          .menu-categories-button {
+            width: 100%;
+            min-width: 0;
+            height: 44px;
+            border-radius: 0;
+            padding: 0 14px;
+            font-size: 14px;
+          }
+
+          .menu-tab {
+            width: 100%;
+            height: 42px;
+            padding: 0 14px;
+            font-size: 14px;
+            border-radius: 10px;
+          }
+
+          .menu-tab::after {
+            display: none;
           }
 
           .hero-buttons {

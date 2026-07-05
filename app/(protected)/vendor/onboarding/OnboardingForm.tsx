@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
+import type { Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { getStoredSession } from "@/lib/supabaseAuth";
@@ -22,11 +23,12 @@ export const OnboardingForm = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [subcategories, setSubcategories] = useState<CatalogSubcategory[]>([]);
 
   const methods = useForm<OnboardingFormData>({
-    resolver: zodResolver(onboardingSchema) as any,
+    resolver: zodResolver(onboardingSchema) as unknown as Resolver<OnboardingFormData>,
     mode: "onChange",
     defaultValues: {
       subCategories: [],
@@ -68,7 +70,7 @@ export const OnboardingForm = () => {
         }
 
         if (payload.vendor) {
-          reset({ ...payload.vendor } as any);
+          reset({ ...payload.vendor } as Partial<OnboardingFormData>);
         }
 
         const catalogResponse = await fetch("/api/vendor/catalog", {
@@ -93,7 +95,8 @@ export const OnboardingForm = () => {
   }, [reset, router]);
 
   const handleNext = async () => {
-    let fieldsToValidate: any[] = [];
+    setSubmitError("");
+    let fieldsToValidate: (keyof OnboardingFormData)[] = [];
     if (step === 1) {
       fieldsToValidate = [
         "companyName", "registrationType", "cinRegistration", "gstNumber", 
@@ -112,7 +115,7 @@ export const OnboardingForm = () => {
       ];
     }
 
-    const isStepValid = await trigger(fieldsToValidate as any);
+    const isStepValid = await trigger(fieldsToValidate);
     if (isStepValid) setStep(prev => prev + 1);
   };
 
@@ -124,6 +127,7 @@ export const OnboardingForm = () => {
     }
 
     setSubmitting(true);
+    setSubmitError("");
 
     try {
       const { logoFile, certificateFile, awardsFile, ...cleanData } = data;
@@ -166,14 +170,14 @@ export const OnboardingForm = () => {
       });
 
       if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload?.error?.message || "Something went wrong.");
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error?.message || "Unable to save vendor profile.");
       }
 
       router.push("/vendor/dashboard");
     } catch (err) {
       console.error(err);
-      alert("Something went wrong. Please try again.");
+      setSubmitError(err instanceof Error ? err.message : "Unable to save vendor profile. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -199,6 +203,12 @@ export const OnboardingForm = () => {
               {step === 2 && <Step2Business categories={categories} subcategories={subcategories} />}
               {step === 3 && <Step3Sustainability />}
               {step === 4 && <Step4Marketplace />}
+
+              {submitError && (
+                <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  {submitError}
+                </div>
+              )}
 
               <div className="mt-12 flex items-center justify-between pt-8 border-t border-gray-100">
                 <button

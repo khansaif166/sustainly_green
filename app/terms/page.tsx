@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
+import type { ReactNode } from "react";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import Link from "next/link";
@@ -10,7 +11,7 @@ export default function TermsPage() {
     <>
       <Header />
 
-      <main className="max-w-full mx-auto px-4 py-16 space-y-10">
+      <main className="mx-auto w-full max-w-[100vw] overflow-x-hidden px-4 py-16 space-y-10">
        <Link
           href="/"
           className="
@@ -29,11 +30,11 @@ export default function TermsPage() {
           Back to Home
         </Link>
         {/* ================= HEADER ================= */}
-        <section className="text-center space-y-3">
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
+        <section className="mx-auto max-w-3xl text-center space-y-3">
+          <h1 className="break-words text-2xl font-semibold text-[var(--color-text-primary)] sm:text-3xl">
             TERMS AND CONDITIONS OF USE
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
+          <p className="break-words text-sm text-[var(--color-text-secondary)]">
             Terms and Conditions for Sustainly Green
           </p>
         </section>
@@ -44,24 +45,23 @@ export default function TermsPage() {
           rounded-3xl bg-[var(--color-bg-white)]
           border border-[var(--color-border)]
           shadow-[0_12px_40px_rgba(0,0,0,0.08)]
-          p-6 md:p-10 space-y-10
+          mx-auto max-w-5xl min-w-0 overflow-hidden break-words p-6 md:p-10 space-y-10
         "
         >
           <Section title="SECTION 1: INTRODUCTION">
             <p>
-              Sustainly Green is a UK-registered company committed to
-              accelerating the global transition to a sustainable, eco-conscious
-              future. It operates as an innovative online platform connecting
-              green and sustainable manufacturers, and service providers, and
-              dedicated to environmental sustainability and compliance with UK
-              and local laws.
+              Sustainly Ecohub India Pvt Ltd operates Sustainly Green, a
+              sustainability-focused online platform connecting green product
+              manufacturers, service providers, and buyers. The Platform is
+              dedicated to sustainable sourcing, environmental responsibility,
+              and compliance with applicable Indian laws and platform policies.
             </p>
 
             <p className="font-medium">1.2 Scope and Acceptance of Terms</p>
             <p>
               1.2.1 By accessing, registering, or using the Sustainly Green
-              platform (the "Platform"), you agree to be legally bound by these
-              Terms and Conditions ("Terms"). If you do not agree, do not use
+              platform (the &quot;Platform&quot;), you agree to be legally bound by these
+              Terms and Conditions (&quot;Terms&quot;). If you do not agree, do not use
               the Platform.
             </p>
             <p>
@@ -73,12 +73,12 @@ export default function TermsPage() {
             <p>
               1.2.3 These Terms apply to all users including but not limited to
               service providers, manufacturers, and general visitors
-              (collectively, "Users").
+              (collectively, &quot;Users&quot;).
             </p>
           </Section>
 
           <Section title="SECTION 2: DEFINITIONS">
-            <ul className="list-disc space-y-2 pl-10">
+            <ul className="list-disc space-y-2 pl-6 sm:pl-10">
               <li>
                 <b>Sustainly Green</b> refers to Sustainly Green and its
                 affiliates.
@@ -107,7 +107,7 @@ export default function TermsPage() {
           </Section>
 
           <Section title="SECTION 3: USER ELIGIBILITY AND REGISTRATION">
-            <ul className="list-disc pl-10 space-y-2">
+            <ul className="list-disc pl-6 sm:pl-10 space-y-2">
               <li>Signup requirements</li>
               <li>Account security</li>
               <li>Accurate information policy</li>
@@ -122,11 +122,11 @@ export default function TermsPage() {
           </Section>
 
           <Section title="SECTION 4: REGISTRATION AND ACCOUNTS">
-            <ul className="list-disc pl-10 space-y-2">
+            <ul className="list-disc pl-6 sm:pl-10 space-y-2">
               <li>Platform acts as a directory/listing service only</li>
               <li>No endorsement or verification of listings</li>
               <li>No liability for sustainability claims</li>
-              <li>UK & international law compliance disclaimer</li>
+              <li>Applicable Indian law and platform compliance disclaimer</li>
             </ul>
 
             <p>4.1 Users must create an account to access features.</p>
@@ -135,8 +135,8 @@ export default function TermsPage() {
           </Section>
 
           <Section title="SECTION 5: USER OBLIGATIONS">
-            <ul className="list-disc pl-10 space-y-2">
-              <li>Comply with UK and local laws</li>
+            <ul className="list-disc pl-6 sm:pl-10 space-y-2">
+              <li>Comply with applicable Indian and local laws</li>
               <li>No unlawful or misleading activity</li>
               <li>No misrepresentation of sustainability</li>
               <li>No infringement of intellectual property</li>
@@ -156,7 +156,7 @@ export default function TermsPage() {
               distribution of listed products.
             </p>
 
-            <ul className="list-disc pl-10 space-y-2">
+            <ul className="list-disc pl-6 sm:pl-10 space-y-2">
               <li>Harm caused by products</li>
               <li>Mislabeling of non-sustainable items</li>
               <li>Violations of law by users</li>
@@ -172,7 +172,7 @@ export default function TermsPage() {
 
           <Section title="SECTION 9: DISCLAIMERS AND LIMITATION OF LIABILITY">
             <p className="font-semibold">
-              THE PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTIES.
+              THE PLATFORM IS PROVIDED &quot;AS IS&quot; WITHOUT WARRANTIES.
             </p>
             <p>
               Sustainly Green is not liable for indirect or consequential
@@ -197,30 +197,34 @@ export default function TermsPage() {
 
           <Section title="SECTION 12: GOVERNING LAW AND JURISDICTION">
             <p>
-              Governed by the laws of England and Wales. Jurisdiction lies in
-              London, United Kingdom.
+              Governed by the laws of India. Jurisdiction lies with the
+              competent courts serving Tirupattur District, Tamil Nadu, India.
             </p>
           </Section>
 
           <Section title="SECTION 13: DISPUTE RESOLUTION">
             <p>
               Disputes will first be resolved through negotiation, then
-              mediation, followed by binding arbitration in London under the
-              Arbitration Act 1996.
+              mediation where appropriate, followed by arbitration or court
+              proceedings as permitted under applicable Indian law.
             </p>
           </Section>
 
           <Section title="SECTION 14: CONTACT AND NOTICES">
             <p>
-              <b>Sustainly Green</b>
+              <b>Sustainly Ecohub India Pvt Ltd</b>
             </p>
-            <p>Winchester House, 259-269 Old Marylebone Road</p>
-            <p>London, NW1 5RA, United Kingdom</p>
+            <p>Green Valley Incubation Forum</p>
+            <p>Newtown, Vaniyambadi - 635 751</p>
+            <p>Tirupattur District, Tamil Nadu, India</p>
             <p>
               Email: <b>grow@sustainlygreen.com</b>
             </p>
             <p>
-              Phone: <b>+44 20 3996 1521</b>
+              Phone: <b>82482 89024</b>
+            </p>
+            <p>
+              WhatsApp: <b>900 399 1874</b>
             </p>
           </Section>
 
@@ -239,7 +243,7 @@ export default function TermsPage() {
 
 /* ================= REUSABLE SECTION ================= */
 
-function Section({ title, children }: any) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">

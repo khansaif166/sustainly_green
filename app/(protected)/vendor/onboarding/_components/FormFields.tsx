@@ -10,6 +10,18 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: LucideIcon;
 }
 
+interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  name: string;
+  label: string;
+}
+
+interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  name: string;
+  label: string;
+  icon?: LucideIcon;
+  options: { label: string; value: string }[];
+}
+
 export const Input: React.FC<InputProps> = ({ name, label, icon: Icon, ...props }) => {
   const { register, formState: { errors } } = useFormContext();
   const error = errors[name]?.message as string;
@@ -34,7 +46,7 @@ export const Input: React.FC<InputProps> = ({ name, label, icon: Icon, ...props 
   );
 };
 
-export const TextArea: React.FC<InputProps & { rows?: number }> = ({ name, label, ...props }) => {
+export const TextArea: React.FC<TextAreaProps> = ({ name, label, ...props }) => {
   const { register, formState: { errors } } = useFormContext();
   const error = errors[name]?.message as string;
 
@@ -43,7 +55,7 @@ export const TextArea: React.FC<InputProps & { rows?: number }> = ({ name, label
       <label className="text-sm font-medium text-gray-700 ml-1">{label}</label>
       <textarea
         {...register(name)}
-        {...(props as any)}
+        {...props}
         className={`w-full px-4 py-2.5 bg-white border ${error ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-xl outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 placeholder:text-gray-400 resize-none`}
       />
       {error && <p className="text-xs text-red-500 ml-1">{error}</p>}
@@ -51,23 +63,30 @@ export const TextArea: React.FC<InputProps & { rows?: number }> = ({ name, label
   );
 };
 
-export const Select: React.FC<InputProps & { options: { label: string; value: string }[] }> = ({ name, label, options, ...props }) => {
+export const Select: React.FC<SelectProps> = ({ name, label, options, icon: Icon, ...props }) => {
   const { register, formState: { errors } } = useFormContext();
   const error = errors[name]?.message as string;
 
   return (
     <div className="space-y-1.5 flex-1">
       <label className="text-sm font-medium text-gray-700 ml-1">{label}</label>
-      <select
-        {...register(name)}
-        {...(props as any)}
-        className={`w-full px-4 py-2.5 bg-white border ${error ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-xl outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 appearance-none`}
-      >
-        <option value="">Select {label}</option>
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
+      <div className="relative group">
+        {Icon && (
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-600 transition-colors">
+            <Icon size={18} />
+          </div>
+        )}
+        <select
+          {...register(name)}
+          {...props}
+          className={`w-full ${Icon ? 'pl-10 pr-4' : 'px-4'} py-2.5 bg-white border ${error ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-xl outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-gray-900 appearance-none`}
+        >
+          <option value="">Select {label}</option>
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
       {error && <p className="text-xs text-red-500 ml-1">{error}</p>}
     </div>
   );
@@ -76,22 +95,29 @@ export const Select: React.FC<InputProps & { options: { label: string; value: st
 export const Toggle: React.FC<{ name: string; label: string }> = ({ name, label }) => {
   const { register, watch, setValue } = useFormContext();
   const checked = Boolean(watch(name));
+  const toggle = () => setValue(name, !checked, { shouldDirty: true, shouldValidate: true });
 
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-      <span className="text-sm font-medium text-gray-700">{label}</span>
+    <div>
       <button
         type="button"
-        onClick={() => setValue(name, !checked, { shouldDirty: true, shouldValidate: true })}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${checked ? 'bg-green-600' : 'bg-gray-200'}`}
+        role="switch"
+        aria-checked={checked}
+        onClick={toggle}
+        className="flex w-full cursor-pointer items-center justify-between gap-4 p-3 bg-gray-50 rounded-xl border border-gray-100 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:ring-offset-2"
       >
-        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+        <span className="text-left text-sm font-medium text-gray-700">{label}</span>
+        <span
+          aria-hidden="true"
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${checked ? 'bg-green-600' : 'bg-gray-200'}`}
+        >
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+        </span>
       </button>
-      <input type="checkbox" {...register(name)} className="hidden" />
+      <input type="checkbox" {...register(name)} checked={checked} readOnly className="sr-only" />
     </div>
   );
 };
-
 export const MultiSelect: React.FC<{ name: string; label: string; options?: string[]; max?: number }> = ({ name, label, options, max = 5 }) => {
   const { setValue, watch, formState: { errors } } = useFormContext();
   const selected: string[] = watch(name) || [];

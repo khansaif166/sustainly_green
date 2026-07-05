@@ -358,7 +358,7 @@ export default function BrowsePage() {
     <>
       <style>{`
         /* ── BASE ── */
-        .bs-page { min-height: 100vh; background: #f6f7f5; }
+        .bs-page { min-height: 100vh; background: #f6f7f5; max-width: 100%; overflow-x: hidden; }
 
         /* ── HERO ── */
         .bs-hero {
@@ -366,6 +366,7 @@ export default function BrowsePage() {
           padding: 40px 24px 32px;
           position: relative;
           overflow: hidden;
+          max-width: 100%;
         }
         .bs-hero::before {
           content: '';
@@ -381,6 +382,7 @@ export default function BrowsePage() {
           margin: 0 auto;
           position: relative;
           z-index: 1;
+          min-width: 0;
         }
         .bs-back {
           display: inline-flex; align-items: center; gap: 6px;
@@ -394,11 +396,12 @@ export default function BrowsePage() {
 
         /* search */
         .bs-search-wrap {
-          display: flex; align-items: center; gap: 12;
+          display: flex; align-items: center; gap: 12px;
           background: rgba(255,255,255,0.07);
           border: 1.5px solid rgba(255,255,255,0.1);
           border-radius: 16px; padding: 12px 18px;
           max-width: 640px;
+          min-width: 0;
           backdrop-filter: blur(12px);
           transition: border-color .2s, background .2s;
         }
@@ -407,6 +410,7 @@ export default function BrowsePage() {
         .bs-search-in {
           flex: 1; background: none; border: none; outline: none;
           color: #fff; font-size: 15px; font-family: inherit;
+          min-width: 0;
         }
         .bs-search-in::placeholder { color: rgba(255,255,255,0.3); }
         .bs-search-clear {
@@ -434,6 +438,8 @@ export default function BrowsePage() {
           max-width: 1200px; margin: 0 auto;
           padding: 28px 24px 72px;
           display: flex; gap: 24px; align-items: flex-start;
+          min-width: 0;
+          width: 100%;
         }
 
         /* ── SIDEBAR ── */
@@ -668,9 +674,16 @@ export default function BrowsePage() {
         }
 
         @media (max-width: 640px) {
-          .bs-wrap { padding: 18px 14px 56px; }
+          .bs-wrap { padding: 18px 14px 56px; display: block; }
           .bs-hero { padding: 28px 16px 24px; }
-          .bs-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+          .bs-hero-h { font-size: 28px; overflow-wrap: anywhere; }
+          .bs-hero-sub { font-size: 13px; line-height: 1.45; }
+          .bs-search-wrap { width: 100%; padding: 11px 14px; border-radius: 14px; }
+          .bs-tabs { gap: 6px; }
+          .bs-tab { padding: 8px 12px; font-size: 12px; }
+          .bs-toolbar { align-items: flex-start; }
+          .bs-toolbar-right { width: 100%; justify-content: space-between; }
+          .bs-grid { grid-template-columns: 1fr; gap: 12px; }
           .bs-vendor-grid { grid-template-columns: 1fr; }
         }
       `}</style>

@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { FaInstagram, FaLinkedinIn, FaYoutube } from "react-icons/fa6";
+import Image from "next/image";
+import { FaLinkedinIn, FaYoutube } from "react-icons/fa6";
 
 const COPYRIGHT_YEAR = 2026;
+const LINKEDIN_URL = "https://www.linkedin.com/in/irshad-ahmedk";
+const YOUTUBE_URL = "https://www.youtube.com/@SustainlyGreen";
 
 export default function Footer() {
   return (
@@ -9,19 +12,19 @@ export default function Footer() {
       <div className="footer-grid">
         {/* Brand */}
         <div>
-          <div className="footer-brand-name">Sustainly<span> Green</span></div>
+          <div className="footer-logo-row">
+            <Image src="/log.webp" alt="Sustainly Green" width={150} height={40} className="footer-logo-img" />
+            <div className="footer-brand-name">Sustainly<span> Green</span></div>
+          </div>
           <p className="footer-brand-sub">
-            India's first verified B2B marketplace for sustainable sourcing — connecting ESG-certified vendors with corporate buyers under a zero-greenwashing standard.
+            India&apos;s first verified B2B marketplace for sustainable sourcing — connecting ESG-certified vendors with corporate buyers under a zero-greenwashing standard.
           </p>
           <div className="footer-social">
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="fsoc" aria-label="LinkedIn">
+            <a href={LINKEDIN_URL} target="_blank" rel="noopener noreferrer" className="fsoc" aria-label="LinkedIn">
               <FaLinkedinIn aria-hidden="true" />
             </a>
-            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="fsoc" aria-label="YouTube">
+            <a href={YOUTUBE_URL} target="_blank" rel="noopener noreferrer" className="fsoc" aria-label="YouTube">
               <FaYoutube aria-hidden="true" />
-            </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="fsoc" aria-label="Instagram">
-              <FaInstagram aria-hidden="true" />
             </a>
           </div>
         </div>
@@ -48,7 +51,8 @@ export default function Footer() {
         <div className="footer-col">
           <h5>Platform</h5>
           <Link href="/about">About Us</Link>
-          <Link href="/blogs">Blog</Link>
+          <Link href="/resources">Resources</Link>
+          <Link href="/blogs">Blogs</Link>
           <Link href="/careers">Careers</Link>
           <Link href="/contact">Contact Us</Link>
         </div>
@@ -58,13 +62,14 @@ export default function Footer() {
           <h5>Legal</h5>
           <Link href="/terms">Terms &amp; Conditions</Link>
           <Link href="/privacy-policy">Privacy Policy</Link>
+          <Link href="/cookie-policy">Cookie Policy</Link>
         </div>
       </div>
 
       <div className="footer-bottom">
         <div className="footer-bottom-left">
           <p>
-            {`© ${COPYRIGHT_YEAR} Sustainly Green India Pvt Ltd · Chennai, Tamil Nadu, India `}
+            {`© ${COPYRIGHT_YEAR} Sustainly Ecohub India Pvt Ltd · Vaniyambadi, Tamil Nadu, India `}
             <span className="cin">grow@sustainlygreen.com</span>
           </p>
         </div>

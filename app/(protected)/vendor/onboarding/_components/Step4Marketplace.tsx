@@ -6,7 +6,7 @@ import { useFormContext } from "react-hook-form";
 import { ChevronDown, ChevronUp, ScrollText } from "lucide-react";
 
 export const Step4Marketplace = () => {
-  const { watch, register, formState: { errors } } = useFormContext();
+  const { register, formState: { errors } } = useFormContext();
   const [showEcoScore, setShowEcoScore] = React.useState(false);
   const [showMarketplace, setShowMarketplace] = React.useState(true);
 

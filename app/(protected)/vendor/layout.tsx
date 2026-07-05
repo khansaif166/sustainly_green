@@ -5,12 +5,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Package, User, Menu, MessageSquareText,
-  X, BarChart3, LogOut, Leaf,
+  X, BarChart3, LogOut, Leaf, Home,
 } from "lucide-react";
 import { fetchCurrentProfile, getCurrentUser, signOutSupabase } from "@/lib/supabaseAuth";
 import SessionTimeoutNotice from "@/app/components/SessionTimeoutNotice";
 
 const NAV = [
+  { name: "Home",       href: "/",                  icon: Home },
   { name: "Dashboard",  href: "/vendor/dashboard",  icon: LayoutDashboard },
   { name: "Enquiries",  href: "/vendor/enquiries",   icon: MessageSquareText },
   { name: "Products",   href: "/vendor/products",    icon: Package },
@@ -33,7 +34,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       if (!profile || (profile.role !== "VENDOR" && profile.role !== "ADMIN")) {
         router.replace("/login"); return;
       }
-      setUserName(profile.name || (profile as any).company_name || "Vendor");
+      setUserName(profile.name || "Vendor");
       setUserEmail(profile.email || "");
       setChecking(false);
     }
@@ -127,7 +128,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
 
         <nav className="vl-nav">
           {NAV.map(({ name, href, icon: Icon }) => {
-            const active = pathname.startsWith(href);
+            const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
               <Link key={href} href={href} onClick={() => setOpen(false)}
                 className={`vl-nav-item${active ? " active" : ""}`}>

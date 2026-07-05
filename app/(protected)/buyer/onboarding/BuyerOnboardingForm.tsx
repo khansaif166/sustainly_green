@@ -32,6 +32,8 @@ const STEP_FIELDS: Record<number, readonly string[]> = {
   5: STEP5_FIELDS,
 };
 
+type LooseRecord = Record<string, unknown>;
+
 function clean<T extends object>(obj: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(obj)
@@ -143,13 +145,22 @@ function buildBuyerPayload(data: Partial<BuyerOnboardingFormData>, status: "draf
   });
 }
 
-function flattenBuyerPayload(buyer: any, profile: any): Partial<BuyerOnboardingFormData> {
-  const ci = buyer?.companyInfo || {};
-  const bo = buyer?.businessOverview || {};
-  const sus = buyer?.sustainability || {};
-  const pro = buyer?.procurement || {};
-  const seg = buyer?.segmentDetails || {};
-  const decl = buyer?.declaration || {};
+function flattenBuyerPayload(buyer: unknown, profile: unknown): Partial<BuyerOnboardingFormData> {
+  const buyerRecord = (buyer && typeof buyer === "object" ? buyer : {}) as {
+    companyInfo?: LooseRecord;
+    businessOverview?: LooseRecord;
+    sustainability?: LooseRecord;
+    procurement?: LooseRecord;
+    segmentDetails?: LooseRecord;
+    declaration?: LooseRecord;
+  };
+  const profileRecord = (profile && typeof profile === "object" ? profile : {}) as LooseRecord;
+  const ci = buyerRecord.companyInfo || {};
+  const bo = buyerRecord.businessOverview || {};
+  const sus = buyerRecord.sustainability || {};
+  const pro = buyerRecord.procurement || {};
+  const seg = buyerRecord.segmentDetails || {};
+  const decl = buyerRecord.declaration || {};
 
   return {
     ...ci,
@@ -158,12 +169,12 @@ function flattenBuyerPayload(buyer: any, profile: any): Partial<BuyerOnboardingF
     ...pro,
     ...seg,
     declarationAgreed: Boolean(decl.agreed || decl.name),
-    declarationName: decl.name || profile?.name || "",
+    declarationName: decl.name || profileRecord.name || "",
     declarationDesignation: decl.designation || "",
     declarationDate: decl.date || new Date().toISOString().split("T")[0],
-    email: ci.email || profile?.email || "",
-    contactPerson: ci.contactPerson || profile?.name || "",
-  };
+    email: ci.email || profileRecord.email || "",
+    contactPerson: ci.contactPerson || profileRecord.name || "",
+  } as Partial<BuyerOnboardingFormData>;
 }
 
 export const BuyerOnboardingForm = () => {
@@ -173,6 +184,7 @@ export const BuyerOnboardingForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const methods = useForm<BuyerOnboardingFormData>({
     resolver: zodResolver(buyerOnboardingSchema),
@@ -222,7 +234,7 @@ export const BuyerOnboardingForm = () => {
         reset({
           ...getValues(),
           ...flattenBuyerPayload(payload.buyer, payload.profile),
-        } as any);
+        } as BuyerOnboardingFormData);
       } catch (err) {
         console.error("Buyer profile load failed:", err);
       } finally {
@@ -231,12 +243,13 @@ export const BuyerOnboardingForm = () => {
     }
 
     void loadBuyer();
-  }, [reset, router]);
+  }, [getValues, reset, router]);
 
   // ─── Step Navigation ───────────────────────────────────────────────────────
   const handleNext = async () => {
+    setFormError("");
     const fields = STEP_FIELDS[step];
-    const isStepValid = await trigger(fields as any);
+    const isStepValid = await trigger(fields as (keyof BuyerOnboardingFormData)[]);
     if (isStepValid) setStep((prev) => prev + 1);
   };
 
@@ -251,6 +264,7 @@ export const BuyerOnboardingForm = () => {
     }
 
     setSavingDraft(true);
+    setFormError("");
     try {
       const response = await fetch("/api/buyer/profile", {
         method: "PUT",
@@ -262,7 +276,7 @@ export const BuyerOnboardingForm = () => {
       });
 
       if (!response.ok) {
-        const payload = await response.json();
+        const payload = await response.json().catch(() => null);
         throw new Error(payload?.error?.message || "Draft save failed.");
       }
 
@@ -270,6 +284,7 @@ export const BuyerOnboardingForm = () => {
       setTimeout(() => setDraftSaved(false), 3000);
     } catch (err) {
       console.error("Draft save failed:", err);
+      setFormError(err instanceof Error ? err.message : "Unable to save draft.");
     } finally {
       setSavingDraft(false);
     }
@@ -277,6 +292,7 @@ export const BuyerOnboardingForm = () => {
 
   // ─── Final Submit ──────────────────────────────────────────────────────────
   const handleFinalSubmit = async () => {
+    setFormError("");
     // Validate each step in order so errors are always on a visible step.
     const stepChecks: [number, readonly string[]][] = [
       [1, STEP1_FIELDS],
@@ -287,7 +303,7 @@ export const BuyerOnboardingForm = () => {
     ];
 
     for (const [stepNum, fields] of stepChecks) {
-      const valid = await trigger(fields as any);
+      const valid = await trigger(fields as (keyof BuyerOnboardingFormData)[]);
       if (!valid) {
         setStep(stepNum);
         return;
@@ -298,6 +314,7 @@ export const BuyerOnboardingForm = () => {
     if (!session) { router.push("/login"); return; }
 
     setSubmitting(true);
+    setFormError("");
     try {
       const data = getValues() as BuyerOnboardingFormData;
       const response = await fetch("/api/buyer/profile", {
@@ -310,14 +327,14 @@ export const BuyerOnboardingForm = () => {
       });
 
       if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload?.error?.message || "Something went wrong.");
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error?.message || "Unable to save buyer profile.");
       }
 
       router.push("/buyer/dashboard");
     } catch (err) {
       console.error(err);
-      alert("Something went wrong. Please try again.");
+      setFormError(err instanceof Error ? err.message : "Unable to save buyer profile. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -345,6 +362,12 @@ export const BuyerOnboardingForm = () => {
               {step === 3 && <Step3Sustainability />}
               {step === 4 && <Step4Procurement />}
               {step === 5 && <Step5SegmentAndSubmit />}
+
+              {formError && (
+                <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  {formError}
+                </div>
+              )}
 
               {/* Navigation */}
               <div className="mt-12 flex items-center justify-between pt-8 border-t border-gray-100">
