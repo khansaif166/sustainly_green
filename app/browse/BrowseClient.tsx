@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
@@ -29,6 +29,7 @@ type Vendor = PublicVendor & { GreenLensScore?: number };
 type Category = { id: string; name: string; imageUrl?: string };
 interface FilterState { badge: string; location: string; sortBy: string; }
 const DEFAULT_FILTERS: FilterState = { badge: "", location: "", sortBy: "newest" };
+const PAGE_SIZE = 12;
 
 const BADGES = [
   { val: "", label: "All Badges", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
@@ -95,6 +96,8 @@ export default function BrowsePage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [localSearch, setLocalSearch] = useState(search);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resultsTopRef = useRef<HTMLDivElement | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [expanded, setExpanded] = useState({ type: true, category: true, eco: true, location: false, sort: true });
 
@@ -114,6 +117,7 @@ export default function BrowsePage() {
           }
           if (filters.badge) list = list.filter(p => (p.certifications || []).some(c => c.toLowerCase().includes(filters.badge)));
           if (filters.sortBy === "eco_score") list = list.sort((a, b) => (b.ecoScore || 0) - (a.ecoScore || 0));
+          if (filters.sortBy === "name_az") list = list.sort((a, b) => vt(a.title).localeCompare(vt(b.title)));
           setProducts(list); setVendors([]); setTotalCount(list.length);
         } else {
           let list: Vendor[] = await fetchApprovedVendors();
@@ -124,6 +128,7 @@ export default function BrowsePage() {
             list = list.filter(v => [v.location, v.city, v.state, v.country].map(value => vt(value)).join(" ").toLowerCase().includes(loc));
           }
           if (filters.sortBy === "eco_score") list = list.sort((a, b) => (b.ecoScore || 0) - (a.ecoScore || 0));
+          if (filters.sortBy === "name_az") list = list.sort((a, b) => vt(a.companyName).localeCompare(vt(b.companyName)));
           setVendors(list); setProducts([]); setTotalCount(list.length);
         }
       } catch (e) { console.error(e); } finally { setLoading(false); }
@@ -132,6 +137,7 @@ export default function BrowsePage() {
   }, [type, category, search, filters]);
 
   useEffect(() => { setLocalSearch(search); }, [search]);
+  useEffect(() => { setCurrentPage(1); }, [type, category, search, filters.badge, filters.location, filters.sortBy]);
 
   function handleSearch(val: string) {
     setLocalSearch(val);
@@ -141,7 +147,8 @@ export default function BrowsePage() {
 
   function updateUrl(key: string, value: string) {
     const url = new URLSearchParams(params.toString());
-    value ? url.set(key, value) : url.delete(key);
+    if (value) url.set(key, value);
+    else url.delete(key);
     router.push(`/browse?${url.toString()}`);
   }
 
@@ -349,9 +356,29 @@ export default function BrowsePage() {
     </Link>
   );
 
-  const gridClass = type === "Vendor" ? "bs-vendor-grid" : "bs-grid";
   const items = type === "Vendor" ? vendors : products;
   const isEmpty = !loading && items.length === 0;
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const pageEnd = Math.min(pageStart + PAGE_SIZE, items.length);
+  const visibleVendors = vendors.slice(pageStart, pageEnd);
+  const visibleProducts = products.slice(pageStart, pageEnd);
+  const pageNumbers = useMemo(() => {
+    const windowSize = 5;
+    const halfWindow = Math.floor(windowSize / 2);
+    const start = Math.max(1, Math.min(safePage - halfWindow, totalPages - windowSize + 1));
+    const end = Math.min(totalPages, start + windowSize - 1);
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [safePage, totalPages]);
+
+  function goToPage(page: number) {
+    const nextPage = Math.min(Math.max(page, 1), totalPages);
+    setCurrentPage(nextPage);
+    requestAnimationFrame(() => {
+      resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   /* ============================================================ RENDER */
   return (
@@ -393,6 +420,10 @@ export default function BrowsePage() {
         .bs-back:hover { color: rgba(255,255,255,0.85); }
         .bs-hero-h { font-size: clamp(26px,3.5vw,38px); font-weight: 800; color: #fff; margin: 0 0 6px; letter-spacing: -.03em; line-height: 1.1; }
         .bs-hero-sub { font-size: 14px; color: rgba(255,255,255,0.45); margin: 0 0 28px; }
+        .bs-page-vendor .bs-hero { padding: 24px 24px 20px; }
+        .bs-page-vendor .bs-back { margin-bottom: 14px; }
+        .bs-page-vendor .bs-hero-sub { margin-bottom: 16px; }
+        .bs-page-vendor .bs-tabs { margin-top: 14px; }
 
         /* search */
         .bs-search-wrap {
@@ -441,6 +472,7 @@ export default function BrowsePage() {
           min-width: 0;
           width: 100%;
         }
+        .bs-page-vendor .bs-wrap { padding-top: 18px; }
 
         /* ── SIDEBAR ── */
         .bs-sidebar {
@@ -453,7 +485,19 @@ export default function BrowsePage() {
           overflow-y: auto;
           box-shadow: 0 2px 12px rgba(0,0,0,0.05);
         }
-        @media (max-width:900px) { .bs-sidebar { display: none; } }
+        @media (max-width:900px) {
+          .bs-wrap > .bs-sidebar { display: none; }
+          .bs-drawer .bs-sidebar {
+            display: block;
+            width: 100%;
+            position: static;
+            max-height: none;
+            overflow: visible;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+          }
+        }
         .bs-sb-head {
           display: flex; align-items: center; justify-content: space-between;
           margin-bottom: 14px; padding-bottom: 12px;
@@ -521,6 +565,7 @@ export default function BrowsePage() {
           background: none; color: #9ca3af; transition: all .15s;
         }
         .bs-view-btn-active { background: #fff !important; color: #16a34a !important; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+        .bs-results-anchor { scroll-margin-top: 96px; }
 
         /* active filter chips */
         .bs-active-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
@@ -613,7 +658,7 @@ export default function BrowsePage() {
         .bs-row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
 
         /* ── VENDOR CARD ── */
-        .bs-vendor-card { gap: 0; }
+        .bs-vendor-card { gap: 0; min-height: 218px; }
         .bs-vc-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 16px 0; }
         .bs-vendor-card .bs-card-desc { padding: 8px 16px 0; }
         .bs-vendor-card .bs-card-tags { padding: 0 16px; margin-top: 10px; }
@@ -636,7 +681,7 @@ export default function BrowsePage() {
         .bs-vc-fill { height: 100%; background: linear-gradient(90deg, #1db954, #16a34a); border-radius: 50px; transition: width .6s ease; }
         .bs-vc-foot {
           display: flex; align-items: center; justify-content: space-between;
-          margin: 12px 16px 14px;
+          margin: auto 16px 14px;
           border-top: 1px solid rgba(0,0,0,0.06); padding-top: 10px;
         }
         .bs-vc-loc { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #9ca3af; font-weight: 500; }
@@ -658,6 +703,56 @@ export default function BrowsePage() {
         .bs-empty h3 { font-size: 18px; font-weight: 700; color: #374151; margin: 0 0 6px; }
         .bs-empty p { font-size: 14px; margin: 0; }
 
+        /* ── PAGINATION ── */
+        .bs-pagination {
+          margin-top: 22px;
+          padding: 14px 16px;
+          border: 1px solid rgba(0,0,0,0.07);
+          border-radius: 16px;
+          background: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        }
+        .bs-page-meta {
+          margin: 0;
+          color: #6b7280;
+          font-size: 13px;
+          font-weight: 600;
+        }
+        .bs-page-meta strong { color: #111; }
+        .bs-page-controls { display: flex; align-items: center; gap: 6px; }
+        .bs-page-btn {
+          min-width: 34px;
+          height: 34px;
+          padding: 0 11px;
+          border: 1px solid rgba(0,0,0,0.1);
+          border-radius: 10px;
+          background: #fff;
+          color: #374151;
+          font-size: 12.5px;
+          font-weight: 700;
+          cursor: pointer;
+          font-family: inherit;
+          transition: background .15s, color .15s, border-color .15s;
+        }
+        .bs-page-btn:hover:not(:disabled) {
+          background: rgba(22,163,74,0.08);
+          border-color: rgba(22,163,74,0.24);
+          color: #15803d;
+        }
+        .bs-page-btn-active {
+          background: #16a34a;
+          border-color: #16a34a;
+          color: #fff;
+        }
+        .bs-page-btn:disabled {
+          opacity: .42;
+          cursor: not-allowed;
+        }
+
         /* ── MOBILE DRAWER ── */
         .bs-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; animation: bsFadeIn .15s ease; }
         .bs-drawer {
@@ -676,6 +771,8 @@ export default function BrowsePage() {
         @media (max-width: 640px) {
           .bs-wrap { padding: 18px 14px 56px; display: block; }
           .bs-hero { padding: 28px 16px 24px; }
+          .bs-page-vendor .bs-hero { padding: 20px 16px 18px; }
+          .bs-page-vendor .bs-wrap { padding-top: 14px; }
           .bs-hero-h { font-size: 28px; overflow-wrap: anywhere; }
           .bs-hero-sub { font-size: 13px; line-height: 1.45; }
           .bs-search-wrap { width: 100%; padding: 11px 14px; border-radius: 14px; }
@@ -685,10 +782,13 @@ export default function BrowsePage() {
           .bs-toolbar-right { width: 100%; justify-content: space-between; }
           .bs-grid { grid-template-columns: 1fr; gap: 12px; }
           .bs-vendor-grid { grid-template-columns: 1fr; }
+          .bs-pagination { align-items: stretch; flex-direction: column; }
+          .bs-page-controls { justify-content: center; flex-wrap: wrap; }
+          .bs-page-meta { text-align: center; }
         }
       `}</style>
 
-      <div className="bs-page">
+      <div className={`bs-page${type === "Vendor" ? " bs-page-vendor" : ""}`}>
         <Header />
 
         {/* ── HERO ── */}
@@ -725,6 +825,8 @@ export default function BrowsePage() {
           <Sidebar />
 
           <main className="bs-main">
+            <div ref={resultsTopRef} className="bs-results-anchor" />
+
             {/* Toolbar */}
             <div className="bs-toolbar">
               <p className="bs-count">
@@ -773,13 +875,51 @@ export default function BrowsePage() {
             {!loading && !isEmpty && (
               type === "Vendor" ? (
                 <div className={viewMode === "grid" ? "bs-vendor-grid" : "bs-list-mode"}>
-                  {vendors.map(v => <VendorCard key={v.id} v={v} />)}
+                  {visibleVendors.map(v => <VendorCard key={v.id} v={v} />)}
                 </div>
               ) : (
                 <div className={viewMode === "grid" ? "bs-grid" : "bs-list-mode"}>
-                  {products.map(p => <ProductCard key={p.id} p={p} />)}
+                  {visibleProducts.map(p => <ProductCard key={p.id} p={p} />)}
                 </div>
               )
+            )}
+
+            {!loading && !isEmpty && totalPages > 1 && (
+              <div className="bs-pagination" aria-label={`${type} pagination`}>
+                <p className="bs-page-meta">
+                  Showing <strong>{pageStart + 1}-{pageEnd}</strong> of <strong>{items.length}</strong>
+                </p>
+                <div className="bs-page-controls">
+                  <button className="bs-page-btn" onClick={() => goToPage(safePage - 1)} disabled={safePage === 1}>
+                    Previous
+                  </button>
+                  {pageNumbers[0] > 1 && (
+                    <>
+                      <button className="bs-page-btn" onClick={() => goToPage(1)}>1</button>
+                      {pageNumbers[0] > 2 && <span className="bs-page-meta">…</span>}
+                    </>
+                  )}
+                  {pageNumbers.map(page => (
+                    <button
+                      key={page}
+                      className={`bs-page-btn${safePage === page ? " bs-page-btn-active" : ""}`}
+                      onClick={() => goToPage(page)}
+                      aria-current={safePage === page ? "page" : undefined}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                    <>
+                      {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && <span className="bs-page-meta">…</span>}
+                      <button className="bs-page-btn" onClick={() => goToPage(totalPages)}>{totalPages}</button>
+                    </>
+                  )}
+                  <button className="bs-page-btn" onClick={() => goToPage(safePage + 1)} disabled={safePage === totalPages}>
+                    Next
+                  </button>
+                </div>
+              </div>
             )}
           </main>
         </div>

@@ -11,7 +11,7 @@ import {
   submitVendorClaim,
   type PublicVendor,
 } from "@/lib/supabasePublic";
-import { getStoredSession } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 import {
   FiMapPin, FiMail, FiGlobe, FiArrowLeft, FiPackage,
   FiCheckCircle, FiClock, FiAlertCircle, FiExternalLink, FiX,
@@ -21,14 +21,13 @@ import { HiOutlineSparkles } from "react-icons/hi2";
 
 type Vendor = PublicVendor;
 type Product = { id: string; title: string; images?: string[]; priceType?: string; ecoScore?: number; };
-
-const Field = ({ label, value }: { label: string; value: string }) => (
-  <label className="vp-field">
-    <span className="vp-label">{label}</span>
-    <input value={value} readOnly className="vp-input" style={{ display: "none" }} />
-    <span className="vp-value">{value}</span>
-  </label>
-);
+type VendorDisplayFields = Vendor & {
+  category?: string;
+  ecoTier?: string;
+  website?: string;
+  ecoScore?: number;
+  GreenLensScore?: number;
+};
 
 export default function VendorProfilePage() {
   const params = useParams();
@@ -38,6 +37,7 @@ export default function VendorProfilePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [claimOpen, setClaimOpen] = useState(false);
+  const [claimLoginOpen, setClaimLoginOpen] = useState(false);
   const [claimSubmitting, setClaimSubmitting] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(false);
   const [claimError, setClaimError] = useState("");
@@ -48,6 +48,18 @@ export default function VendorProfilePage() {
   });
 
   const set = (k: keyof typeof claimForm, v: string) => setClaimForm(f => ({ ...f, [k]: v }));
+
+  async function openClaimFlow() {
+    const session = await getValidSession();
+    setClaimError("");
+
+    if (!session?.accessToken) {
+      setClaimLoginOpen(true);
+      return;
+    }
+
+    setClaimOpen(true);
+  }
 
   const loadVendor = async () => {
     if (!vendorId) return;
@@ -64,9 +76,16 @@ export default function VendorProfilePage() {
   const handleClaim = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!vendor) return;
+    const session = await getValidSession();
+
+    if (!session?.accessToken) {
+      setClaimOpen(false);
+      setClaimLoginOpen(true);
+      return;
+    }
+
     setClaimSubmitting(true); setClaimError("");
     try {
-      const session = getStoredSession();
       await submitVendorClaim({ vendorId: vendor.id, ...claimForm, profileId: session?.user?.id, accessToken: session?.accessToken });
       setClaimSuccess(true); setClaimOpen(false);
       await loadVendor();
@@ -92,6 +111,7 @@ export default function VendorProfilePage() {
   );
 
   const companyName = (vendor.companyName || "").replace(/^\/+/, "").trim() || "Vendor";
+  const displayVendor = vendor as VendorDisplayFields;
   const initials = companyName.slice(0, 2).toUpperCase();
   const certs = (vendor.certifications || []) as string[];
 
@@ -300,44 +320,142 @@ export default function VendorProfilePage() {
           display: flex; align-items: center; justify-content: center; padding: 16px;
         }
         .vp-modal {
-          width: 100%; max-width: 620px; max-height: 94vh;
-          overflow-y: auto; background: #fff; border-radius: 28px;
+          width: 100%; max-width: 680px; max-height: 92vh;
+          overflow: hidden; background: #fff; border-radius: 24px;
           box-shadow: 0 32px 100px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.06);
           display: flex; flex-direction: column;
         }
         /* modal top banner */
         .vp-modal-banner {
           background: linear-gradient(135deg, #0a1a10 0%, #0f2318 100%);
-          border-radius: 28px 28px 0 0; padding: 20px 24px;
-          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          border-radius: 24px 24px 0 0; padding: 18px 24px 16px;
+          display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
           position: relative; overflow: hidden;
+          flex-shrink: 0;
         }
         .vp-modal-banner::before {
           content: ''; position: absolute; inset: 0;
           background: radial-gradient(ellipse 300px 200px at 90% 60%, rgba(22,163,74,0.18) 0%, transparent 60%);
           pointer-events: none;
         }
-        .vp-modal-banner-left { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+        .vp-modal-banner-left { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; min-width: 0; flex: 1; }
         .vp-modal-avatar {
-          width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
+          width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
           background: linear-gradient(135deg, #16a34a, #15803d);
           color: #fff; font-size: 15px; font-weight: 800;
           display: flex; align-items: center; justify-content: center;
           border: 2px solid rgba(255,255,255,0.12);
         }
-        .vp-modal-banner-title { font-size: 15px; font-weight: 800; color: #fff; margin: 0 0 2px; }
-        .vp-modal-banner-sub { font-size: 12px; color: rgba(255,255,255,0.45); margin: 0; }
+        .vp-modal-banner-copy { min-width: 0; padding-top: 1px; }
+        .vp-modal-banner-title {
+          font-size: 17px; font-weight: 850; color: #fff; margin: 0 0 4px;
+          line-height: 1.2; overflow-wrap: anywhere;
+        }
+        .vp-modal-banner-sub {
+          font-size: 12.5px; color: rgba(255,255,255,0.55); margin: 0;
+          line-height: 1.35; overflow-wrap: anywhere;
+        }
         .vp-modal-close {
-          width: 32px; height: 32px; border-radius: 50%; border: none;
+          width: 36px; height: 36px; border-radius: 50%; border: none;
           background: rgba(255,255,255,0.1); cursor: pointer;
           display: flex; align-items: center; justify-content: center;
           color: rgba(255,255,255,0.6); flex-shrink: 0; transition: background .15s;
           position: relative; z-index: 1;
+          margin-top: 2px;
         }
         .vp-modal-close:hover { background: rgba(255,255,255,0.18); color: #fff; }
 
         /* modal body */
-        .vp-modal-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        .vp-login-modal {
+          max-width: 440px;
+          padding: 26px;
+          gap: 18px;
+          position: relative;
+        }
+        .vp-login-head {
+          display: flex;
+          gap: 14px;
+          align-items: flex-start;
+        }
+        .vp-login-icon {
+          width: 46px;
+          height: 46px;
+          border-radius: 14px;
+          background: #f0fdf4;
+          color: #15803d;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .vp-login-title {
+          margin: 0 0 6px;
+          color: #111827;
+          font-size: 20px;
+          font-weight: 850;
+          letter-spacing: -.02em;
+          line-height: 1.2;
+        }
+        .vp-login-copy {
+          margin: 0;
+          color: #6b7280;
+          font-size: 13.5px;
+          line-height: 1.6;
+        }
+        .vp-login-actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 4px;
+        }
+        .vp-login-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          min-height: 42px;
+          padding: 0 18px;
+          border-radius: 999px;
+          font-size: 13px;
+          font-weight: 800;
+          text-decoration: none;
+          border: 1px solid rgba(0,0,0,0.1);
+          font-family: inherit;
+          cursor: pointer;
+        }
+        .vp-login-btn-primary {
+          background: #16a34a;
+          color: #fff;
+          border-color: #16a34a;
+          box-shadow: 0 8px 22px rgba(22,163,74,.22);
+        }
+        .vp-login-btn-secondary {
+          background: #fff;
+          color: #374151;
+        }
+        .vp-login-close {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          border: none;
+          background: #f3f4f6;
+          color: #6b7280;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+        .vp-login-close:hover { background: #e5e7eb; color: #111827; }
+        .vp-claim-form { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+        .vp-modal-body {
+          padding: 22px 24px;
+          display: flex; flex-direction: column; gap: 18px;
+          overflow-y: auto;
+          min-height: 0;
+        }
 
         /* section divider */
         .vp-section-label {
@@ -348,8 +466,8 @@ export default function VendorProfilePage() {
         }
         .vp-section-label::after { content: ''; flex: 1; height: 1px; background: #f0f0f0; }
 
-        .vp-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        @media (max-width: 520px) { .vp-form-grid { grid-template-columns: 1fr; } }
+        .vp-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 620px) { .vp-form-grid { grid-template-columns: 1fr; } }
         .vp-form-full { grid-column: 1 / -1; }
 
         /* input with icon */
@@ -360,7 +478,7 @@ export default function VendorProfilePage() {
         .vp-input-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
         .vp-textarea-icon { position: absolute; left: 11px; top: 11px; color: #9ca3af; pointer-events: none; }
         .vp-form-in {
-          width: 100%; padding: 9px 12px 9px 34px;
+          width: 100%; padding: 10px 12px 10px 36px;
           border: 1.5px solid #e5e7eb; border-radius: 10px;
           font-size: 13px; font-family: inherit; outline: none; color: #111;
           background: #fafafa; transition: border-color .15s, background .15s;
@@ -370,7 +488,7 @@ export default function VendorProfilePage() {
         .vp-form-in::placeholder { color: #c4cad3; }
         .vp-form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
         .vp-form-in-noicon { padding-left: 12px; }
-        .vp-form-textarea { padding: 9px 12px 9px 34px; min-height: 80px; resize: none; vertical-align: top; line-height: 1.5; }
+        .vp-form-textarea { padding: 10px 12px 10px 36px; min-height: 88px; resize: vertical; vertical-align: top; line-height: 1.5; }
 
         /* proof callout */
         .vp-proof-callout {
@@ -384,6 +502,7 @@ export default function VendorProfilePage() {
           padding: 16px 24px 20px;
           border-top: 1px solid #f3f4f6;
           display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+          flex-shrink: 0;
         }
         .vp-form-note { font-size: 11px; color: #b0b8c4; max-width: 280px; line-height: 1.5; display: flex; align-items: flex-start; gap: 5px; }
         .vp-submit-btn {
@@ -399,7 +518,20 @@ export default function VendorProfilePage() {
         .vp-form-err {
           background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px;
           padding: 10px 14px; font-size: 13px; color: #991b1b;
-          display: flex; align-items: center; gap: 6px; margin: 0 24px;
+          display: flex; align-items: center; gap: 6px; margin: 0 24px 12px;
+        }
+        @media (max-width: 640px) {
+          .vp-modal-overlay { align-items: flex-end; padding: 10px; }
+          .vp-modal { max-height: 94vh; border-radius: 20px; }
+          .vp-modal-banner { border-radius: 20px 20px 0 0; padding: 16px; gap: 12px; }
+          .vp-modal-avatar { width: 42px; height: 42px; border-radius: 12px; font-size: 14px; }
+          .vp-modal-banner-title { font-size: 15px; }
+          .vp-modal-banner-sub { font-size: 11.5px; }
+          .vp-modal-body { padding: 18px 16px; }
+          .vp-modal-footer { padding: 14px 16px 16px; }
+          .vp-submit-btn { width: 100%; justify-content: center; }
+          .vp-form-note { max-width: none; }
+          .vp-form-err { margin: 0 16px 12px; }
         }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
@@ -428,14 +560,14 @@ export default function VendorProfilePage() {
                   {vendor.isUnclaimed && <span className="vp-badge vp-badge-amber"><FiAlertCircle size={10} />Unclaimed listing</span>}
                   {vendor.isClaimRequested && <span className="vp-badge vp-badge-blue"><FiClock size={10} />Claim under review</span>}
                   {vendor.isClaimed && <span className="vp-badge vp-badge-green"><FiCheckCircle size={10} />Verified business</span>}
-                  {(vendor as any).ecoTier && <span className="vp-badge vp-badge-purple"><HiOutlineSparkles size={10} />{(vendor as any).ecoTier}</span>}
+                  {displayVendor.ecoTier && <span className="vp-badge vp-badge-purple"><HiOutlineSparkles size={10} />{displayVendor.ecoTier}</span>}
                 </div>
 
                 <h1 className="vp-hero-name">{companyName}</h1>
 
                 <div className="vp-hero-meta">
                   {vendor.location && <span className="vp-hero-meta-item"><FiMapPin size={12} />{vendor.location}</span>}
-                  {(vendor as any).category && <span className="vp-hero-meta-item"><FiAward size={12} />{(vendor as any).category}</span>}
+                  {displayVendor.category && <span className="vp-hero-meta-item"><FiAward size={12} />{displayVendor.category}</span>}
                   {vendor.email && <span className="vp-hero-meta-item"><FiMail size={12} />{vendor.email}</span>}
                 </div>
 
@@ -447,7 +579,7 @@ export default function VendorProfilePage() {
               {/* CTA */}
               <div className="vp-hero-cta">
                 {vendor.isUnclaimed && (
-                  <button className="vp-claim-btn" onClick={() => setClaimOpen(true)}>
+                  <button className="vp-claim-btn" onClick={openClaimFlow}>
                     <FiShield size={14} />Claim this business
                   </button>
                 )}
@@ -463,9 +595,9 @@ export default function VendorProfilePage() {
                 <div className="vp-stat-val">{products.length}</div>
                 <div className="vp-stat-lbl">Products listed</div>
               </div>
-              {typeof (vendor as any).ecoScore === "number" && (
+              {typeof displayVendor.ecoScore === "number" && (
                 <div className="vp-stat">
-                  <div className="vp-stat-val">{(vendor as any).ecoScore}<span style={{ fontSize: 14, color: "rgba(255,255,255,0.35)" }}>/100</span></div>
+                  <div className="vp-stat-val">{displayVendor.ecoScore}<span style={{ fontSize: 14, color: "rgba(255,255,255,0.35)" }}>/100</span></div>
                   <div className="vp-stat-lbl">Eco Score</div>
                 </div>
               )}
@@ -475,9 +607,9 @@ export default function VendorProfilePage() {
                   <div className="vp-stat-lbl">Certifications</div>
                 </div>
               )}
-              {typeof (vendor as any).GreenLensScore === "number" && (
+              {typeof displayVendor.GreenLensScore === "number" && (
                 <div className="vp-stat">
-                  <div className="vp-stat-val">{(vendor as any).GreenLensScore}<span style={{ fontSize: 14, color: "rgba(255,255,255,0.35)" }}>/5</span></div>
+                  <div className="vp-stat-val">{displayVendor.GreenLensScore}<span style={{ fontSize: 14, color: "rgba(255,255,255,0.35)" }}>/5</span></div>
                   <div className="vp-stat-lbl">Green Lens Score</div>
                 </div>
               )}
@@ -492,7 +624,7 @@ export default function VendorProfilePage() {
           <aside className="vp-sidebar">
 
             {/* Contact */}
-            {(vendor.email || (vendor as any).website || vendor.location) && (
+            {(vendor.email || displayVendor.website || vendor.location) && (
               <div className="vp-card">
                 <p className="vp-card-title">Contact & Info</p>
                 {vendor.location && (
@@ -505,8 +637,8 @@ export default function VendorProfilePage() {
                     <FiMail size={14} className="vp-contact-icon" />{vendor.email}
                   </a>
                 )}
-                {(vendor as any).website && (
-                  <a href={(vendor as any).website} target="_blank" rel="noopener noreferrer" className="vp-contact-row">
+                {displayVendor.website && (
+                  <a href={displayVendor.website} target="_blank" rel="noopener noreferrer" className="vp-contact-row">
                     <FiGlobe size={14} className="vp-contact-icon" />Website <FiExternalLink size={11} style={{ marginLeft: "auto", opacity: .5 }} />
                   </a>
                 )}
@@ -588,6 +720,35 @@ export default function VendorProfilePage() {
           </main>
         </div>
 
+        {claimLoginOpen && vendor.isUnclaimed && (
+          <div className="vp-modal-overlay" onClick={e => e.target === e.currentTarget && setClaimLoginOpen(false)}>
+            <div className="vp-modal vp-login-modal" role="dialog" aria-modal="true" aria-label="Login required">
+              <button className="vp-login-close" onClick={() => setClaimLoginOpen(false)} aria-label="Close login prompt">
+                <FiX size={14} />
+              </button>
+              <div className="vp-login-head">
+                <div className="vp-login-icon">
+                  <FiLock size={20} />
+                </div>
+                <div>
+                  <h2 className="vp-login-title">Login required</h2>
+                  <p className="vp-login-copy">
+                    Please login first to claim this business. We need an account so Sustainly can verify ownership and track the claim request.
+                  </p>
+                </div>
+              </div>
+              <div className="vp-login-actions">
+                <Link href="/login" className="vp-login-btn vp-login-btn-primary">
+                  <FiUser size={14} />Login
+                </Link>
+                <Link href="/register?role=VENDOR" className="vp-login-btn vp-login-btn-secondary">
+                  Create vendor account
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── CLAIM MODAL ── */}
         {claimOpen && vendor.isUnclaimed && (
           <div className="vp-modal-overlay" onClick={e => e.target === e.currentTarget && setClaimOpen(false)}>
@@ -597,7 +758,7 @@ export default function VendorProfilePage() {
               <div className="vp-modal-banner">
                 <div className="vp-modal-banner-left">
                   <div className="vp-modal-avatar">{initials}</div>
-                  <div>
+                  <div className="vp-modal-banner-copy">
                     <p className="vp-modal-banner-title">Claim this business</p>
                     <p className="vp-modal-banner-sub">{companyName} · Ownership verification required</p>
                   </div>
@@ -605,7 +766,7 @@ export default function VendorProfilePage() {
                 <button className="vp-modal-close" onClick={() => setClaimOpen(false)}><FiX size={13} /></button>
               </div>
 
-              <form onSubmit={handleClaim}>
+              <form onSubmit={handleClaim} className="vp-claim-form">
                 <div className="vp-modal-body">
 
                   {/* Section 1 — Your details */}
