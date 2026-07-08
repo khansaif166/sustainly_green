@@ -71,6 +71,11 @@ function requireConfig() {
   }
 }
 
+function getSiteUrl(): string {
+  if (typeof window !== "undefined") return window.location.origin;
+  return process.env.NEXT_PUBLIC_SITE_URL || "";
+}
+
 async function authFetch<T>(
   path: string,
   options: RequestInit & { accessToken?: string } = {},
@@ -308,7 +313,11 @@ export async function signUpWithSupabase(input: {
 }): Promise<SupabaseSignUpResult> {
   const normalizedEmail = input.email.trim().toLowerCase();
   const normalizedName = input.name.trim();
-  const response = await authFetch<SupabaseAuthResponse>("/auth/v1/signup", {
+  const redirectTo = getSiteUrl();
+  const signupPath = redirectTo
+    ? `/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`
+    : "/auth/v1/signup";
+  const response = await authFetch<SupabaseAuthResponse>(signupPath, {
     method: "POST",
     body: JSON.stringify({
       email: normalizedEmail,
@@ -344,7 +353,11 @@ export async function signUpWithSupabase(input: {
 
 export async function requestPasswordReset(email: string) {
   const normalizedEmail = email.trim().toLowerCase();
-  await authFetch<void>("/auth/v1/recover", {
+  const redirectTo = getSiteUrl();
+  const recoverPath = redirectTo
+    ? `/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`
+    : "/auth/v1/recover";
+  await authFetch<void>(recoverPath, {
     method: "POST",
     body: JSON.stringify({ email: normalizedEmail }),
   });
