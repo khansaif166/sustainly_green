@@ -353,13 +353,22 @@ export async function signUpWithSupabase(input: {
 
 export async function requestPasswordReset(email: string) {
   const normalizedEmail = email.trim().toLowerCase();
-  const redirectTo = getSiteUrl();
+  const siteUrl = getSiteUrl();
+  const redirectTo = siteUrl ? `${siteUrl}/reset-password` : "";
   const recoverPath = redirectTo
     ? `/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`
     : "/auth/v1/recover";
   await authFetch<void>(recoverPath, {
     method: "POST",
     body: JSON.stringify({ email: normalizedEmail }),
+  });
+}
+
+export async function updateSupabasePassword(accessToken: string, password: string) {
+  await authFetch<void>("/auth/v1/user", {
+    method: "PUT",
+    accessToken,
+    body: JSON.stringify({ password }),
   });
 }
 
