@@ -303,10 +303,15 @@ export default function BrowsePage() {
         <div className="bs-vc-logo">
           {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }} /> : logoInitials(v)}
         </div>
-        {v.listingVerified && <img src={VERIFIED_BADGE_SRC} alt="Sustainly Green Eco Verified" className="bs-verified-img bs-verified-img-grid" />}
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3 className="bs-vc-name">{vt(v.companyName, "Unnamed Vendor")}</h3>
           {v.category && <p className="bs-vc-cat">{vt(v.category)}</p>}
+          {v.listingVerified && (
+            <span className="bs-verified-pill">
+              <img src={VERIFIED_BADGE_SRC} alt="" />
+              Eco Verified
+            </span>
+          )}
         </div>
         <span className="bs-vc-tier" style={badgeStyle(vendorBadge(v))}>{vendorBadgeLabel(v)}</span>
       </div>
@@ -340,10 +345,15 @@ export default function BrowsePage() {
       <div className="bs-vc-logo" style={{ width: 52, height: 52, fontSize: 16, flexShrink: 0, borderRadius: 12 }}>
         {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} /> : logoInitials(v)}
       </div>
-      {v.listingVerified && <img src={VERIFIED_BADGE_SRC} alt="Sustainly Green Eco Verified" className="bs-verified-img bs-verified-img-row" />}
       <div className="bs-row-body">
         <h3 className="bs-row-title">{vt(v.companyName, "Unnamed Vendor")}</h3>
         {v.category && <p className="bs-card-vendor" style={{ marginBottom: 4 }}>{vt(v.category)}</p>}
+        {v.listingVerified && (
+          <span className="bs-verified-pill bs-verified-pill-row">
+            <img src={VERIFIED_BADGE_SRC} alt="" />
+            Eco Verified
+          </span>
+        )}
         {(v.subCategories || []).length > 0 && (
           <div className="bs-card-tags" style={{ marginTop: 6 }}>
             {v.subCategories!.slice(0, 3).map((item, i) => <span key={i} className="bs-tag">{vt(item)}</span>)}
@@ -664,27 +674,29 @@ export default function BrowsePage() {
         /* ── VENDOR CARD ── */
         .bs-vendor-card { gap: 0; min-height: 218px; position: relative; }
         .bs-vc-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 16px 0; }
-        .bs-verified-img {
+        .bs-verified-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          width: fit-content;
+          margin-top: 7px;
+          padding: 3px 8px 3px 4px;
+          border-radius: 999px;
+          background: #ecfdf5;
+          color: #047857;
+          border: 1px solid rgba(4,120,87,.16);
+          font-size: 10px;
+          font-weight: 800;
+          line-height: 1;
+        }
+        .bs-verified-pill img {
+          width: 16px;
+          height: 20px;
           object-fit: cover;
-          border-radius: 6px;
-          box-shadow: 0 8px 18px rgba(15,23,42,.18);
-          border: 2px solid #fff;
+          border-radius: 3px;
           flex-shrink: 0;
         }
-        .bs-verified-img-grid {
-          position: absolute;
-          top: 10px;
-          right: 12px;
-          width: 34px;
-          height: 42px;
-        }
-        .bs-verified-img-row {
-          position: absolute;
-          top: 10px;
-          left: 46px;
-          width: 30px;
-          height: 38px;
-        }
+        .bs-verified-pill-row { margin: 4px 0 2px; }
         .bs-vendor-card .bs-card-desc { padding: 8px 16px 0; }
         .bs-vendor-card .bs-card-tags { padding: 0 16px; margin-top: 10px; }
         .bs-vc-logo {
