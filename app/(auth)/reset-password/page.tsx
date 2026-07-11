@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   clearStoredSession,
   saveSessionFromAuthHash,
+  SupabaseAuthError,
   updateSupabasePassword,
   type SupabaseSession,
 } from "@/lib/supabaseAuth";
@@ -77,8 +78,22 @@ export default function ResetPasswordPage() {
       clearStoredSession("manual");
       setSession(null);
       setSuccess(true);
-    } catch {
-      setError("We could not update your password. Please request a new reset link and try again.");
+    } catch (err: unknown) {
+      console.error("PASSWORD_UPDATE_ERROR", err);
+      if (err instanceof SupabaseAuthError) {
+        const message = err.message.toLowerCase();
+        if (err.status === 401 || message.includes("jwt") || message.includes("expired")) {
+          setError("This reset link has expired or was already used. Please request a new reset email.");
+        } else if (message.includes("same") || message.includes("different")) {
+          setError("Please choose a password that is different from your current password.");
+        } else if (message.includes("weak") || message.includes("password")) {
+          setError(err.message);
+        } else {
+          setError(err.message || "We could not update your password. Please request a new reset link and try again.");
+        }
+      } else {
+        setError("We could not update your password. Please request a new reset link and try again.");
+      }
     } finally {
       setSubmitting(false);
     }

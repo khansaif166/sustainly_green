@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, XCircle, ExternalLink, Search, Filter, Trash2, Building2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, XCircle, ExternalLink, Search, Trash2 } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
+
+const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
+type VendorStatusFilter = "ALL" | "APPROVED" | "PENDING";
 
 type Vendor = {
   website?: string;
@@ -24,6 +27,7 @@ type Vendor = {
   shortDescription?: string;
   logoUrl?: string;
   approved: boolean;
+  listingVerified?: boolean;
   claimedStatus?: string;
 };
 
@@ -31,7 +35,7 @@ export default function AdminVendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState("");
-  const [status,  setStatus]  = useState<"ALL" | "APPROVED" | "PENDING">("ALL");
+  const [status,  setStatus]  = useState<VendorStatusFilter>("ALL");
 
   async function fetchVendors() {
     const session = getStoredSession();
@@ -42,7 +46,10 @@ export default function AdminVendorsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { fetchVendors(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchVendors();
+  }, []);
 
   async function approveVendor(uid: string) {
     const session = getStoredSession();
@@ -55,6 +62,17 @@ export default function AdminVendorsPage() {
     const session = getStoredSession();
     if (!session) return;
     await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ approved: false }) });
+    fetchVendors();
+  }
+
+  async function toggleVerifiedBadge(uid: string, listingVerified: boolean) {
+    const session = getStoredSession();
+    if (!session) return;
+    await fetch(`/api/admin/vendors/${uid}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ listingVerified }),
+    });
     fetchVendors();
   }
 
@@ -126,6 +144,8 @@ export default function AdminVendorsPage() {
 
         .av-empty{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:18px;padding:40px 24px;text-align:center;font-size:13.5px;color:#9ca3af}
         .av-unclaimed{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:50px;font-size:10.5px;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid rgba(194,65,12,.15)}
+        .av-verified-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:50px;font-size:10.5px;font-weight:800;background:#ecfdf5;color:#047857;border:1px solid rgba(4,120,87,.18)}
+        .av-verified-badge img{width:18px;height:22px;object-fit:cover;border-radius:3px}
       `}</style>
 
       <div className="av-page">
@@ -146,6 +166,10 @@ export default function AdminVendorsPage() {
                 <p className="av-hero-stat-val" style={{ color: "#fbbf24" }}>{pending}</p>
                 <p className="av-hero-stat-label">Pending</p>
               </div>
+              <div className="av-hero-stat">
+                <p className="av-hero-stat-val">{approved}</p>
+                <p className="av-hero-stat-label">Approved</p>
+              </div>
             </div>
           </div>
         </div>
@@ -156,7 +180,7 @@ export default function AdminVendorsPage() {
             <Search size={14} color="#9ca3af" className="av-search-icon" />
             <input placeholder="Search company or email…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select className="av-select" value={status} onChange={e => setStatus(e.target.value as any)}>
+          <select className="av-select" value={status} onChange={e => setStatus(e.target.value as VendorStatusFilter)}>
             <option value="ALL">All Vendors</option>
             <option value="PENDING">Pending</option>
             <option value="APPROVED">Approved</option>
@@ -188,6 +212,12 @@ export default function AdminVendorsPage() {
                               <span className="av-unclaimed">
                                 <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#c2410c" }} />
                                 Unclaimed
+                              </span>
+                            )}
+                            {v.listingVerified && (
+                              <span className="av-verified-badge">
+                                <img src={VERIFIED_BADGE_SRC} alt="" />
+                                Eco Verified
                               </span>
                             )}
                           </div>
@@ -235,6 +265,13 @@ export default function AdminVendorsPage() {
                     )}
                     <button onClick={() => rejectVendor(v.uid)} className="av-btn av-btn-ghost" style={{ flex: 1 }}>
                       <XCircle size={13} />Reject
+                    </button>
+                    <button
+                      onClick={() => toggleVerifiedBadge(v.uid, !v.listingVerified)}
+                      className={v.listingVerified ? "av-btn av-btn-green" : "av-btn av-btn-outline"}
+                      style={{ flex: "1 1 100%" }}
+                    >
+                      <CheckCircle2 size={13} />{v.listingVerified ? "Remove Eco Badge" : "Add Eco Badge"}
                     </button>
                     <button onClick={() => deleteVendor(v.uid)} className="av-btn av-btn-danger" title="Delete vendor">
                       <Trash2 size={13} />

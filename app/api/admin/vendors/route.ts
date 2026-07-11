@@ -34,6 +34,7 @@ type VendorRow = {
   approved: boolean;
   status: string;
   claim_status: string | null;
+  listing_verified: boolean | null;
 };
 
 function mapVendor(row: VendorRow) {
@@ -65,6 +66,7 @@ function mapVendor(row: VendorRow) {
     approved: row.approved,
     status: row.status,
     claimedStatus: row.claim_status || "",
+    listingVerified: Boolean(row.listing_verified),
   };
 }
 
@@ -73,7 +75,7 @@ export async function GET(request: Request) {
     await requireRole(request, ["ADMIN"]);
 
     const rows = await supabaseServiceFetch<VendorRow[]>(
-      "/rest/v1/vendors?select=id,profile_id,company_name,logo_url,registration_type,cin_registration,gst_number,year_of_incorporation,business_type,primary_category,sub_categories,country,city,state,pin_code,business_email,whatsapp,primary_contact_name,designation,primary_sustainability_cert,issuing_body,certificate_file_url,short_description,approved,status,claim_status&order=created_at.desc&limit=10000",
+      "/rest/v1/vendors?select=id,profile_id,company_name,logo_url,registration_type,cin_registration,gst_number,year_of_incorporation,business_type,primary_category,sub_categories,country,city,state,pin_code,business_email,whatsapp,primary_contact_name,designation,primary_sustainability_cert,issuing_body,certificate_file_url,short_description,approved,status,claim_status,listing_verified&order=created_at.desc&limit=10000",
     );
 
     return apiOk({ ok: true, vendors: rows.map(mapVendor) });

@@ -103,9 +103,10 @@ async function authFetch<T>(
         error?: string;
         error_code?: string;
         error_description?: string;
+        message?: string;
         msg?: string;
       };
-      parsedMessage = parsed.msg || parsed.error_description || message;
+      parsedMessage = parsed.msg || parsed.message || parsed.error_description || message;
       parsedCode = parsed.error_code || parsed.code || parsed.error;
     } catch {}
 

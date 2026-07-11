@@ -9,6 +9,7 @@ import { Search, BadgeCheck, Clock } from "lucide-react";
 
 /* ---------------- TYPES ---------------- */
 type Vendor = PublicVendor & { name?: string };
+const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
 
 /* ================= PAGE ================= */
 export default function FindVendorsPage() {
@@ -89,8 +90,15 @@ export default function FindVendorsPage() {
               <Link
                 key={v.id}
                 href={`/find-vendors/${v.id}`}
-                className="bg-[var(--color-bg-white)] rounded-2xl p-6 space-y-4 shadow-[0_12px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition"
+                className="relative bg-[var(--color-bg-white)] rounded-2xl p-6 space-y-4 shadow-[0_12px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition"
               >
+                {v.listingVerified && (
+                  <img
+                    src={VERIFIED_BADGE_SRC}
+                    alt="Sustainly Green Eco Verified"
+                    className="absolute -top-3 right-4 h-16 w-12 rounded-md object-cover shadow-lg ring-2 ring-white"
+                  />
+                )}
                 {/* HEADER */}
                 <div className="flex items-start justify-between">
                   {/* LOGO */}

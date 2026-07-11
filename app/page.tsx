@@ -67,7 +67,10 @@ type SupplierCard = {
   mark: string;
   badge: string;
   isUnclaimed?: boolean;
+  listingVerified?: boolean;
 };
+
+const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
 
 const sidebarCategories: CategoryItem[] = [
   { id: "renewable-energy", name: "Renewable Energy", icon: "sun" },
@@ -362,6 +365,7 @@ export default function HomePage() {
                 mark: vendor.logoText,
                 badge: vendor.isUnclaimed ? "Listed" : vendor.listingVerified ? "Verified" : "Approved",
                 isUnclaimed: vendor.isUnclaimed,
+                listingVerified: vendor.listingVerified,
               };
             }),
           );
@@ -744,6 +748,9 @@ export default function HomePage() {
             <div className="card-grid four-up">
               {featuredSuppliers.map((supplier, index) => (
                 <Link key={supplier.id} href={`/find-vendors/${supplier.id}`} className="supplier-card">
+                  {supplier.listingVerified && (
+                    <img src={VERIFIED_BADGE_SRC} alt="Sustainly Green Eco Verified" className="supplier-verified-img" />
+                  )}
                   <div className={`supplier-mark mark-${index % 4}`}>{supplier.mark}</div>
                   <h3>{supplier.name}</h3>
                   <p className="supplier-country">{supplier.country}</p>
@@ -2226,6 +2233,7 @@ export default function HomePage() {
         }
 
         .supplier-card {
+          position: relative;
           padding: 12px;
           display: grid;
           grid-template-rows: 56px minmax(34px, auto) 18px 1fr auto;
@@ -2233,6 +2241,19 @@ export default function HomePage() {
           justify-items: center;
           text-align: center;
           gap: 8px;
+        }
+
+        .supplier-verified-img {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 34px;
+          height: 42px;
+          object-fit: cover;
+          border-radius: 6px;
+          border: 2px solid #fff;
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+          z-index: 2;
         }
 
         .supplier-mark {

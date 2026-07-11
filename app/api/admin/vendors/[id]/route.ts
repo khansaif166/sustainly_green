@@ -52,6 +52,7 @@ type VendorRow = {
   payment_terms: string | null;
   language: string | null;
   approved: boolean;
+  listing_verified: boolean | null;
   status: string;
   updated_at: string;
 };
@@ -96,6 +97,7 @@ function mapVendor(row: VendorRow) {
     paymentTerms: row.payment_terms || "",
     language: row.language || "",
     approved: row.approved,
+    listingVerified: Boolean(row.listing_verified),
     status: row.status,
     updatedAt: row.updated_at,
   };
@@ -167,7 +169,7 @@ export async function GET(
     const rows = await supabaseServiceFetch<VendorRow[]>(
       `/rest/v1/vendors?${new URLSearchParams({
         select:
-          "id,profile_id,company_name,logo_url,registration_type,cin_registration,gst_number,year_of_incorporation,registered_address,city,state,pin_code,country,primary_contact_name,designation,business_email,whatsapp,alternate_phone,business_type,primary_category,sub_categories,short_description,key_products,export_capability,export_markets,primary_sustainability_cert,issuing_body,certificate_file_url,sustainability_practice,recycled_content,carbon_footprint,social_compliance,listing_tier,awards_image_url,payment_terms,language,approved,status,updated_at",
+          "id,profile_id,company_name,logo_url,registration_type,cin_registration,gst_number,year_of_incorporation,registered_address,city,state,pin_code,country,primary_contact_name,designation,business_email,whatsapp,alternate_phone,business_type,primary_category,sub_categories,short_description,key_products,export_capability,export_markets,primary_sustainability_cert,issuing_body,certificate_file_url,sustainability_practice,recycled_content,carbon_footprint,social_compliance,listing_tier,awards_image_url,payment_terms,language,approved,listing_verified,status,updated_at",
         id: `eq.${id}`,
         limit: "1",
       })}`,
@@ -218,6 +220,10 @@ export async function PATCH(
       patch.approved = approved;
       patch.status = approved ? "approved" : "submitted";
       patch.approved_at = approved ? new Date().toISOString() : null;
+    }
+
+    if (body.listingVerified !== undefined) {
+      patch.listing_verified = Boolean(body.listingVerified);
     }
 
     // Fetch profileId before committing the vendor update so a failure here

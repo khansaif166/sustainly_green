@@ -17,7 +17,6 @@ import {
   HiBadgeCheck,
   HiGlobeAlt,
 } from "react-icons/hi";
-import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -38,8 +37,19 @@ export default function LoginPage() {
       await requestPasswordReset(email);
       setResetSent(true);
       setError(null);
-    } catch (err: any) {
-      setError("Failed to send reset email.");
+    } catch (err: unknown) {
+      console.error("PASSWORD_RESET_ERROR", err);
+      if (err instanceof SupabaseAuthError) {
+        if (/redirect/i.test(err.message)) {
+          setError("Password reset redirect is not allowed in Supabase. Add this site's /reset-password URL to Supabase Auth Redirect URLs.");
+        } else if (err.code === "over_email_send_rate_limit" || err.status === 429) {
+          setError("Email rate limit exceeded. Please wait a few minutes before requesting another reset email.");
+        } else {
+          setError(err.message || "Failed to send reset email.");
+        }
+      } else {
+        setError("Failed to send reset email.");
+      }
     } finally {
       setResetLoading(false);
     }
@@ -54,7 +64,7 @@ export default function LoginPage() {
       const profile = await ensureCurrentProfile(session.accessToken);
 
       router.push(redirectForRole(profile));
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof SupabaseAuthError) {
         if (err.code === "email_not_confirmed") {
           setError("Please verify your email before signing in. Check your inbox for the confirmation link.");
@@ -88,7 +98,7 @@ export default function LoginPage() {
            text-sm font-medium absolute top-6 left-10
         "
         >
-          <img src="/log.webp" className="h-14 rounded-xl p-2 bg-white" />
+          <img src="/log.webp" alt="Sustainly Green" className="h-14 rounded-xl p-2 bg-white" />
         </Link>
 
         <div className="relative z-10 max-w-lg">

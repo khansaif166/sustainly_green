@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -11,6 +12,8 @@ import {
 import { Input, Select, TextArea, MultiSelect, Toggle, FileUpload } from "../../../vendor/onboarding/_components/FormFields";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
+
+const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
 
 export default function AdminVendorDetailsPage() {
   const router = useRouter();
@@ -64,6 +67,19 @@ export default function AdminVendorDetailsPage() {
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error?.message || "Error rejecting vendor");
       setVendorData((p: any) => ({ ...p, approved: false }));
+    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
+    setSubmitting(false);
+  };
+
+  const handleToggleVerifiedBadge = async () => {
+    if (!uid || !vendorData) return;
+    setSubmitting(true);
+    try {
+      const nextValue = !vendorData.listingVerified;
+      const res = await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify({ listingVerified: nextValue }) });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error?.message || "Error updating verified badge");
+      setVendorData((p: any) => ({ ...p, listingVerified: nextValue }));
     } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
     setSubmitting(false);
   };
@@ -153,6 +169,10 @@ export default function AdminVendorDetailsPage() {
         .avd-check-item{display:flex;align-items:center;gap:10px}
         .avd-check-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
         .avd-spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+        .avd-eco-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:50px;font-size:11.5px;font-weight:800;background:rgba(16,185,129,.16);color:#6ee7b7;border:1px solid rgba(110,231,183,.2)}
+        .avd-eco-badge img{width:20px;height:24px;object-fit:cover;border-radius:4px}
+        .avd-badge-preview{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:#f8fafc;border:1px solid #e5e7eb;margin-top:14px}
+        .avd-badge-preview img{width:54px;height:66px;object-fit:cover;border-radius:7px;box-shadow:0 8px 18px rgba(15,23,42,.12)}
         @keyframes spin{to{transform:rotate(360deg)}}
       `}</style>
 
@@ -177,6 +197,12 @@ export default function AdminVendorDetailsPage() {
                       {vendorData.approved ? <CheckCircle2 size={12} /> : null}
                       {vendorData.approved ? "Verified Vendor" : "Pending Verification"}
                     </span>
+                    {vendorData.listingVerified && (
+                      <span className="avd-eco-badge">
+                        <img src={VERIFIED_BADGE_SRC} alt="" />
+                        Eco Verified Badge
+                      </span>
+                    )}
                     {vendorData.updatedAt && <span style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>Updated {new Date(vendorData.updatedAt).toLocaleDateString()}</span>}
                   </div>
                 </div>
@@ -186,13 +212,17 @@ export default function AdminVendorDetailsPage() {
                 {isEditing ? (
                   <>
                     <button onClick={() => setIsEditing(false)} className="avd-btn avd-btn-outline"><X size={14} />Cancel</button>
-                    <button onClick={handleSubmit(onSubmit as any)} disabled={submitting} className="avd-btn avd-btn-green">
+                    <button onClick={handleSubmit(onSubmit)} disabled={submitting} className="avd-btn avd-btn-green">
                       {submitting ? <div className="avd-spinner" /> : <Save size={14} />}Save Changes
                     </button>
                   </>
                 ) : (
                   <>
                     <button onClick={() => setIsEditing(true)} className="avd-btn avd-btn-outline"><Edit3 size={14} />Edit</button>
+                    <button onClick={handleToggleVerifiedBadge} disabled={submitting} className={vendorData.listingVerified ? "avd-btn avd-btn-red" : "avd-btn avd-btn-green"}>
+                      {submitting ? <div className="avd-spinner" /> : <ShieldCheck size={14} />}
+                      {vendorData.listingVerified ? "Remove Eco Badge" : "Add Eco Badge"}
+                    </button>
                     {!vendorData.approved && <button onClick={handleApprove} disabled={submitting} className="avd-btn avd-btn-green">{submitting ? <div className="avd-spinner" /> : <CheckCircle2 size={14} />}Approve</button>}
                     {vendorData.approved && <button onClick={handleReject} disabled={submitting} className="avd-btn avd-btn-red"><XCircle size={14} />Suspend</button>}
                   </>
@@ -335,7 +365,17 @@ export default function AdminVendorDetailsPage() {
                   <D label="Listing Tier"   value={vendorData.listingTier} />
                   <D label="Language"       value={vendorData.language} />
                   <D label="Payment Terms"  value={vendorData.paymentTerms} />
+                  <D label="Eco Verified Badge" value={vendorData.listingVerified ? "Visible to buyers" : "Not assigned"} />
                 </div>
+                {vendorData.listingVerified && (
+                  <div className="avd-badge-preview">
+                    <img src={VERIFIED_BADGE_SRC} alt="Sustainly Green Eco Verified badge" />
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 800, color: "#111", margin: "0 0 3px" }}>Eco Verified badge active</p>
+                      <p style={{ fontSize: 11.5, color: "#6b7280", margin: 0 }}>Buyers can see this badge on the public vendor listing and profile.</p>
+                    </div>
+                  </div>
+                )}
                 {vendorData.awardsImageUrl && (
                   <div style={{ marginTop: 14 }}>
                     <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 8px" }}>Awards &amp; Recognitions</p>
@@ -366,7 +406,7 @@ export default function AdminVendorDetailsPage() {
                 </div>
                 {!vendorData.approved && (
                   <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,.08)" }}>
-                    <p style={{ fontSize: 11.5, color: "rgba(255,255,255,.3)", margin: "0 0 12px" }}>Once approved, the vendor's profile will be live on the marketplace.</p>
+                    <p style={{ fontSize: 11.5, color: "rgba(255,255,255,.3)", margin: "0 0 12px" }}>Once approved, the vendor&apos;s profile will be live on the marketplace.</p>
                     <button onClick={handleApprove} disabled={submitting} style={{ width: "100%", padding: "11px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                       {submitting ? <div className="avd-spinner" /> : <CheckCircle2 size={15} />}Approve &amp; Go Live
                     </button>

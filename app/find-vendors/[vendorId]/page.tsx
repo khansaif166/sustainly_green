@@ -28,6 +28,7 @@ type VendorDisplayFields = Vendor & {
   ecoScore?: number;
   GreenLensScore?: number;
 };
+const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
 
 export default function VendorProfilePage() {
   const params = useParams();
@@ -150,6 +151,7 @@ export default function VendorProfilePage() {
           flex-wrap: wrap;
         }
         .vp-logo-wrap {
+          position: relative;
           width: 88px; height: 88px; border-radius: 20px; flex-shrink: 0;
           background: linear-gradient(135deg, #16a34a, #15803d);
           color: #fff; font-size: 26px; font-weight: 800;
@@ -158,6 +160,15 @@ export default function VendorProfilePage() {
           box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
         .vp-logo-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .vp-verified-badge-img {
+          width: 58px;
+          height: 70px;
+          object-fit: cover;
+          border-radius: 8px;
+          border: 2px solid rgba(255,255,255,.85);
+          box-shadow: 0 14px 30px rgba(0,0,0,.32);
+          flex-shrink: 0;
+        }
         .vp-hero-info { flex: 1; min-width: 0; }
         .vp-hero-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
         .vp-badge {
@@ -169,6 +180,7 @@ export default function VendorProfilePage() {
         .vp-badge-blue  { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.2); }
         .vp-badge-green { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
         .vp-badge-purple { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); }
+        .vp-badge-eco { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(110,231,183,0.25); }
 
         .vp-hero-name {
           font-size: clamp(22px, 3vw, 32px); font-weight: 800; color: #fff;
@@ -553,6 +565,9 @@ export default function VendorProfilePage() {
                   ? <img src={vendor.logoUrl} alt={companyName} />
                   : initials}
               </div>
+              {vendor.listingVerified && (
+                <img src={VERIFIED_BADGE_SRC} alt="Sustainly Green Eco Verified" className="vp-verified-badge-img" />
+              )}
 
               {/* Info */}
               <div className="vp-hero-info">
@@ -560,6 +575,7 @@ export default function VendorProfilePage() {
                   {vendor.isUnclaimed && <span className="vp-badge vp-badge-amber"><FiAlertCircle size={10} />Unclaimed listing</span>}
                   {vendor.isClaimRequested && <span className="vp-badge vp-badge-blue"><FiClock size={10} />Claim under review</span>}
                   {vendor.isClaimed && <span className="vp-badge vp-badge-green"><FiCheckCircle size={10} />Verified business</span>}
+                  {vendor.listingVerified && <span className="vp-badge vp-badge-eco"><FiShield size={10} />Eco Verified</span>}
                   {displayVendor.ecoTier && <span className="vp-badge vp-badge-purple"><HiOutlineSparkles size={10} />{displayVendor.ecoTier}</span>}
                 </div>
 

@@ -30,6 +30,7 @@ type Category = { id: string; name: string; imageUrl?: string };
 interface FilterState { badge: string; location: string; sortBy: string; }
 const DEFAULT_FILTERS: FilterState = { badge: "", location: "", sortBy: "newest" };
 const PAGE_SIZE = 12;
+const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
 
 const BADGES = [
   { val: "", label: "All Badges", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
@@ -302,6 +303,7 @@ export default function BrowsePage() {
         <div className="bs-vc-logo">
           {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }} /> : logoInitials(v)}
         </div>
+        {v.listingVerified && <img src={VERIFIED_BADGE_SRC} alt="Sustainly Green Eco Verified" className="bs-verified-img bs-verified-img-grid" />}
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3 className="bs-vc-name">{vt(v.companyName, "Unnamed Vendor")}</h3>
           {v.category && <p className="bs-vc-cat">{vt(v.category)}</p>}
@@ -338,6 +340,7 @@ export default function BrowsePage() {
       <div className="bs-vc-logo" style={{ width: 52, height: 52, fontSize: 16, flexShrink: 0, borderRadius: 12 }}>
         {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} /> : logoInitials(v)}
       </div>
+      {v.listingVerified && <img src={VERIFIED_BADGE_SRC} alt="Sustainly Green Eco Verified" className="bs-verified-img bs-verified-img-row" />}
       <div className="bs-row-body">
         <h3 className="bs-row-title">{vt(v.companyName, "Unnamed Vendor")}</h3>
         {v.category && <p className="bs-card-vendor" style={{ marginBottom: 4 }}>{vt(v.category)}</p>}
@@ -641,6 +644,7 @@ export default function BrowsePage() {
 
         /* ── ROW ── */
         .bs-row {
+          position: relative;
           background: #fff; border: 1px solid rgba(0,0,0,0.07);
           border-radius: 16px; padding: 14px 16px;
           display: flex; align-items: flex-start; gap: 14px;
@@ -658,8 +662,29 @@ export default function BrowsePage() {
         .bs-row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
 
         /* ── VENDOR CARD ── */
-        .bs-vendor-card { gap: 0; min-height: 218px; }
+        .bs-vendor-card { gap: 0; min-height: 218px; position: relative; }
         .bs-vc-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 16px 0; }
+        .bs-verified-img {
+          object-fit: cover;
+          border-radius: 6px;
+          box-shadow: 0 8px 18px rgba(15,23,42,.18);
+          border: 2px solid #fff;
+          flex-shrink: 0;
+        }
+        .bs-verified-img-grid {
+          position: absolute;
+          top: 10px;
+          right: 12px;
+          width: 34px;
+          height: 42px;
+        }
+        .bs-verified-img-row {
+          position: absolute;
+          top: 10px;
+          left: 46px;
+          width: 30px;
+          height: 38px;
+        }
         .bs-vendor-card .bs-card-desc { padding: 8px 16px 0; }
         .bs-vendor-card .bs-card-tags { padding: 0 16px; margin-top: 10px; }
         .bs-vc-logo {
