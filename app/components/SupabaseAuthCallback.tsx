@@ -13,9 +13,15 @@ export default function SupabaseAuthCallback() {
 
     async function handleAuthHash() {
       const hash = window.location.hash;
+      const pathname = window.location.pathname;
+      const params = new URLSearchParams(hash.replace(/^#/, ""));
+      const authType = params.get("type");
+
+      if (pathname === "/reset-password" || authType === "recovery") {
+        return;
+      }
 
       if (hash.includes("error=")) {
-        const params = new URLSearchParams(hash.replace(/^#/, ""));
         const desc = params.get("error_description") || "email_verification_failed";
         window.location.replace(`/login?error=${encodeURIComponent(desc)}`);
         return;

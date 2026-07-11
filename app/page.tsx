@@ -432,6 +432,16 @@ export default function HomePage() {
             </Link>
 
             <div className="mobile-menu-slot">
+              {!authLoading && profile ? (
+                <Link href={dashboardLink} className="mobile-auth-link mobile-auth-link-strong">
+                  Dashboard
+                </Link>
+              ) : (
+                <Link href="/login" className="mobile-auth-link">
+                  <UserRound size={15} />
+                  Sign In
+                </Link>
+              )}
               <button
                 type="button"
                 className="mobile-menu-toggle"
@@ -515,6 +525,37 @@ export default function HomePage() {
                 </Link>
               ))}
             </nav>
+            <div className="mobile-menu-auth">
+              {!authLoading && profile ? (
+                <>
+                  <Link href={dashboardLink} className="mobile-menu-auth-primary" onClick={() => setMobileMenuOpen(false)}>
+                    Dashboard
+                  </Link>
+                  <button
+                    type="button"
+                    className="mobile-menu-auth-secondary"
+                    onClick={() => {
+                      void handleLogout();
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="mobile-menu-auth-secondary" onClick={() => setMobileMenuOpen(false)}>
+                    Login
+                  </Link>
+                  <Link href="/register?role=BUYER" className="mobile-menu-auth-primary" onClick={() => setMobileMenuOpen(false)}>
+                    Sign up
+                  </Link>
+                  <Link href="/register?role=VENDOR" className="mobile-menu-auth-secondary" onClick={() => setMobileMenuOpen(false)}>
+                    List Business
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
@@ -1169,7 +1210,32 @@ export default function HomePage() {
         .mobile-menu-slot {
           display: flex;
           flex: 0 0 auto;
+          align-items: center;
+          gap: 8px;
           justify-content: flex-end;
+        }
+
+        .mobile-auth-link {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          min-height: 42px;
+          padding: 0 12px;
+          border: 1px solid #d9e5dd;
+          border-radius: 12px;
+          background: #fff;
+          color: #183426;
+          font-size: 13px;
+          font-weight: 700;
+          line-height: 1;
+          white-space: nowrap;
+        }
+
+        .mobile-auth-link-strong {
+          background: #206f35;
+          border-color: #206f35;
+          color: #fff;
         }
 
         .menu-row {
@@ -1244,6 +1310,35 @@ export default function HomePage() {
         .menu-tab:hover::after,
         .menu-tab:focus-visible::after {
           transform: scaleX(1);
+        }
+
+        .mobile-menu-auth {
+          display: none;
+        }
+
+        .mobile-menu-auth-primary,
+        .mobile-menu-auth-secondary {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 44px;
+          padding: 0 14px;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 700;
+          text-align: center;
+        }
+
+        .mobile-menu-auth-primary {
+          background: #206f35;
+          color: #fff;
+          border: 1px solid #206f35;
+        }
+
+        .mobile-menu-auth-secondary {
+          background: #fff;
+          color: #183426;
+          border: 1px solid #d9e5dd;
         }
 
         @media (min-width: 981px) {
@@ -2495,7 +2590,7 @@ export default function HomePage() {
           .brand-lockup {
             order: 1;
             flex: 1 1 auto;
-            max-width: calc(100% - 54px);
+            max-width: calc(100% - 154px);
           }
 
           .brand-lockup img {
@@ -2529,6 +2624,10 @@ export default function HomePage() {
             display: flex;
             flex: 0 0 auto;
             justify-content: flex-end;
+          }
+
+          .mobile-auth-link {
+            display: inline-flex;
           }
 
           .join-button,
@@ -2573,6 +2672,18 @@ export default function HomePage() {
 
           .menu-tab::after {
             display: none;
+          }
+
+          .mobile-menu-auth {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 4px 0 0;
+          }
+
+          .mobile-menu-auth-primary:last-child,
+          .mobile-menu-auth-secondary:last-child {
+            grid-column: 1 / -1;
           }
 
           .hero-composition {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   saveSessionFromAuthHash,
+  signOutSupabase,
   updateSupabasePassword,
   type SupabaseSession,
 } from "@/lib/supabaseAuth";
@@ -72,6 +73,8 @@ export default function ResetPasswordPage() {
     try {
       setSubmitting(true);
       await updateSupabasePassword(session.accessToken, password);
+      await signOutSupabase();
+      setSession(null);
       setSuccess(true);
     } catch {
       setError("We could not update your password. Please request a new reset link and try again.");
