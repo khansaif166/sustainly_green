@@ -180,7 +180,7 @@ function saveSession(response: SupabaseAuthResponse): SupabaseSession {
   return session;
 }
 
-export async function saveSessionFromAuthHash(hash: string) {
+export async function saveSessionFromAuthHash(hash: string, options: { persist?: boolean } = {}) {
   const params = new URLSearchParams(hash.replace(/^#/, ""));
   const accessToken = params.get("access_token");
   const refreshToken = params.get("refresh_token");
@@ -204,8 +204,11 @@ export async function saveSessionFromAuthHash(hash: string) {
     user,
   };
 
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  dispatchAuthEvent(AUTH_SESSION_SAVED_EVENT);
+  if (options.persist !== false) {
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    dispatchAuthEvent(AUTH_SESSION_SAVED_EVENT);
+  }
+
   return session;
 }
 

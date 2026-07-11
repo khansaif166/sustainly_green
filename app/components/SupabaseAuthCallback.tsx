@@ -17,7 +17,11 @@ export default function SupabaseAuthCallback() {
       const params = new URLSearchParams(hash.replace(/^#/, ""));
       const authType = params.get("type");
 
-      if (pathname === "/reset-password" || authType === "recovery") {
+      if (
+        pathname.replace(/\/+$/, "") === "/reset-password" ||
+        authType === "recovery" ||
+        hash.includes("type=recovery")
+      ) {
         return;
       }
 

@@ -4,8 +4,8 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  clearStoredSession,
   saveSessionFromAuthHash,
-  signOutSupabase,
   updateSupabasePassword,
   type SupabaseSession,
 } from "@/lib/supabaseAuth";
@@ -38,7 +38,8 @@ export default function ResetPasswordPage() {
       }
 
       try {
-        const nextSession = await saveSessionFromAuthHash(hash);
+        clearStoredSession("manual");
+        const nextSession = await saveSessionFromAuthHash(hash, { persist: false });
         setSession(nextSession);
         window.history.replaceState(null, "", "/reset-password");
       } catch {
@@ -73,7 +74,7 @@ export default function ResetPasswordPage() {
     try {
       setSubmitting(true);
       await updateSupabasePassword(session.accessToken, password);
-      await signOutSupabase();
+      clearStoredSession("manual");
       setSession(null);
       setSuccess(true);
     } catch {
