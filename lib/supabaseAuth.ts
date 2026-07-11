@@ -316,7 +316,8 @@ export async function signUpWithSupabase(input: {
 }): Promise<SupabaseSignUpResult> {
   const normalizedEmail = input.email.trim().toLowerCase();
   const normalizedName = input.name.trim();
-  const redirectTo = getSiteUrl();
+  const siteUrl = getSiteUrl();
+  const redirectTo = siteUrl ? `${siteUrl}/verify-email` : "";
   const signupPath = redirectTo
     ? `/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`
     : "/auth/v1/signup";

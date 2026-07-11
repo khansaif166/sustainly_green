@@ -16,9 +16,9 @@ import {
   HiShieldCheck,
   HiOfficeBuilding,
 } from "react-icons/hi";
-import { ArrowLeft } from "lucide-react";
 
 export default function RegisterPage() {
+  const roleOptions = ["BUYER", "VENDOR"] as const;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,7 +71,7 @@ export default function RegisterPage() {
       }
 
       router.push(role === "VENDOR" ? "/vendor/onboarding" : redirectForRole(null));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setError(getRegistrationErrorMessage(err));
     } finally {
@@ -89,7 +89,7 @@ export default function RegisterPage() {
         href="/"
         className="inline-flex items-center gap-2 mb-8 px-3 py-1.5 text-sm font-medium absolute top-6 left-10"
       >
-        <img src="/log.webp" className="h-14 rounded-xl p-2 bg-white" />
+        <img src="/log.webp" alt="Sustainly Green" className="h-14 rounded-xl p-2 bg-white" />
       </Link>
 
       <div className="relative z-10 max-w-lg">
@@ -206,11 +206,11 @@ export default function RegisterPage() {
               </label>
 
               <div className="flex gap-3">
-                {["BUYER", "VENDOR"].map((r) => (
+                {roleOptions.map((r) => (
                   <button
                     key={r}
                     type="button"
-                    onClick={() => setRole(r as any)}
+                    onClick={() => setRole(r)}
                     className={`flex-1 rounded-full px-5 py-2 text-sm font-semibold border transition
                       ${
                         role === r

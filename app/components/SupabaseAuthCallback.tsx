@@ -19,6 +19,7 @@ export default function SupabaseAuthCallback() {
 
       if (
         pathname.replace(/\/+$/, "") === "/reset-password" ||
+        pathname.replace(/\/+$/, "") === "/verify-email" ||
         authType === "recovery" ||
         hash.includes("type=recovery")
       ) {
