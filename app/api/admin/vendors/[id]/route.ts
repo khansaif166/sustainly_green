@@ -53,6 +53,7 @@ type VendorRow = {
   language: string | null;
   approved: boolean;
   listing_verified: boolean | null;
+  public_contact: Record<string, unknown> | null;
   status: string;
   updated_at: string;
 };
@@ -98,6 +99,13 @@ function mapVendor(row: VendorRow) {
     language: row.language || "",
     approved: row.approved,
     listingVerified: Boolean(row.listing_verified),
+    listingBadgeType:
+      Boolean(row.listing_verified) && typeof row.public_contact?.sustainlyBadgeType === "string"
+        ? row.public_contact.sustainlyBadgeType
+        : Boolean(row.listing_verified)
+          ? "eco_verified"
+          : "",
+    publicContact: row.public_contact || {},
     status: row.status,
     updatedAt: row.updated_at,
   };
@@ -169,7 +177,7 @@ export async function GET(
     const rows = await supabaseServiceFetch<VendorRow[]>(
       `/rest/v1/vendors?${new URLSearchParams({
         select:
-          "id,profile_id,company_name,logo_url,registration_type,cin_registration,gst_number,year_of_incorporation,registered_address,city,state,pin_code,country,primary_contact_name,designation,business_email,whatsapp,alternate_phone,business_type,primary_category,sub_categories,short_description,key_products,export_capability,export_markets,primary_sustainability_cert,issuing_body,certificate_file_url,sustainability_practice,recycled_content,carbon_footprint,social_compliance,listing_tier,awards_image_url,payment_terms,language,approved,listing_verified,status,updated_at",
+          "id,profile_id,company_name,logo_url,registration_type,cin_registration,gst_number,year_of_incorporation,registered_address,city,state,pin_code,country,primary_contact_name,designation,business_email,whatsapp,alternate_phone,business_type,primary_category,sub_categories,short_description,key_products,export_capability,export_markets,primary_sustainability_cert,issuing_body,certificate_file_url,sustainability_practice,recycled_content,carbon_footprint,social_compliance,listing_tier,awards_image_url,payment_terms,language,approved,listing_verified,public_contact,status,updated_at",
         id: `eq.${id}`,
         limit: "1",
       })}`,
@@ -224,6 +232,26 @@ export async function PATCH(
 
     if (body.listingVerified !== undefined) {
       patch.listing_verified = Boolean(body.listingVerified);
+    }
+
+    if (body.listingBadgeType !== undefined) {
+      const badgeType =
+        body.listingBadgeType === "verified_supplier" || body.listingBadgeType === "eco_verified"
+          ? body.listingBadgeType
+          : "";
+      const contactRows = await supabaseServiceFetch<Array<{ public_contact: Record<string, unknown> | null }>>(
+        `/rest/v1/vendors?${new URLSearchParams({
+          select: "public_contact",
+          id: `eq.${id}`,
+          limit: "1",
+        })}`,
+      );
+      const publicContact = { ...(contactRows[0]?.public_contact || {}) };
+      if (badgeType) publicContact.sustainlyBadgeType = badgeType;
+      else delete publicContact.sustainlyBadgeType;
+
+      patch.listing_verified = Boolean(badgeType);
+      patch.public_contact = publicContact;
     }
 
     // Fetch profileId before committing the vendor update so a failure here

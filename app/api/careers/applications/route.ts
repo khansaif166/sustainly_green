@@ -1,8 +1,6 @@
 import { apiError, apiOk } from "@/lib/apiResponse";
 import {
-  requireProfile,
   supabaseServiceFetch,
-  toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
 
@@ -13,7 +11,6 @@ function stringOrNull(value: unknown) {
 
 export async function POST(request: Request) {
   try {
-    await requireProfile(request);
     const body = await request.json();
     const careerId = stringOrNull(body.careerId);
     const jobTitle = stringOrNull(body.jobTitle);
@@ -41,8 +38,6 @@ export async function POST(request: Request) {
 
     return apiOk({ ok: true }, 201);
   } catch (error) {
-    const authError = toAuthError(error);
-    if (authError) return apiError(authError.message, authError.status);
     const configError = toConfigError(error);
     if (configError) return apiError(configError.message, configError.status);
     console.error("CAREER_APPLICATION_POST_API_ERROR", error);

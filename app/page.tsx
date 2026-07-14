@@ -19,6 +19,7 @@ import {
   signOutSupabase,
   type SupabaseProfile,
 } from "@/lib/supabaseAuth";
+import { getVendorBadgeMeta } from "@/lib/vendorBadges";
 import Footer from "./components/layouts/Footer";
 import {
   ArrowRight,
@@ -68,9 +69,9 @@ type SupplierCard = {
   badge: string;
   isUnclaimed?: boolean;
   listingVerified?: boolean;
+  listingBadgeType?: string;
+  publicContact?: Record<string, unknown>;
 };
-
-const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
 
 const sidebarCategories: CategoryItem[] = [
   { id: "renewable-energy", name: "Renewable Energy", icon: "sun" },
@@ -366,6 +367,8 @@ export default function HomePage() {
                 badge: vendor.isUnclaimed ? "Listed" : vendor.listingVerified ? "Verified" : "Approved",
                 isUnclaimed: vendor.isUnclaimed,
                 listingVerified: vendor.listingVerified,
+                listingBadgeType: vendor.listingBadgeType,
+                publicContact: vendor.publicContact,
               };
             }),
           );
@@ -748,8 +751,8 @@ export default function HomePage() {
             <div className="card-grid four-up">
               {featuredSuppliers.map((supplier, index) => (
                 <Link key={supplier.id} href={`/find-vendors/${supplier.id}`} className="supplier-card">
-                  {supplier.listingVerified && (
-                    <img src={VERIFIED_BADGE_SRC} alt="Sustainly Green Eco Verified" className="supplier-verified-img" />
+                  {getVendorBadgeMeta(supplier) && (
+                    <img src={getVendorBadgeMeta(supplier)?.src} alt={getVendorBadgeMeta(supplier)?.label} className="supplier-verified-img" />
                   )}
                   <div className={`supplier-mark mark-${index % 4}`}>{supplier.mark}</div>
                   <h3>{supplier.name}</h3>

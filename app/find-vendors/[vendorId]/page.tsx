@@ -12,6 +12,7 @@ import {
   type PublicVendor,
 } from "@/lib/supabasePublic";
 import { getValidSession } from "@/lib/supabaseAuth";
+import { getVendorBadgeMeta } from "@/lib/vendorBadges";
 import {
   FiMapPin, FiMail, FiGlobe, FiArrowLeft, FiPackage,
   FiCheckCircle, FiClock, FiAlertCircle, FiExternalLink, FiX,
@@ -28,7 +29,6 @@ type VendorDisplayFields = Vendor & {
   ecoScore?: number;
   GreenLensScore?: number;
 };
-const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
 
 export default function VendorProfilePage() {
   const params = useParams();
@@ -565,8 +565,8 @@ export default function VendorProfilePage() {
                   ? <img src={vendor.logoUrl} alt={companyName} />
                   : initials}
               </div>
-              {vendor.listingVerified && (
-                <img src={VERIFIED_BADGE_SRC} alt="Sustainly Green Eco Verified" className="vp-verified-badge-img" />
+              {getVendorBadgeMeta(vendor) && (
+                <img src={getVendorBadgeMeta(vendor)?.src} alt={getVendorBadgeMeta(vendor)?.label} className="vp-verified-badge-img" />
               )}
 
               {/* Info */}
@@ -575,7 +575,7 @@ export default function VendorProfilePage() {
                   {vendor.isUnclaimed && <span className="vp-badge vp-badge-amber"><FiAlertCircle size={10} />Unclaimed listing</span>}
                   {vendor.isClaimRequested && <span className="vp-badge vp-badge-blue"><FiClock size={10} />Claim under review</span>}
                   {vendor.isClaimed && <span className="vp-badge vp-badge-green"><FiCheckCircle size={10} />Verified business</span>}
-                  {vendor.listingVerified && <span className="vp-badge vp-badge-eco"><FiShield size={10} />Eco Verified</span>}
+                  {getVendorBadgeMeta(vendor) && <span className="vp-badge vp-badge-eco"><FiShield size={10} />{getVendorBadgeMeta(vendor)?.label}</span>}
                   {displayVendor.ecoTier && <span className="vp-badge vp-badge-purple"><HiOutlineSparkles size={10} />{displayVendor.ecoTier}</span>}
                 </div>
 

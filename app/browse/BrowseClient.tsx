@@ -11,6 +11,7 @@ import {
   fetchApprovedVendors,
   type PublicVendor,
 } from "@/lib/supabasePublic";
+import { getVendorBadgeMeta } from "@/lib/vendorBadges";
 import {
   FiSearch, FiX, FiArrowLeft, FiGrid, FiList, FiPackage,
   FiTool, FiUsers, FiMapPin, FiFilter, FiChevronDown,
@@ -30,7 +31,6 @@ type Category = { id: string; name: string; imageUrl?: string };
 interface FilterState { badge: string; location: string; sortBy: string; }
 const DEFAULT_FILTERS: FilterState = { badge: "", location: "", sortBy: "newest" };
 const PAGE_SIZE = 12;
-const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
 
 const BADGES = [
   { val: "", label: "All Badges", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
@@ -306,10 +306,10 @@ export default function BrowsePage() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3 className="bs-vc-name">{vt(v.companyName, "Unnamed Vendor")}</h3>
           {v.category && <p className="bs-vc-cat">{vt(v.category)}</p>}
-          {v.listingVerified && (
+          {getVendorBadgeMeta(v) && (
             <span className="bs-verified-pill">
-              <img src={VERIFIED_BADGE_SRC} alt="" />
-              Eco Verified
+              <img src={getVendorBadgeMeta(v)?.src} alt="" />
+              {getVendorBadgeMeta(v)?.label}
             </span>
           )}
         </div>
@@ -348,10 +348,10 @@ export default function BrowsePage() {
       <div className="bs-row-body">
         <h3 className="bs-row-title">{vt(v.companyName, "Unnamed Vendor")}</h3>
         {v.category && <p className="bs-card-vendor" style={{ marginBottom: 4 }}>{vt(v.category)}</p>}
-        {v.listingVerified && (
+        {getVendorBadgeMeta(v) && (
           <span className="bs-verified-pill bs-verified-pill-row">
-            <img src={VERIFIED_BADGE_SRC} alt="" />
-            Eco Verified
+            <img src={getVendorBadgeMeta(v)?.src} alt="" />
+            {getVendorBadgeMeta(v)?.label}
           </span>
         )}
         {(v.subCategories || []).length > 0 && (

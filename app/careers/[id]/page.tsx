@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Briefcase, MapPin, Clock, ArrowLeft, UploadCloud } from "lucide-react";
+import { MapPin, Clock, ArrowLeft, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
@@ -54,6 +54,11 @@ export default function JobDetailPage() {
   async function apply() {
     if (!job || !form.name || !form.email) {
       alert("Please fill all required fields.");
+      return;
+    }
+
+    if (!resume) {
+      alert("Please upload your resume before submitting.");
       return;
     }
 

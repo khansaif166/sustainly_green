@@ -84,6 +84,7 @@ export type PublicVendor = {
   approved: boolean;
   claimStatus?: string;
   listingVerified?: boolean;
+  listingBadgeType?: string;
   isClaimed: boolean;
   isUnclaimed: boolean;
   isClaimRequested: boolean;
@@ -296,6 +297,12 @@ function mapVendor(row: SupabaseVendorRow): PublicVendor {
     approved: Boolean(row.approved),
     claimStatus,
     listingVerified: Boolean(row.listing_verified),
+    listingBadgeType:
+      Boolean(row.listing_verified) && typeof row.public_contact?.sustainlyBadgeType === "string"
+        ? row.public_contact.sustainlyBadgeType
+        : Boolean(row.listing_verified)
+          ? "eco_verified"
+          : undefined,
     isClaimed: claimStatus === "CLAIMED",
     isUnclaimed: claimStatus === "UNCLAIMED",
     isClaimRequested: claimStatus === "CLAIM_REQUESTED",

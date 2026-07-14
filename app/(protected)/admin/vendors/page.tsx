@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, XCircle, ExternalLink, Search, Trash2 } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
+import { getVendorBadgeMeta, VENDOR_BADGES, type VendorBadgeType } from "@/lib/vendorBadges";
 
-const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
 type VendorStatusFilter = "ALL" | "APPROVED" | "PENDING";
 
 type Vendor = {
@@ -28,6 +28,8 @@ type Vendor = {
   logoUrl?: string;
   approved: boolean;
   listingVerified?: boolean;
+  listingBadgeType?: string;
+  publicContact?: Record<string, unknown>;
   claimedStatus?: string;
 };
 
@@ -65,13 +67,13 @@ export default function AdminVendorsPage() {
     fetchVendors();
   }
 
-  async function toggleVerifiedBadge(uid: string, listingVerified: boolean) {
+  async function setVendorBadge(uid: string, listingBadgeType: VendorBadgeType | "") {
     const session = getStoredSession();
     if (!session) return;
     await fetch(`/api/admin/vendors/${uid}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ listingVerified }),
+      body: JSON.stringify({ listingBadgeType }),
     });
     fetchVendors();
   }
@@ -146,6 +148,7 @@ export default function AdminVendorsPage() {
         .av-unclaimed{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:50px;font-size:10.5px;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid rgba(194,65,12,.15)}
         .av-verified-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:50px;font-size:10.5px;font-weight:800;background:#ecfdf5;color:#047857;border:1px solid rgba(4,120,87,.18)}
         .av-verified-badge img{width:18px;height:22px;object-fit:cover;border-radius:3px}
+        .av-badge-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;flex:1 1 100%}
       `}</style>
 
       <div className="av-page">
@@ -194,6 +197,7 @@ export default function AdminVendorsPage() {
           <div className="av-grid">
             {filtered.map(v => {
               const initial = v.companyName?.charAt(0)?.toUpperCase() || "?";
+              const badgeMeta = getVendorBadgeMeta(v);
               return (
                 <div key={v.uid} className="av-card">
                   {/* Top */}
@@ -214,10 +218,10 @@ export default function AdminVendorsPage() {
                                 Unclaimed
                               </span>
                             )}
-                            {v.listingVerified && (
+                            {badgeMeta && (
                               <span className="av-verified-badge">
-                                <img src={VERIFIED_BADGE_SRC} alt="" />
-                                Eco Verified
+                                <img src={badgeMeta.src} alt="" />
+                                {badgeMeta.label}
                               </span>
                             )}
                           </div>
@@ -266,13 +270,19 @@ export default function AdminVendorsPage() {
                     <button onClick={() => rejectVendor(v.uid)} className="av-btn av-btn-ghost" style={{ flex: 1 }}>
                       <XCircle size={13} />Reject
                     </button>
-                    <button
-                      onClick={() => toggleVerifiedBadge(v.uid, !v.listingVerified)}
-                      className={v.listingVerified ? "av-btn av-btn-green" : "av-btn av-btn-outline"}
-                      style={{ flex: "1 1 100%" }}
-                    >
-                      <CheckCircle2 size={13} />{v.listingVerified ? "Remove Eco Badge" : "Add Eco Badge"}
-                    </button>
+                    <div className="av-badge-actions">
+                      <button onClick={() => setVendorBadge(v.uid, "verified_supplier")} className={getVendorBadgeMeta(v)?.type === "verified_supplier" ? "av-btn av-btn-green" : "av-btn av-btn-outline"}>
+                        {VENDOR_BADGES.verified_supplier.label}
+                      </button>
+                      <button onClick={() => setVendorBadge(v.uid, "eco_verified")} className={getVendorBadgeMeta(v)?.type === "eco_verified" ? "av-btn av-btn-green" : "av-btn av-btn-outline"}>
+                        {VENDOR_BADGES.eco_verified.label}
+                      </button>
+                      {v.listingVerified && (
+                        <button onClick={() => setVendorBadge(v.uid, "")} className="av-btn av-btn-ghost" style={{ gridColumn: "1 / -1" }}>
+                          Remove Badge
+                        </button>
+                      )}
+                    </div>
                     <button onClick={() => deleteVendor(v.uid)} className="av-btn av-btn-danger" title="Delete vendor">
                       <Trash2 size={13} />
                     </button>

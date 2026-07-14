@@ -12,8 +12,7 @@ import {
 import { Input, Select, TextArea, MultiSelect, Toggle, FileUpload } from "../../../vendor/onboarding/_components/FormFields";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
-
-const VERIFIED_BADGE_SRC = "/eco-verified-badge.jpg";
+import { getVendorBadgeMeta, VENDOR_BADGES, type VendorBadgeType } from "@/lib/vendorBadges";
 
 export default function AdminVendorDetailsPage() {
   const router = useRouter();
@@ -71,15 +70,22 @@ export default function AdminVendorDetailsPage() {
     setSubmitting(false);
   };
 
-  const handleToggleVerifiedBadge = async () => {
+  const handleSetVendorBadge = async (listingBadgeType: VendorBadgeType | "") => {
     if (!uid || !vendorData) return;
     setSubmitting(true);
     try {
-      const nextValue = !vendorData.listingVerified;
-      const res = await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify({ listingVerified: nextValue }) });
+      const res = await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify({ listingBadgeType }) });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error?.message || "Error updating verified badge");
-      setVendorData((p: any) => ({ ...p, listingVerified: nextValue }));
+      setVendorData((p: any) => ({
+        ...p,
+        listingVerified: Boolean(listingBadgeType),
+        listingBadgeType,
+        publicContact: {
+          ...(p?.publicContact || {}),
+          sustainlyBadgeType: listingBadgeType || undefined,
+        },
+      }));
     } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
     setSubmitting(false);
   };
@@ -173,6 +179,8 @@ export default function AdminVendorDetailsPage() {
         .avd-eco-badge img{width:20px;height:24px;object-fit:cover;border-radius:4px}
         .avd-badge-preview{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:#f8fafc;border:1px solid #e5e7eb;margin-top:14px}
         .avd-badge-preview img{width:54px;height:66px;object-fit:cover;border-radius:7px;box-shadow:0 8px 18px rgba(15,23,42,.12)}
+        .avd-badge-choice-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
+        .avd-badge-choice{justify-content:center;width:100%;border-radius:12px}
         @keyframes spin{to{transform:rotate(360deg)}}
       `}</style>
 
@@ -197,10 +205,10 @@ export default function AdminVendorDetailsPage() {
                       {vendorData.approved ? <CheckCircle2 size={12} /> : null}
                       {vendorData.approved ? "Verified Vendor" : "Pending Verification"}
                     </span>
-                    {vendorData.listingVerified && (
+                    {getVendorBadgeMeta(vendorData) && (
                       <span className="avd-eco-badge">
-                        <img src={VERIFIED_BADGE_SRC} alt="" />
-                        Eco Verified Badge
+                        <img src={getVendorBadgeMeta(vendorData)?.src} alt="" />
+                        {getVendorBadgeMeta(vendorData)?.label}
                       </span>
                     )}
                     {vendorData.updatedAt && <span style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>Updated {new Date(vendorData.updatedAt).toLocaleDateString()}</span>}
@@ -219,10 +227,15 @@ export default function AdminVendorDetailsPage() {
                 ) : (
                   <>
                     <button onClick={() => setIsEditing(true)} className="avd-btn avd-btn-outline"><Edit3 size={14} />Edit</button>
-                    <button onClick={handleToggleVerifiedBadge} disabled={submitting} className={vendorData.listingVerified ? "avd-btn avd-btn-red" : "avd-btn avd-btn-green"}>
+                    <button onClick={() => handleSetVendorBadge("verified_supplier")} disabled={submitting} className={getVendorBadgeMeta(vendorData)?.type === "verified_supplier" ? "avd-btn avd-btn-green" : "avd-btn avd-btn-outline"}>
                       {submitting ? <div className="avd-spinner" /> : <ShieldCheck size={14} />}
-                      {vendorData.listingVerified ? "Remove Eco Badge" : "Add Eco Badge"}
+                      Verified Supplier
                     </button>
+                    <button onClick={() => handleSetVendorBadge("eco_verified")} disabled={submitting} className={getVendorBadgeMeta(vendorData)?.type === "eco_verified" ? "avd-btn avd-btn-green" : "avd-btn avd-btn-outline"}>
+                      {submitting ? <div className="avd-spinner" /> : <ShieldCheck size={14} />}
+                      Eco Verified
+                    </button>
+                    {vendorData.listingVerified && <button onClick={() => handleSetVendorBadge("")} disabled={submitting} className="avd-btn avd-btn-red">Remove Badge</button>}
                     {!vendorData.approved && <button onClick={handleApprove} disabled={submitting} className="avd-btn avd-btn-green">{submitting ? <div className="avd-spinner" /> : <CheckCircle2 size={14} />}Approve</button>}
                     {vendorData.approved && <button onClick={handleReject} disabled={submitting} className="avd-btn avd-btn-red"><XCircle size={14} />Suspend</button>}
                   </>
@@ -365,13 +378,26 @@ export default function AdminVendorDetailsPage() {
                   <D label="Listing Tier"   value={vendorData.listingTier} />
                   <D label="Language"       value={vendorData.language} />
                   <D label="Payment Terms"  value={vendorData.paymentTerms} />
-                  <D label="Eco Verified Badge" value={vendorData.listingVerified ? "Visible to buyers" : "Not assigned"} />
+                  <D label="Buyer-facing Badge" value={getVendorBadgeMeta(vendorData)?.label || "Not assigned"} />
                 </div>
-                {vendorData.listingVerified && (
+                <div className="avd-badge-choice-grid">
+                  <button type="button" onClick={() => handleSetVendorBadge("verified_supplier")} disabled={submitting} className={getVendorBadgeMeta(vendorData)?.type === "verified_supplier" ? "avd-btn avd-btn-green avd-badge-choice" : "avd-btn avd-btn-outline avd-badge-choice"}>
+                    {VENDOR_BADGES.verified_supplier.label}
+                  </button>
+                  <button type="button" onClick={() => handleSetVendorBadge("eco_verified")} disabled={submitting} className={getVendorBadgeMeta(vendorData)?.type === "eco_verified" ? "avd-btn avd-btn-green avd-badge-choice" : "avd-btn avd-btn-outline avd-badge-choice"}>
+                    {VENDOR_BADGES.eco_verified.label}
+                  </button>
+                  {vendorData.listingVerified && (
+                    <button type="button" onClick={() => handleSetVendorBadge("")} disabled={submitting} className="avd-btn avd-btn-red avd-badge-choice">
+                      Remove Badge
+                    </button>
+                  )}
+                </div>
+                {getVendorBadgeMeta(vendorData) && (
                   <div className="avd-badge-preview">
-                    <img src={VERIFIED_BADGE_SRC} alt="Sustainly Green Eco Verified badge" />
+                    <img src={getVendorBadgeMeta(vendorData)?.src} alt={`${getVendorBadgeMeta(vendorData)?.label} badge`} />
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 800, color: "#111", margin: "0 0 3px" }}>Eco Verified badge active</p>
+                      <p style={{ fontSize: 13, fontWeight: 800, color: "#111", margin: "0 0 3px" }}>{getVendorBadgeMeta(vendorData)?.label} badge active</p>
                       <p style={{ fontSize: 11.5, color: "#6b7280", margin: 0 }}>Buyers can see this badge on the public vendor listing and profile.</p>
                     </div>
                   </div>
