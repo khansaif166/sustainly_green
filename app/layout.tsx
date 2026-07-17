@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import SessionTimeoutNotice from "./components/SessionTimeoutNotice";
 import SupabaseAuthCallback from "./components/SupabaseAuthCallback";
@@ -42,6 +43,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-MNNFGHF6FC"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-MNNFGHF6FC');
+          `}
+        </Script>
+      </head>
       <body className={`${poppins.variable} ${jakarta.variable} font-sans antialiased`} suppressHydrationWarning>
         <SupabaseAuthCallback />
         <SessionTimeoutNotice />
