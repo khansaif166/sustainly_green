@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { FaLinkedinIn, FaYoutube } from "react-icons/fa6";
+import { OPEN_RFQ_PROMPT_EVENT } from "../RfqPrompt";
 
 const COPYRIGHT_YEAR = 2026;
 const LINKEDIN_URL = "https://www.linkedin.com/in/irshad-ahmedk";
@@ -34,8 +37,14 @@ export default function Footer() {
           <h5>For Buyers</h5>
           <Link href="/register?role=BUYER">Start Sourcing</Link>
           <Link href="/browse?type=vendor">Browse Vendors</Link>
-          <Link href="/buyer/rfq/new">Submit RFQ</Link>
-          <Link href="/help">Buyer FAQs</Link>
+          <button
+            type="button"
+            className="footer-text-button"
+            onClick={() => window.dispatchEvent(new Event(OPEN_RFQ_PROMPT_EVENT))}
+          >
+            Submit RFQ
+          </button>
+          <Link href="/help/buyers">Buyer FAQs</Link>
         </div>
 
         {/* For Vendors */}
@@ -44,7 +53,7 @@ export default function Footer() {
           <Link href="/register?role=VENDOR">List Your Business</Link>
           <Link href="/browse?type=vendor">Browse Vendors</Link>
           <Link href="/contact">Supplier Verification</Link>
-          <Link href="/help">Vendor FAQs</Link>
+          <Link href="/help/vendors">Vendor FAQs</Link>
         </div>
 
         {/* Platform */}

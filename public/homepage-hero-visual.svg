@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 430" role="img" aria-labelledby="title desc">
+  <title id="title">Sustainable energy marketplace</title>
+  <desc id="desc">Solar panels, wind turbines, clean buildings and green landscape.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4fbf6"/>
+      <stop offset="1" stop-color="#deefe3"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9bd39f"/>
+      <stop offset="1" stop-color="#55ae68"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#315c83"/>
+      <stop offset="1" stop-color="#16334e"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="13" stdDeviation="12" flood-color="#173e28" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <rect width="820" height="430" rx="40" fill="url(#sky)"/>
+  <circle cx="673" cy="83" r="42" fill="#f5cf65" opacity=".92"/>
+  <path d="M0 310c130-91 252-77 354-17 102 60 210 60 466-38v175H0Z" fill="#c9e6ce"/>
+  <path d="M0 360c187-63 324-48 440 1 118 50 239 40 380-25v94H0Z" fill="url(#hill)"/>
+  <g stroke="#7fa58c" stroke-width="5" stroke-linecap="round">
+    <path d="M198 305V111"/><path d="M198 111l-76 39"/><path d="M198 111l68 47"/><path d="M198 111l5-84"/>
+    <path d="M570 283V151"/><path d="M570 151l-58 31"/><path d="M570 151l51 37"/><path d="M570 151l3-63"/>
+  </g>
+  <g filter="url(#shadow)">
+    <path d="M322 261h196l42 119H282Z" fill="url(#panel)" stroke="#d8edf0" stroke-width="5"/>
+    <g stroke="#85a9c4" stroke-width="2" opacity=".72">
+      <path d="M313 291h216M303 322h237M293 353h258"/>
+      <path d="M355 261l-22 119M402 261l-12 119M450 261l1 119M496 261l14 119"/>
+    </g>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="631" y="205" width="126" height="155" rx="20" fill="#fff"/>
+    <rect x="737" y="205" width="20" height="155" rx="0 20 20 0" fill="#268348"/>
+    <rect x="654" y="234" width="59" height="11" rx="5" fill="#b9d4c0"/>
+    <rect x="654" y="258" width="77" height="11" rx="5" fill="#d6e6da"/>
+    <path d="M676 318c-28-18-22-51 13-59 16 31 7 51-13 59Z" fill="#45a95e"/>
+  </g>
+  <g fill="#2c8a4b">
+    <circle cx="84" cy="335" r="34"/><circle cx="121" cy="347" r="25"/><circle cx="744" cy="363" r="34"/>
+  </g>
+</svg>

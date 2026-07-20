@@ -101,6 +101,11 @@ export default function BrowsePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [expanded, setExpanded] = useState({ type: true, category: true, eco: true, location: false, sort: true });
+  const vendorLocations = useMemo(() => Array.from(new Set(
+    vendors.flatMap((vendor) => [vendor.city, vendor.state, vendor.country])
+      .map((value) => vt(value).trim())
+      .filter(Boolean),
+  )).sort((a, b) => a.localeCompare(b)), [vendors]);
 
   useEffect(() => {
     fetchActiveCategories().then(setCategories).catch(() => setCategories([]));
@@ -125,8 +130,12 @@ export default function BrowsePage() {
           if (search) { const s = search.toLowerCase(); list = list.filter(v => vendorSearchText(v).includes(s)); }
           if (filters.badge) list = list.filter(v => vendorBadge(v) === filters.badge);
           if (filters.location) {
-            const loc = filters.location.toLowerCase();
-            list = list.filter(v => [v.location, v.city, v.state, v.country].map(value => vt(value)).join(" ").toLowerCase().includes(loc));
+            const locationTerms = filters.location.trim().toLowerCase().split(/\s+/).filter(Boolean);
+            list = list.filter(v => {
+              const searchableLocation = [v.location, v.city, v.state, v.country]
+                .map(value => vt(value)).join(" ").toLowerCase();
+              return locationTerms.every(term => searchableLocation.includes(term));
+            });
           }
           if (filters.sortBy === "eco_score") list = list.sort((a, b) => (b.ecoScore || 0) - (a.ecoScore || 0));
           if (filters.sortBy === "name_az") list = list.sort((a, b) => vt(a.companyName).localeCompare(vt(b.companyName)));
@@ -224,7 +233,17 @@ export default function BrowsePage() {
           </button>
           {expanded.location && (
             <div className="bs-opts">
-              <input type="text" placeholder="City or state…" value={filters.location} onChange={e => setFilters(f => ({ ...f, location: e.target.value }))} className="bs-text-input" />
+              <input
+                type="search"
+                list="vendor-location-options"
+                placeholder="City, state or country…"
+                value={filters.location}
+                onChange={e => setFilters(f => ({ ...f, location: e.target.value }))}
+                className="bs-text-input"
+              />
+              <datalist id="vendor-location-options">
+                {vendorLocations.map(location => <option key={location} value={location} />)}
+              </datalist>
             </div>
           )}
         </div>

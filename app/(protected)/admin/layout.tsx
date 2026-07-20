@@ -173,15 +173,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         .al-main input,
         .al-main select,
         .al-main textarea {
-          border-color: #cbd5d1 !important;
+          border-color: #97a99d !important;
           color: #10241b !important;
         }
         .al-main input::placeholder,
         .al-main textarea::placeholder {
-          color: #6b7b71 !important;
+          color: #53645a !important;
         }
         .al-main label {
-          color: #37483d;
+          color: #26392d;
+          font-weight: 600;
         }
       `}</style>
 

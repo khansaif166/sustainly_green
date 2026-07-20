@@ -17,9 +17,11 @@ export const Step2Business = ({ categories = [], subcategories = [] }: Step2Busi
   const exportEnabled = watch("exportCapability");
   const primaryCategory = watch("primaryCategory");
   const selectedCategory = categories.find((category) => category.name === primaryCategory || category.id === primaryCategory);
-  const subcategoryOptions = selectedCategory
-    ? subcategories.filter((item) => item.categoryId === selectedCategory.id).map((item) => item.name)
-    : subcategories.map((item) => item.name);
+  const mappedSubcategories = selectedCategory
+    ? subcategories.filter((item) => item.categoryId === selectedCategory.id)
+    : [];
+  const subcategoryOptions = (mappedSubcategories.length > 0 ? mappedSubcategories : subcategories)
+    .map((item) => item.name);
 
   React.useEffect(() => {
     const selected = watch("subCategories") || [];

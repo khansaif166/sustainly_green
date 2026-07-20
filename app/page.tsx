@@ -63,6 +63,7 @@ type SupplierCard = {
   id: string;
   name: string;
   country: string;
+  state?: string;
   subcategories?: string[];
   rating: string;
   mark: string;
@@ -73,17 +74,57 @@ type SupplierCard = {
   publicContact?: Record<string, unknown>;
 };
 
+type HomepageAdSlide = {
+  id: string;
+  title: string;
+  imageUrl: string;
+  linkUrl: string;
+};
+
+const defaultHomepageAds: HomepageAdSlide[] = [
+  {
+    id: "advertise-with-sustainly",
+    title: "Put your sustainable business in front of verified buyers",
+    imageUrl: "/homepage-advertise-banner.svg",
+    linkUrl: "/contact",
+  },
+];
+
+const sideAdSlides = [
+  {
+    title: "Advertise Here",
+    text: "Reach 50k+ buyers every month",
+    image: "/TheGlobalGoals_Icons_Color_Goal_17.svg",
+    imageAlt: "Partnerships for sustainable growth",
+    href: "/contact",
+  },
+  {
+    title: "Promote Green Products",
+    text: "Showcase solutions to sustainability-focused buyers",
+    image: "/TheGlobalGoals_Icons_Color_Goal_13.svg",
+    imageAlt: "Climate action",
+    href: "/contact",
+  },
+  {
+    title: "Grow Your Marketplace Reach",
+    text: "Connect your responsible brand with new businesses",
+    image: "/TheGlobalGoals_Icons_Color_Goal_12.svg",
+    imageAlt: "Responsible consumption and production",
+    href: "/register?role=VENDOR",
+  },
+];
+
 const sidebarCategories: CategoryItem[] = [
-  { id: "renewable-energy", name: "Renewable Energy", icon: "sun" },
+  { id: "renewable-energy", name: "Renewable Energy", icon: "/TheGlobalGoals_Icons_Color_Goal_7.svg" },
   { id: "energy-efficiency", name: "Energy Efficiency", icon: "zap" },
-  { id: "water-wastewater", name: "Water & Wastewater", icon: "drop" },
-  { id: "waste-management", name: "Waste Management", icon: "recycle" },
-  { id: "green-building", name: "Green Building", icon: "building" },
+  { id: "water-wastewater", name: "Water & Wastewater", icon: "/TheGlobalGoals_Icons_Color_Goal_6.svg" },
+  { id: "waste-management", name: "Waste Management", icon: "/TheGlobalGoals_Icons_Color_Goal_12.svg" },
+  { id: "green-building", name: "Green Building", icon: "/TheGlobalGoals_Icons_Color_Goal_9.svg" },
   { id: "sustainable-materials", name: "Sustainable Materials", icon: "hex" },
   { id: "eco-packaging", name: "Eco Packaging", icon: "box" },
   { id: "electric-mobility", name: "Electric Mobility", icon: "truck" },
   { id: "agriculture-organic", name: "Agriculture & Organic", icon: "sprout" },
-  { id: "environmental-monitoring", name: "Environmental Monitoring", icon: "chart" },
+  { id: "environmental-monitoring", name: "Environmental Monitoring", icon: "/TheGlobalGoals_Icons_Color_Goal_13.svg" },
 ];
 
 const quickActions = [
@@ -222,13 +263,32 @@ const staticFeaturedProducts: ProductCard[] = [
 ];
 
 const staticSuppliers: SupplierCard[] = [
-  { id: "ecovolt", name: "EcoVolt Solutions", country: "India", rating: "4.8", mark: "EV", badge: "Verified" },
-  { id: "greenbuild", name: "GreenBuild Exim", country: "Germany", rating: "4.7", mark: "GB", badge: "Verified" },
-  { id: "purewater", name: "PureWater Tech", country: "India", rating: "4.9", mark: "PW", badge: "Verified" },
-  { id: "sustainpack", name: "SustainPack Ltd.", country: "United Kingdom", rating: "4.6", mark: "SP", badge: "Verified" },
+  { id: "ecovolt", name: "EcoVolt Solutions", country: "India", state: "Tamil Nadu", rating: "4.8", mark: "EV", badge: "Claimed" },
+  { id: "greenbuild", name: "GreenBuild Exim", country: "Germany", state: "Bavaria", rating: "4.7", mark: "GB", badge: "Claimed" },
+  { id: "purewater", name: "PureWater Tech", country: "India", state: "Karnataka", rating: "4.9", mark: "PW", badge: "Claimed" },
+  { id: "sustainpack", name: "SustainPack Ltd.", country: "United Kingdom", state: "England", rating: "4.6", mark: "SP", badge: "Claimed" },
 ];
 
+function categoryIcon(category: { id: string; name: string }, index: number) {
+  const key = `${category.id} ${category.name}`.toLowerCase();
+  if (key.includes("renewable")) return "/TheGlobalGoals_Icons_Color_Goal_7.svg";
+  if (key.includes("energy efficiency")) return "zap";
+  if (key.includes("water")) return "/TheGlobalGoals_Icons_Color_Goal_6.svg";
+  if (key.includes("waste")) return "/TheGlobalGoals_Icons_Color_Goal_12.svg";
+  if (key.includes("building") || key.includes("infrastructure")) return "/TheGlobalGoals_Icons_Color_Goal_9.svg";
+  if (key.includes("material")) return "hex";
+  if (key.includes("packag")) return "box";
+  if (key.includes("mobility") || key.includes("vehicle")) return "truck";
+  if (key.includes("agri") || key.includes("organic")) return "sprout";
+  if (key.includes("monitor") || key.includes("climate")) return "/TheGlobalGoals_Icons_Color_Goal_13.svg";
+  return sidebarCategories[index % sidebarCategories.length]?.icon || "sun";
+}
+
 function iconForCategory(icon: string) {
+  if (icon.startsWith("/")) {
+    return <Image src={icon} alt="" width={34} height={34} className="category-sdg-icon" />;
+  }
+
   const commonProps = { size: 16, strokeWidth: 1.75 };
 
   switch (icon) {
@@ -272,6 +332,9 @@ export default function HomePage() {
   const [bestSellers, setBestSellers] = useState<ProductCard[]>(staticProducts);
   const [featuredProducts, setFeaturedProducts] = useState<ProductCard[]>(staticFeaturedProducts);
   const [featuredSuppliers, setFeaturedSuppliers] = useState<SupplierCard[]>(staticSuppliers);
+  const [homepageAds, setHomepageAds] = useState<HomepageAdSlide[]>(defaultHomepageAds);
+  const [heroSlide, setHeroSlide] = useState(0);
+  const [sideAdSlide, setSideAdSlide] = useState(0);
 
   useEffect(() => {
     async function loadAuth() {
@@ -311,6 +374,34 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    fetch("/api/homepage/ads")
+      .then((response) => response.ok ? response.json() : { slides: [] })
+      .then((payload) => setHomepageAds([
+        ...defaultHomepageAds,
+        ...(Array.isArray(payload.slides) ? payload.slides : []),
+      ]))
+      .catch(() => setHomepageAds(defaultHomepageAds));
+  }, []);
+
+  useEffect(() => {
+    if (homepageAds.length === 0) {
+      setHeroSlide(0);
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setHeroSlide((current) => (current + 1) % (homepageAds.length + 1));
+    }, 5_000);
+    return () => window.clearInterval(timer);
+  }, [homepageAds.length]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setSideAdSlide((current) => (current + 1) % sideAdSlides.length);
+    }, 4_500);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     async function loadHomepageData() {
       try {
         const categories = await fetchActiveCategories(10);
@@ -320,7 +411,7 @@ export default function HomePage() {
             categories.map((item, index) => ({
               id: item.id,
               name: item.name,
-              icon: sidebarCategories[index % sidebarCategories.length]?.icon || "sun",
+              icon: categoryIcon(item, index),
             })),
           );
         }
@@ -361,10 +452,11 @@ export default function HomePage() {
                 id: vendor.id,
                 name: companyName,
                 country: vendor.country || vendor.location || "India",
+                state: vendor.state || vendor.city || undefined,
                 subcategories: vendor.subCategories,
                 rating: vendor.isUnclaimed ? "Listed" : "4.8",
                 mark: vendor.logoText,
-                badge: vendor.isUnclaimed ? "Listed" : vendor.listingVerified ? "Verified" : "Approved",
+                badge: vendor.isUnclaimed ? "Unclaimed" : "Claimed",
                 isUnclaimed: vendor.isUnclaimed,
                 listingVerified: vendor.listingVerified,
                 listingBadgeType: vendor.listingBadgeType,
@@ -594,7 +686,26 @@ export default function HomePage() {
           </aside>
 
           <div className="hero-stack">
-            <div className="hero-banner">
+            <div className={`hero-banner${heroSlide > 0 ? " hero-banner-ad" : ""}`}>
+              {heroSlide > 0 && homepageAds[heroSlide - 1] ? (
+                <div
+                  className="hero-ad-slide"
+                  style={{ backgroundImage: `url(${homepageAds[heroSlide - 1].imageUrl})` }}
+                >
+                  <Link
+                    href={homepageAds[heroSlide - 1].linkUrl}
+                    className="hero-ad-main-link"
+                    aria-label={`View advertisement: ${homepageAds[heroSlide - 1].title}`}
+                  />
+                  <span className="hero-ad-label">Sponsored</span>
+                  <span className="hero-ad-title">{homepageAds[heroSlide - 1].title}</span>
+                  <div className="hero-buttons hero-ad-buttons">
+                    <Link href="/browse" className="primary-hero-button">Explore Products</Link>
+                    <Link href="/browse?type=vendor" className="secondary-hero-button">Find Suppliers</Link>
+                  </div>
+                </div>
+              ) : (
+                <>
               <div className="hero-copy">
                 <p className="hero-kicker">Powering a</p>
                 <h1>Sustainable Future</h1>
@@ -612,40 +723,63 @@ export default function HomePage() {
               </div>
 
               <div className="hero-visual" aria-hidden="true">
-                <div className="hero-arc" />
-                <div className="hero-leaf hero-leaf-top" />
-                <div className="hero-leaf hero-leaf-side" />
-                <div className="hero-windmill" />
-                <div className="hero-energy-unit">
-                  <div className="hero-energy-label">ENERGY STORAGE</div>
-                </div>
-                <div className="hero-solar-row">
-                  <div className="hero-solar-panel" />
-                  <div className="hero-solar-panel panel-tilt" />
-                </div>
+                <Image
+                  src="/homepage-hero-visual.svg"
+                  alt=""
+                  width={820}
+                  height={430}
+                  className="hero-main-illustration"
+                />
               </div>
+                </>
+              )}
+              {homepageAds.length > 0 && (
+                <div className="hero-slide-controls" aria-label="Homepage banner slides">
+                  {Array.from({ length: homepageAds.length + 1 }, (_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      aria-label={`Show banner ${index + 1}`}
+                      aria-current={heroSlide === index ? "true" : undefined}
+                      className={heroSlide === index ? "active" : ""}
+                      onClick={() => setHeroSlide(index)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
 
           <aside className="ad-card">
-            <div className="ad-badge">
-              <Leaf size={22} />
-            </div>
-            <h3>Advertise Here</h3>
-            <p>Reach 50k+ buyers every month</p>
-            <Link href="/contact" className="ad-button">
+            <h3>{sideAdSlides[sideAdSlide].title}</h3>
+            <p>{sideAdSlides[sideAdSlide].text}</p>
+            <Image
+              src={sideAdSlides[sideAdSlide].image}
+              alt={sideAdSlides[sideAdSlide].imageAlt}
+              width={116}
+              height={116}
+              className="ad-visual"
+            />
+            <Link href={sideAdSlides[sideAdSlide].href} className="ad-button">
               Learn More
             </Link>
-            <div className="ad-dots">
-              <span className="ad-dot ad-dot-active" />
-              <span className="ad-dot" />
-              <span className="ad-dot" />
+            <div className="ad-dots" aria-label="Advertising slides">
+              {sideAdSlides.map((slide, index) => (
+                <button
+                  key={slide.title}
+                  type="button"
+                  aria-label={`Show advertisement ${index + 1}`}
+                  aria-current={sideAdSlide === index ? "true" : undefined}
+                  className={`ad-dot${sideAdSlide === index ? " ad-dot-active" : ""}`}
+                  onClick={() => setSideAdSlide(index)}
+                />
+              ))}
             </div>
           </aside>
 
           <div className="quick-action-grid">
-            {quickActions.map((item) => {
+            {quickActions.map((item, index) => {
               const content = (
                 <>
                 <div className="quick-action-icon">
@@ -664,7 +798,7 @@ export default function HomePage() {
                   <button
                     key={item.title}
                     type="button"
-                    className="quick-action-card quick-action-button"
+                    className={`quick-action-card quick-action-button quick-action-tone-${index + 1}`}
                     onClick={() => {
                       if (profile?.role === "BUYER") {
                         router.push("/buyer/rfq/new");
@@ -684,7 +818,7 @@ export default function HomePage() {
                 <Link
                   key={item.title}
                   href={item.href || "/browse"}
-                  className={`quick-action-card${item.title === "Supplier Verification" ? " verification-card" : ""}`}
+                  className={`quick-action-card quick-action-tone-${index + 1}${item.title === "Supplier Verification" ? " verification-card" : ""}`}
                 >
                   {content}
                 </Link>
@@ -756,17 +890,10 @@ export default function HomePage() {
                   )}
                   <div className={`supplier-mark mark-${index % 4}`}>{supplier.mark}</div>
                   <h3>{supplier.name}</h3>
-                  <p className="supplier-country">{supplier.country}</p>
-                  {supplier.subcategories?.length ? (
-                    <p className="supplier-subcats">{supplier.subcategories.slice(0, 2).join(", ")}</p>
-                  ) : null}
+                  <p className="supplier-country">{supplier.state || supplier.country}</p>
                   <p className="verified-label">
-                    {supplier.badge}
+                    {supplier.badge} vendor
                   </p>
-                  <div className="supplier-rating">
-                    <span>{supplier.rating}</span>
-                    {!supplier.isUnclaimed && <span className="stars">★★★★★</span>}
-                  </div>
                 </Link>
               ))}
             </div>
@@ -1514,6 +1641,14 @@ export default function HomePage() {
           stroke-width: 1.6;
         }
 
+        .category-sdg-icon {
+          display: block;
+          width: 100%;
+          height: 100%;
+          border-radius: inherit;
+          object-fit: cover;
+        }
+
         .sidebar-label {
           display: inline-flex;
           align-items: center;
@@ -1573,6 +1708,7 @@ export default function HomePage() {
         }
 
         .hero-banner {
+          position: relative;
           border-radius: 22px;
           padding: 28px 30px 22px;
           background: linear-gradient(135deg, #f5fbf6 0%, #edf7ef 45%, #f8fcf9 100%);
@@ -1580,8 +1716,107 @@ export default function HomePage() {
           grid-template-columns: minmax(300px, 420px) minmax(260px, 1fr);
           gap: 14px;
           overflow: hidden;
-          min-height: 300px;
+          height: 330px;
+          min-height: 330px;
           min-width: 0;
+        }
+
+        .hero-banner.hero-banner-ad {
+          display: block;
+          padding: 0;
+          background: #e9f3ec;
+        }
+
+        .hero-ad-slide {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          padding: 34px;
+          background-position: center;
+          background-size: cover;
+          color: #fff;
+          isolation: isolate;
+        }
+
+        .hero-ad-main-link {
+          position: absolute;
+          z-index: 1;
+          inset: 0;
+        }
+
+        .hero-ad-slide::after {
+          content: "";
+          position: absolute;
+          z-index: -1;
+          inset: 0;
+          background: linear-gradient(180deg, transparent 35%, rgba(4, 22, 11, 0.74));
+        }
+
+        .hero-ad-label {
+          position: relative;
+          z-index: 2;
+          width: fit-content;
+          margin-bottom: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.55);
+          border-radius: 999px;
+          padding: 5px 10px;
+          background: rgba(0, 0, 0, 0.24);
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+        }
+
+        .hero-ad-title {
+          position: relative;
+          z-index: 2;
+          max-width: 70%;
+          font-size: clamp(22px, 3vw, 36px);
+          font-weight: 750;
+          line-height: 1.1;
+          text-shadow: 0 2px 18px rgba(0, 0, 0, 0.36);
+        }
+
+        .hero-ad-buttons {
+          position: relative;
+          z-index: 3;
+          margin-top: 18px;
+        }
+
+        .hero-ad-buttons .secondary-hero-button {
+          border-color: rgba(255, 255, 255, 0.72);
+          background: rgba(255, 255, 255, 0.94);
+        }
+
+        .hero-slide-controls {
+          position: absolute;
+          z-index: 5;
+          right: 22px;
+          bottom: 18px;
+          display: flex;
+          gap: 7px;
+          border-radius: 999px;
+          padding: 7px 9px;
+          background: rgba(10, 35, 18, 0.2);
+          backdrop-filter: blur(6px);
+        }
+
+        .hero-slide-controls button {
+          width: 8px;
+          height: 8px;
+          border: 0;
+          border-radius: 999px;
+          padding: 0;
+          background: rgba(255, 255, 255, 0.58);
+          cursor: pointer;
+          transition: width 180ms ease, background-color 180ms ease;
+        }
+
+        .hero-slide-controls button.active {
+          width: 24px;
+          background: #fff;
         }
 
         .hero-copy {
@@ -1602,7 +1837,7 @@ export default function HomePage() {
         }
 
         .hero-copy h1 {
-          font-size: clamp(2.9rem, 4vw, 4.2rem);
+          font-size: clamp(2.65rem, 3.7vw, 3.65rem);
           line-height: 1.02;
           letter-spacing: -0.04em;
           margin: 0;
@@ -1666,6 +1901,17 @@ export default function HomePage() {
           min-height: 220px;
           min-width: 0;
           max-width: 100%;
+          display: grid;
+          place-items: center;
+          overflow: hidden;
+        }
+
+        .hero-main-illustration {
+          display: block;
+          width: 100%;
+          height: 250px;
+          object-fit: contain;
+          object-position: center;
         }
 
         .hero-arc {
@@ -1688,9 +1934,18 @@ export default function HomePage() {
           transform: rotate(-24deg);
         }
 
-        .hero-leaf-top {
-          top: 28px;
-          right: 58px;
+        .hero-impact-image {
+          position: absolute;
+          z-index: 2;
+          top: 10px;
+          right: 38px;
+          width: 78px;
+          height: 78px;
+          border: 5px solid rgba(255, 255, 255, 0.92);
+          border-radius: 22px;
+          object-fit: cover;
+          box-shadow: 0 14px 28px rgba(24, 82, 45, 0.18);
+          transform: rotate(3deg);
         }
 
         .hero-leaf-side {
@@ -1788,18 +2043,21 @@ export default function HomePage() {
         }
 
         .ad-card {
+          position: relative;
           grid-column: 3;
           grid-row: 1;
           border-radius: 22px;
-          padding: 28px 16px 22px;
-          display: grid;
-          gap: 14px;
+          padding: 28px 16px 54px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          justify-content: center;
+          align-items: center;
           justify-items: center;
           text-align: center;
           background: linear-gradient(180deg, #f3faf5, #fdfefe);
-          height: 300px;
-          min-height: 0;
-          align-content: center;
+          height: auto;
+          min-height: 330px;
           margin-top: 16px;
         }
 
@@ -1833,12 +2091,21 @@ export default function HomePage() {
 
         .ad-card h3 {
           font-size: 16px;
+          max-width: 170px;
         }
 
         .ad-card p {
           font-size: 13px;
           line-height: 1.45;
-          max-width: 130px;
+          max-width: 170px;
+        }
+
+        .ad-visual {
+          width: 72px;
+          height: 72px;
+          border-radius: 16px;
+          object-fit: cover;
+          box-shadow: 0 10px 22px rgba(25, 72, 106, 0.16);
         }
 
         .ad-button {
@@ -1859,19 +2126,34 @@ export default function HomePage() {
         }
 
         .ad-dots {
+          position: absolute;
+          left: 50%;
+          bottom: 20px;
           display: flex;
+          align-items: center;
           gap: 8px;
+          transform: translateX(-50%);
         }
 
         .ad-dot {
           width: 6px;
           height: 6px;
+          border: 0;
+          padding: 0;
           border-radius: 999px;
           background: #ccd9d0;
+          cursor: pointer;
+          transition: width 180ms ease, background-color 180ms ease;
         }
 
         .ad-dot-active {
+          width: 18px;
           background: #2b7a40;
+        }
+
+        .ad-dot:focus-visible {
+          outline: 2px solid #2b7a40;
+          outline-offset: 3px;
         }
 
         .quick-action-grid {
@@ -1904,6 +2186,26 @@ export default function HomePage() {
 
         .verification-card {
           background: linear-gradient(180deg, #eef7ef, #fbfdfb);
+        }
+
+        .quick-action-tone-1 {
+          background: linear-gradient(145deg, #eaf5ff, #f7fbff);
+          border-color: #cfe5f7;
+        }
+
+        .quick-action-tone-2 {
+          background: linear-gradient(145deg, #fff8d9, #fffdf3);
+          border-color: #f0e2a9;
+        }
+
+        .quick-action-tone-3 {
+          background: linear-gradient(145deg, #edf9ef, #f9fdf9);
+          border-color: #cfe8d4;
+        }
+
+        .quick-action-tone-4 {
+          background: linear-gradient(145deg, #f5efff, #fcf9ff);
+          border-color: #dfd2f2;
         }
 
         .quick-action-icon {
@@ -2555,7 +2857,7 @@ export default function HomePage() {
             grid-column: 2;
             grid-row: 3;
             height: auto;
-            min-height: auto;
+            min-height: 330px;
             margin-top: 4px;
           }
 
@@ -2745,6 +3047,8 @@ export default function HomePage() {
           .hero-banner {
             grid-template-columns: 1fr;
             padding: 24px 20px 18px;
+            height: 500px;
+            min-height: 500px;
           }
 
           .hero-visual {
@@ -2835,6 +3139,16 @@ export default function HomePage() {
           .hero-banner {
             padding: 22px 16px 18px;
             border-radius: 18px;
+            height: 440px;
+            min-height: 440px;
+          }
+
+          .hero-ad-slide {
+            padding: 24px 20px 30px;
+          }
+
+          .hero-ad-title {
+            max-width: 90%;
           }
 
           .hero-copy h1 {

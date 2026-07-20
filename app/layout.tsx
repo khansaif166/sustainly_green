@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import SessionTimeoutNotice from "./components/SessionTimeoutNotice";
 import SupabaseAuthCallback from "./components/SupabaseAuthCallback";
+import RfqPrompt from "./components/RfqPrompt";
 import { Poppins, Plus_Jakarta_Sans } from "next/font/google";
 
 const poppins = Poppins({
@@ -60,6 +61,7 @@ export default function RootLayout({
       <body className={`${poppins.variable} ${jakarta.variable} font-sans antialiased`} suppressHydrationWarning>
         <SupabaseAuthCallback />
         <SessionTimeoutNotice />
+        <RfqPrompt />
         {children}
       </body>
     </html>

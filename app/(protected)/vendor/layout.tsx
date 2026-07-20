@@ -81,15 +81,16 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         .vl-main input,
         .vl-main select,
         .vl-main textarea {
-          border-color: #cbd5d1 !important;
+          border-color: #97a99d !important;
           color: #10241b !important;
         }
         .vl-main input::placeholder,
         .vl-main textarea::placeholder {
-          color: #6b7b71 !important;
+          color: #53645a !important;
         }
         .vl-main label {
-          color: #37483d;
+          color: #26392d;
+          font-weight: 600;
         }
       `}</style>
 

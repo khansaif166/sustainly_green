@@ -21,13 +21,13 @@ const resources = [
   {
     title: "Buyer FAQs",
     text: "Answers for RFQs, supplier discovery, marketplace use, and account setup.",
-    href: "/help",
+    href: "/help/buyers",
     icon: FileQuestion,
   },
   {
     title: "Vendor FAQs",
     text: "Guidance for listing a business, verification, product uploads, and enquiries.",
-    href: "/help",
+    href: "/help/vendors",
     icon: ShieldCheck,
   },
   {

@@ -128,15 +128,16 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         .bl-content input,
         .bl-content select,
         .bl-content textarea {
-          border-color: #cbd5d1 !important;
+          border-color: #97a99d !important;
           color: #10241b !important;
         }
         .bl-content input::placeholder,
         .bl-content textarea::placeholder {
-          color: #6b7b71 !important;
+          color: #53645a !important;
         }
         .bl-content label {
-          color: #37483d;
+          color: #26392d;
+          font-weight: 600;
         }
         .bl-topbar {
           display: none; position: sticky; top: 0; z-index: 40;
