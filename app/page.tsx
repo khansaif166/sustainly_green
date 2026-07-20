@@ -94,37 +94,37 @@ const sideAdSlides = [
   {
     title: "Advertise Here",
     text: "Reach 50k+ buyers every month",
-    image: "/TheGlobalGoals_Icons_Color_Goal_17.svg",
-    imageAlt: "Partnerships for sustainable growth",
+    image: "/logo.png",
+    imageAlt: "Sustainly Green",
     href: "/contact",
   },
   {
     title: "Promote Green Products",
     text: "Reach sustainability-focused buyers",
-    image: "/TheGlobalGoals_Icons_Color_Goal_13.svg",
-    imageAlt: "Climate action",
+    image: "/favi.png",
+    imageAlt: "Sustainly Green marketplace",
     href: "/contact",
   },
   {
     title: "Grow Your Reach",
     text: "Connect your responsible brand with new businesses",
-    image: "/TheGlobalGoals_Icons_Color_Goal_12.svg",
-    imageAlt: "Responsible consumption and production",
+    image: "/log.webp",
+    imageAlt: "Sustainly Green business network",
     href: "/register?role=VENDOR",
   },
 ];
 
 const sidebarCategories: CategoryItem[] = [
-  { id: "renewable-energy", name: "Renewable Energy", icon: "/TheGlobalGoals_Icons_Color_Goal_7.svg" },
+  { id: "renewable-energy", name: "Renewable Energy", icon: "sun" },
   { id: "energy-efficiency", name: "Energy Efficiency", icon: "zap" },
-  { id: "water-wastewater", name: "Water & Wastewater", icon: "/TheGlobalGoals_Icons_Color_Goal_6.svg" },
-  { id: "waste-management", name: "Waste Management", icon: "/TheGlobalGoals_Icons_Color_Goal_12.svg" },
-  { id: "green-building", name: "Green Building", icon: "/TheGlobalGoals_Icons_Color_Goal_9.svg" },
+  { id: "water-wastewater", name: "Water & Wastewater", icon: "drop" },
+  { id: "waste-management", name: "Waste Management", icon: "recycle" },
+  { id: "green-building", name: "Green Building", icon: "building" },
   { id: "sustainable-materials", name: "Sustainable Materials", icon: "hex" },
   { id: "eco-packaging", name: "Eco Packaging", icon: "box" },
   { id: "electric-mobility", name: "Electric Mobility", icon: "truck" },
   { id: "agriculture-organic", name: "Agriculture & Organic", icon: "sprout" },
-  { id: "environmental-monitoring", name: "Environmental Monitoring", icon: "/TheGlobalGoals_Icons_Color_Goal_13.svg" },
+  { id: "environmental-monitoring", name: "Environmental Monitoring", icon: "chart" },
 ];
 
 const quickActions = [
@@ -271,16 +271,16 @@ const staticSuppliers: SupplierCard[] = [
 
 function categoryIcon(category: { id: string; name: string }, index: number) {
   const key = `${category.id} ${category.name}`.toLowerCase();
-  if (key.includes("renewable")) return "/TheGlobalGoals_Icons_Color_Goal_7.svg";
+  if (key.includes("renewable")) return "sun";
   if (key.includes("energy efficiency")) return "zap";
-  if (key.includes("water")) return "/TheGlobalGoals_Icons_Color_Goal_6.svg";
-  if (key.includes("waste")) return "/TheGlobalGoals_Icons_Color_Goal_12.svg";
-  if (key.includes("building") || key.includes("infrastructure")) return "/TheGlobalGoals_Icons_Color_Goal_9.svg";
+  if (key.includes("water")) return "drop";
+  if (key.includes("waste")) return "recycle";
+  if (key.includes("building") || key.includes("infrastructure")) return "building";
   if (key.includes("material")) return "hex";
   if (key.includes("packag")) return "box";
   if (key.includes("mobility") || key.includes("vehicle")) return "truck";
   if (key.includes("agri") || key.includes("organic")) return "sprout";
-  if (key.includes("monitor") || key.includes("climate")) return "/TheGlobalGoals_Icons_Color_Goal_13.svg";
+  if (key.includes("monitor") || key.includes("climate")) return "chart";
   return sidebarCategories[index % sidebarCategories.length]?.icon || "sun";
 }
 
@@ -517,6 +517,7 @@ export default function HomePage() {
               <Link href="/buyer/dashboard">Buyer</Link>
               <Link href="/vendor/dashboard">Supplier</Link>
               <Link href="/resources">Resources</Link>
+              <Link href="/sdg-commitment">Our SDG Commitment</Link>
               <button type="button" className="utility-link globe-link">
                 <Globe size={14} />
                 EN
@@ -2105,7 +2106,7 @@ export default function HomePage() {
           width: 64px;
           height: 64px;
           border-radius: 16px;
-          object-fit: cover;
+          object-fit: contain;
           box-shadow: 0 10px 22px rgba(25, 72, 106, 0.16);
         }
 

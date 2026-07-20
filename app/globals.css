@@ -1032,6 +1032,56 @@ footer { background: #050A06; padding: 60px 0 0; }
 .faq-list details p { margin: -3px 0 20px; color: #5a6b60; font-size: 14px; line-height: 1.7; }
 .faq-help { margin-top: 26px; border-radius: 15px; padding: 17px 20px; background: #eaf6ed; color: #42564a; font-size: 14px; }
 .faq-help a { color: #176f38; font-weight: 750; }
+
+/* SDG commitment page */
+.sdg-page { background: #f7faf7; color: #10241b; }
+.sdg-hero { display: grid; grid-template-columns: 1.15fr .85fr; gap: 50px; align-items: center; padding: 84px max(24px, calc((100vw - 1240px) / 2)); background: radial-gradient(circle at 85% 10%, #dff3e3, transparent 34%), linear-gradient(135deg, #f7fbf7, #edf7ef); }
+.sdg-hero-copy { max-width: 720px; }
+.sdg-eyebrow { margin: 0 0 10px; color: #258047; font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.sdg-hero h1 { margin: 0; font-size: clamp(44px, 6vw, 76px); line-height: 1; letter-spacing: -.055em; }
+.sdg-hero-copy > p:not(.sdg-eyebrow) { max-width: 680px; margin: 24px 0 0; color: #52665a; font-size: 17px; line-height: 1.8; }
+.sdg-hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.sdg-hero-actions a, .sdg-benefits a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid #aac8b2; border-radius: 999px; padding: 12px 20px; background: #fff; color: #174c2a; font-size: 13px; font-weight: 750; }
+.sdg-hero-actions a:first-child, .sdg-benefits a { border-color: #1d7b3e; background: #1d7b3e; color: #fff; }
+.sdg-hero-goals { display: flex; justify-content: center; gap: 18px; }
+.sdg-hero-goals img { width: min(46%, 210px); height: auto; border-radius: 26px; box-shadow: 0 20px 50px rgba(17, 65, 31, .17); }
+.sdg-intro, .sdg-section, .sdg-supporting, .sdg-benefits, .sdg-trust { width: min(calc(100% - 40px), 1240px); margin: 0 auto; }
+.sdg-intro { display: grid; grid-template-columns: .9fr 1.1fr; gap: 70px; align-items: start; padding: 76px 0; }
+.sdg-intro h2, .sdg-section-head h2, .sdg-benefits h2, .sdg-trust h2 { margin: 0; font-size: clamp(30px, 4vw, 46px); line-height: 1.1; letter-spacing: -.04em; }
+.sdg-intro > p, .sdg-section-head > p:not(.sdg-eyebrow), .sdg-trust p:last-child { margin: 0; color: #5a6b60; font-size: 15px; line-height: 1.85; }
+.sdg-section, .sdg-supporting { padding: 76px 0; }
+.sdg-section-head { max-width: 760px; margin-bottom: 34px; }
+.sdg-section-head > p:not(.sdg-eyebrow) { margin-top: 16px; }
+.sdg-primary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.sdg-primary-card { border: 1px solid #d4e2d7; border-radius: 28px; padding: 30px; background: #fff; box-shadow: 0 15px 40px rgba(17, 54, 29, .06); }
+.sdg-goal-heading { display: flex; gap: 20px; align-items: center; }
+.sdg-goal-heading img { width: 100px; height: 100px; border-radius: 18px; }
+.sdg-goal-heading p { margin: 0 0 5px; color: #278147; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.sdg-goal-heading h3 { margin: 0; font-size: 23px; line-height: 1.15; }
+.sdg-summary { min-height: 78px; margin: 24px 0; color: #56695d; line-height: 1.7; }
+.sdg-primary-card h4 { margin: 22px 0 12px; font-size: 14px; }
+.sdg-primary-card ul, .sdg-benefits ul { display: grid; gap: 10px; margin: 0; padding-left: 20px; color: #52655a; font-size: 14px; line-height: 1.6; }
+.sdg-targets { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 24px; border-top: 1px solid #e4ede6; padding-top: 20px; }
+.sdg-targets h4 { width: 100%; margin-top: 0; }
+.sdg-targets span { border-radius: 999px; padding: 7px 10px; background: #edf6ef; color: #326044; font-size: 11px; font-weight: 650; }
+.sdg-supporting { width: 100%; max-width: none; padding-left: max(20px, calc((100vw - 1240px) / 2)); padding-right: max(20px, calc((100vw - 1240px) / 2)); background: #102b1d; color: #fff; }
+.sdg-supporting .sdg-eyebrow { color: #7fd591; }
+.sdg-support-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.sdg-support-grid article { display: flex; align-items: center; gap: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; padding: 18px; background: rgba(255,255,255,.055); }
+.sdg-support-grid img { width: 76px; height: 76px; border-radius: 13px; }
+.sdg-support-grid h3 { margin: 0; font-size: 16px; }
+.sdg-support-grid p { margin: 8px 0 0; color: rgba(255,255,255,.62); font-size: 13px; line-height: 1.6; }
+.sdg-role-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.sdg-role-grid article { border: 1px solid #d5e3d8; border-radius: 22px; padding: 25px; background: #fff; }
+.sdg-role-grid article > div { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 14px; background: #e7f5ea; color: #207741; }
+.sdg-role-grid h3 { margin: 20px 0 10px; font-size: 18px; }.sdg-role-grid p { margin: 0; color: #5c6c62; font-size: 14px; line-height: 1.7; }
+.sdg-benefits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding: 30px 0 80px; }
+.sdg-benefits > div { border-radius: 26px; padding: 32px; background: linear-gradient(145deg, #edf8ef, #fff); }
+.sdg-benefits ul { margin: 22px 0 26px; }.sdg-benefits h2 { font-size: 32px; }
+.sdg-trust { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start; margin-bottom: 90px; border-radius: 28px; padding: 34px; background: #e4f3e7; }
+.sdg-trust > svg { color: #217740; }.sdg-trust h2 { max-width: 800px; font-size: 34px; }.sdg-trust p:last-child { margin-top: 14px; }
+@media (max-width: 820px) { .sdg-hero, .sdg-intro, .sdg-primary-grid, .sdg-support-grid, .sdg-benefits { grid-template-columns: 1fr; }.sdg-hero { padding: 60px 20px; }.sdg-hero-goals { justify-content: flex-start; }.sdg-intro { gap: 24px; }.sdg-role-grid { grid-template-columns: 1fr; }.sdg-summary { min-height: 0; } }
+@media (max-width: 520px) { .sdg-hero-goals { gap: 10px; }.sdg-primary-card { padding: 22px; }.sdg-goal-heading { align-items: flex-start; }.sdg-goal-heading img { width: 76px; height: 76px; }.sdg-support-grid article { align-items: flex-start; }.sdg-support-grid img { width: 62px; height: 62px; }.sdg-trust { grid-template-columns: 1fr; padding: 25px; } }
 .footer-col h5 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.3); margin-bottom: 16px; }
 .footer-col a,
 .footer-col .footer-text-button { display: block; font-size: 13.5px; color: rgba(255,255,255,0.55); margin-bottom: 10px; transition: color 0.18s; }
