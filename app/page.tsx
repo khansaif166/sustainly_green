@@ -100,13 +100,13 @@ const sideAdSlides = [
   },
   {
     title: "Promote Green Products",
-    text: "Showcase solutions to sustainability-focused buyers",
+    text: "Reach sustainability-focused buyers",
     image: "/TheGlobalGoals_Icons_Color_Goal_13.svg",
     imageAlt: "Climate action",
     href: "/contact",
   },
   {
-    title: "Grow Your Marketplace Reach",
+    title: "Grow Your Reach",
     text: "Connect your responsible brand with new businesses",
     image: "/TheGlobalGoals_Icons_Color_Goal_12.svg",
     imageAlt: "Responsible consumption and production",
@@ -2047,17 +2047,18 @@ export default function HomePage() {
           grid-column: 3;
           grid-row: 1;
           border-radius: 22px;
-          padding: 28px 16px 54px;
+          padding: 18px 16px 46px;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 8px;
           justify-content: center;
           align-items: center;
           justify-items: center;
           text-align: center;
           background: linear-gradient(180deg, #f3faf5, #fdfefe);
-          height: auto;
+          height: 330px;
           min-height: 330px;
+          max-height: 330px;
           margin-top: 16px;
         }
 
@@ -2101,8 +2102,8 @@ export default function HomePage() {
         }
 
         .ad-visual {
-          width: 72px;
-          height: 72px;
+          width: 64px;
+          height: 64px;
           border-radius: 16px;
           object-fit: cover;
           box-shadow: 0 10px 22px rgba(25, 72, 106, 0.16);
@@ -2856,8 +2857,9 @@ export default function HomePage() {
           .ad-card {
             grid-column: 2;
             grid-row: 3;
-            height: auto;
+            height: 330px;
             min-height: 330px;
+            max-height: 330px;
             margin-top: 4px;
           }
 
