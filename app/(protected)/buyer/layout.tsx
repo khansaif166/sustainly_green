@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, FileText, User, LogOut, Menu, X, BarChart3,
-  ChevronRight, Leaf,
+  ChevronRight,
 } from "lucide-react";
 import { fetchCurrentProfile, getCurrentUser, getStoredSession, signOutSupabase } from "@/lib/supabaseAuth";
 import SessionTimeoutNotice from "@/app/components/SessionTimeoutNotice";
@@ -59,15 +60,12 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
     <div className="flex flex-col h-full">
       {/* Brand */}
       <div className="px-5 pt-6 pb-5">
-        <div className="flex items-center gap-2.5">
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#16a34a,#15803d)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Leaf size={16} color="#fff" />
-          </div>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.2 }}>Sustainly Green</p>
-            <p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.38)", margin: 0, fontWeight: 500, letterSpacing: "0.03em" }}>BUYER PANEL</p>
-          </div>
-        </div>
+        <Link href="/" aria-label="Go to Sustainly Green homepage" className="inline-flex flex-col items-start gap-2 no-underline">
+          <span style={{ display: "inline-flex", padding: "5px 8px", borderRadius: 10, background: "#fff" }}>
+            <Image src="/log.webp" alt="Sustainly Green" width={145} height={38} priority style={{ width: 145, height: "auto", objectFit: "contain" }} />
+          </span>
+          <span style={{ fontSize: 10.5, color: "rgba(255,255,255,0.55)", fontWeight: 600, letterSpacing: "0.08em" }}>BUYER PANEL</span>
+        </Link>
       </div>
 
       {/* Nav */}
@@ -180,7 +178,9 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
             <button onClick={() => setMobileOpen(true)} style={{ border: "none", background: "none", cursor: "pointer", padding: 4 }}>
               <Menu size={20} />
             </button>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>Buyer Panel</span>
+            <Link href="/" aria-label="Go to Sustainly Green homepage" style={{ display: "inline-flex", alignItems: "center" }}>
+              <Image src="/log.webp" alt="Sustainly Green" width={112} height={30} priority style={{ width: 112, height: "auto", objectFit: "contain" }} />
+            </Link>
             <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#16a34a,#166534)", color: "#fff", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>
               {avatarLetter}
             </div>

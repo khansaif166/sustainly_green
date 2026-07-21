@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Package, User, Menu, MessageSquareText,
-  X, BarChart3, LogOut, Leaf, Home,
+  X, BarChart3, LogOut, Home,
 } from "lucide-react";
 import { fetchCurrentProfile, getCurrentUser, signOutSupabase } from "@/lib/supabaseAuth";
 import SessionTimeoutNotice from "@/app/components/SessionTimeoutNotice";
@@ -63,6 +64,10 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         @media(min-width:768px){.vl-sidebar{transform:translateX(0)}}
         .vl-sidebar.open{transform:translateX(0)}
         .vl-logo-area{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between}
+        .vl-brand-link{display:inline-flex;flex-direction:column;align-items:flex-start;gap:7px;text-decoration:none}
+        .vl-brand-logo{width:150px;height:auto;object-fit:contain;background:#fff;border-radius:10px;padding:5px 8px}
+        .vl-brand-panel{font-size:10px;color:rgba(255,255,255,.55);font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+        .vl-mobile-logo{width:112px;height:auto;object-fit:contain}
         .vl-nav{flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
         .vl-nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;font-size:13.5px;font-weight:600;color:rgba(255,255,255,.5);text-decoration:none;transition:all .15s;border-left:3px solid transparent}
         .vl-nav-item:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.06)}
@@ -96,12 +101,9 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
 
       {/* Mobile top bar */}
       <div className="vl-mobile-bar">
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 9, background: "linear-gradient(135deg,#16a34a,#15803d)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Leaf size={15} color="#fff" />
-          </div>
-          <span style={{ fontSize: 13, fontWeight: 800, color: "#111" }}>Sustainly Green</span>
-        </div>
+        <Link href="/" aria-label="Go to Sustainly Green homepage" style={{ display: "inline-flex", alignItems: "center" }}>
+          <Image src="/log.webp" alt="Sustainly Green" width={112} height={30} priority className="vl-mobile-logo" />
+        </Link>
         <button onClick={() => setOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex" }}>
           <Menu size={20} color="#374151" />
         </button>
@@ -113,15 +115,10 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       {/* Sidebar */}
       <aside className={`vl-sidebar${open ? " open" : ""}`}>
         <div className="vl-logo-area">
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 11, background: "linear-gradient(135deg,#16a34a,#15803d)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Leaf size={17} color="#fff" />
-            </div>
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.2 }}>Sustainly Green</p>
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,.32)", margin: 0, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase" }}>Vendor Panel</p>
-            </div>
-          </div>
+          <Link href="/" aria-label="Go to Sustainly Green homepage" className="vl-brand-link" onClick={() => setOpen(false)}>
+            <Image src="/log.webp" alt="Sustainly Green" width={150} height={40} priority className="vl-brand-logo" />
+            <span className="vl-brand-panel">Vendor Panel</span>
+          </Link>
           <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", marginLeft: 4 }}>
             <X size={17} color="rgba(255,255,255,.4)" />
           </button>
