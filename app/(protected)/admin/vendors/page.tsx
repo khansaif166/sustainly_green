@@ -1,11 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, XCircle, ExternalLink, Search, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, XCircle, ExternalLink, Search, Trash2, Upload, Download, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { getVendorBadgeMeta, VENDOR_BADGES, type VendorBadgeType } from "@/lib/vendorBadges";
 
 type VendorStatusFilter = "ALL" | "APPROVED" | "PENDING";
+
+const IMPORT_COLUMNS = ["Logo", "Company Name", "Categories", "Products/ Services", "Address", "State", "Operating Hours", "Business Description"];
+const MAX_IMPORT_SIZE = 5 * 1024 * 1024;
+const MAX_IMPORT_ROWS = 1000;
+
+type FileValidation = {
+  status: "validating" | "valid" | "invalid";
+  message: string;
+  rowCount?: number;
+};
 
 type Vendor = {
   website?: string;
@@ -38,6 +49,12 @@ export default function AdminVendorsPage() {
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState("");
   const [status,  setStatus]  = useState<VendorStatusFilter>("ALL");
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [fileValidation, setFileValidation] = useState<FileValidation | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function fetchVendors() {
     const session = getStoredSession();
@@ -84,6 +101,124 @@ export default function AdminVendorsPage() {
     if (!session) return;
     await fetch(`/api/admin/vendors/${uid}`, { method: "DELETE", headers: { Authorization: `Bearer ${session.accessToken}` } });
     fetchVendors();
+  }
+
+  function downloadTemplate() {
+    const sheet = XLSX.utils.aoa_to_sheet([
+      IMPORT_COLUMNS,
+      ["https://example.com/logo.png", "Example Green Company", "Renewable Energy, Solar", "Solar panels; Installation", "12 Example Road", "Karnataka", "Mon-Sat, 9:00 AM-6:00 PM", "Sustainable energy products and services."],
+    ]);
+    sheet["!cols"] = [{ wch: 34 }, { wch: 28 }, { wch: 30 }, { wch: 34 }, { wch: 38 }, { wch: 20 }, { wch: 30 }, { wch: 48 }];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, "Vendors");
+    XLSX.writeFile(workbook, "vendor-import-template.xlsx");
+  }
+
+  async function validateSelectedFile(file: File) {
+    setImportFile(file);
+    setImportMessage(null);
+    setFileValidation({ status: "validating", message: "Checking file, columns, and vendor data…" });
+
+    if (!file.name.toLowerCase().endsWith(".xlsx")) {
+      setFileValidation({ status: "invalid", message: "Only .xlsx Excel files are accepted." });
+      return;
+    }
+    if (!file.size || file.size > MAX_IMPORT_SIZE) {
+      setFileValidation({ status: "invalid", message: "The file must be smaller than 5 MB." });
+      return;
+    }
+
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
+        setFileValidation({ status: "invalid", message: "This is not a valid .xlsx Excel workbook." });
+        return;
+      }
+      const workbook = XLSX.read(bytes, { type: "array", cellDates: false });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (!sheet) {
+        setFileValidation({ status: "invalid", message: "The workbook does not contain a worksheet." });
+        return;
+      }
+      const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: false, blankrows: true });
+      const clean = (value: unknown) => value == null ? "" : String(value).trim().replace(/\s+/g, " ");
+      const headers = (rows[0] || []).map(clean);
+      const correctHeaders = headers.length === IMPORT_COLUMNS.length && IMPORT_COLUMNS.every((header) => headers.includes(header));
+      if (!correctHeaders) {
+        setFileValidation({ status: "invalid", message: `The file must contain only these columns, in any order: ${IMPORT_COLUMNS.join(", ")}.` });
+        return;
+      }
+      const populatedRows = rows.slice(1)
+        .map((row, index) => ({ row, excelRow: index + 2 }))
+        .filter(({ row }) => row.some((value) => clean(value)));
+      if (!populatedRows.length) {
+        setFileValidation({ status: "invalid", message: "The worksheet has no vendor data." });
+        return;
+      }
+      if (populatedRows.length > MAX_IMPORT_ROWS) {
+        setFileValidation({ status: "invalid", message: `Only ${MAX_IMPORT_ROWS} vendors can be imported at once.` });
+        return;
+      }
+
+      const errors: string[] = [];
+      const seen = new Map<string, number>();
+      for (const { row, excelRow } of populatedRows) {
+        const values = IMPORT_COLUMNS.map((column) => clean(row[headers.indexOf(column)]));
+        const missing = IMPORT_COLUMNS.filter((_, index) => !values[index]);
+        if (missing.length) errors.push(`Row ${excelRow}: missing ${missing.join(", ")}.`);
+        if (values[0] && !/^https?:\/\/\S+$/i.test(values[0])) errors.push(`Row ${excelRow}: Logo must be an http(s) URL.`);
+        const key = [values[1], values[4], values[5]].map((value) => value.toLocaleLowerCase()).join("|");
+        const firstRow = seen.get(key);
+        if (firstRow) errors.push(`Row ${excelRow}: duplicate of row ${firstRow}.`);
+        else seen.set(key, excelRow);
+      }
+      if (errors.length) {
+        const remaining = errors.length > 5 ? ` Plus ${errors.length - 5} more error${errors.length - 5 === 1 ? "" : "s"}.` : "";
+        setFileValidation({ status: "invalid", message: `${errors.slice(0, 5).join(" ")}${remaining}`, rowCount: populatedRows.length });
+        return;
+      }
+      setFileValidation({ status: "valid", message: `All columns and data are valid. ${populatedRows.length} vendor${populatedRows.length === 1 ? "" : "s"} ready to import.`, rowCount: populatedRows.length });
+    } catch {
+      setFileValidation({ status: "invalid", message: "The Excel workbook could not be read. Download the template and try again." });
+    }
+  }
+
+  async function importVendors() {
+    if (!importFile) return;
+    const session = getStoredSession();
+    if (!session) return;
+    setImporting(true);
+    setImportMessage(null);
+    const formData = new FormData();
+    formData.append("file", importFile);
+    try {
+      const res = await fetch("/api/admin/vendors/import", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+        body: formData,
+      });
+      const payload = await res.json();
+      if (!res.ok) {
+        const rowErrors = payload.error?.details?.rowErrors as Array<{ row: number; message: string }> | undefined;
+        const suffix = rowErrors?.length
+          ? ` ${rowErrors.slice(0, 5).map((error) => `Row ${error.row}: ${error.message}`).join(" ")}`
+          : "";
+        setImportMessage({ kind: "error", text: `${payload.error?.message || "Import failed."}${suffix}` });
+        return;
+      }
+      setImportMessage({
+        kind: "success",
+        text: `Imported ${payload.inserted} vendor${payload.inserted === 1 ? "" : "s"}.${payload.skippedDuplicates ? ` Skipped ${payload.skippedDuplicates} already in the database.` : ""}`,
+      });
+      setImportFile(null);
+      setFileValidation(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      await fetchVendors();
+    } catch {
+      setImportMessage({ kind: "error", text: "The import request failed. Please try again." });
+    } finally {
+      setImporting(false);
+    }
   }
 
   const filtered = useMemo(() => vendors.filter(v => {
@@ -149,6 +284,18 @@ export default function AdminVendorsPage() {
         .av-verified-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:50px;font-size:10.5px;font-weight:800;background:#ecfdf5;color:#047857;border:1px solid rgba(4,120,87,.18)}
         .av-verified-badge img{width:18px;height:22px;object-fit:cover;border-radius:3px}
         .av-badge-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;flex:1 1 100%}
+        .av-import{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px}
+        .av-import-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+        .av-import-actions{display:flex;gap:9px;flex-wrap:wrap}
+        .av-file{border:1.5px dashed #86a88f;border-radius:14px;padding:16px;background:#f8fcf9}
+        .av-file-input{display:none}
+        .av-selected-file{display:flex;align-items:center;gap:10px;margin-top:12px;padding:11px 12px;border:1px solid #86d39d;border-radius:12px;background:#f0fdf4;color:#166534}
+        .av-selected-file.invalid{border-color:#f2a7a7;background:#fef2f2;color:#991b1b}
+        .av-selected-file.validating{border-color:#f4cc75;background:#fffbeb;color:#92400e}
+        .av-selected-file-name{font-size:12.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .av-selected-file-size{font-size:11px;opacity:.72;margin-top:2px}
+        .av-columns{font-size:11.5px;color:#53645a;margin:7px 0 0;line-height:1.6}
+        .av-message{padding:10px 12px;border-radius:10px;font-size:12.5px;line-height:1.45}
       `}</style>
 
       <div className="av-page">
@@ -157,8 +304,8 @@ export default function AdminVendorsPage() {
         <div className="av-hero">
           <div className="av-hero-inner">
             <div>
-              <h1 className="av-hero-title">Vendor Approvals</h1>
-              <p className="av-hero-sub">Review and approve vendor registrations</p>
+              <h1 className="av-hero-title">Vendor Management</h1>
+              <p className="av-hero-sub">Review registrations and import vendor listings</p>
             </div>
             <div className="av-hero-stats">
               <div className="av-hero-stat">
@@ -175,6 +322,64 @@ export default function AdminVendorsPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="av-import">
+          <div className="av-import-head">
+            <div style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
+              <div style={{ width: 38, height: 38, borderRadius: 12, background: "#f0fdf4", color: "#15803d", display: "flex", alignItems: "center", justifyContent: "center" }}><FileSpreadsheet size={19} /></div>
+              <div>
+                <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 800, color: "#17251c" }}>Add vendors via Excel</p>
+                <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Only .xlsx files using the exact template columns are accepted. Logo values must be image URLs.</p>
+              </div>
+            </div>
+            <div className="av-import-actions">
+              <button type="button" onClick={downloadTemplate} className="av-btn av-btn-outline"><Download size={13} />Download template</button>
+              <button type="button" onClick={() => { setImportOpen((value) => !value); setImportMessage(null); }} className="av-btn av-btn-green"><Upload size={13} />Upload Excel</button>
+            </div>
+          </div>
+          {importOpen && (
+            <div className="av-file">
+              <input
+                ref={fileInputRef}
+                className="av-file-input"
+                type="file"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void validateSelectedFile(file);
+                }}
+              />
+              <p className="av-columns"><b>Required columns, in any order:</b> {IMPORT_COLUMNS.join(" • ")}</p>
+              {importFile && (
+                <div className={`av-selected-file ${fileValidation?.status || "validating"}`}>
+                  <FileSpreadsheet size={21} style={{ flexShrink: 0 }} />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="av-selected-file-name">{importFile.name}</div>
+                    <div className="av-selected-file-size">{(importFile.size / 1024).toFixed(1)} KB</div>
+                    <div style={{ fontSize: 11.5, marginTop: 4, lineHeight: 1.45 }}>{fileValidation?.message}</div>
+                  </div>
+                  {fileValidation?.status === "valid" && <CheckCircle2 size={18} style={{ marginLeft: "auto", flexShrink: 0 }} />}
+                  {fileValidation?.status === "invalid" && <XCircle size={18} style={{ marginLeft: "auto", flexShrink: 0 }} />}
+                </div>
+              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+                <button type="button" onClick={() => {
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                    fileInputRef.current.click();
+                  }
+                }} className="av-btn av-btn-outline">
+                  <FileSpreadsheet size={13} />{importFile ? "Change file" : "Choose Excel file"}
+                </button>
+                <button type="button" disabled={!importFile || fileValidation?.status !== "valid" || importing} onClick={importVendors} className="av-btn av-btn-green" style={{ opacity: !importFile || fileValidation?.status !== "valid" || importing ? .55 : 1 }}>
+                  <Upload size={13} />{importing ? "Importing…" : "Import vendors"}
+                </button>
+                {!importFile && <span style={{ fontSize: 12, color: "#53645a" }}>No file chosen</span>}
+              </div>
+            </div>
+          )}
+          {importMessage && <div className="av-message" style={importMessage.kind === "success" ? { background: "#f0fdf4", color: "#166534" } : { background: "#fef2f2", color: "#991b1b" }}>{importMessage.text}</div>}
         </div>
 
         {/* Filter bar */}
