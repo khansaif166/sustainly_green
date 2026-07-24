@@ -64,9 +64,10 @@ export async function POST(request: Request) {
       return apiError("The uploaded file is not a valid .xlsx workbook.", 400);
     }
 
+    let XLSX: typeof import("xlsx");
     let workbook: import("xlsx").WorkBook;
     try {
-      const XLSX = await import("xlsx");
+      XLSX = await import("xlsx");
       workbook = XLSX.read(bytes, { type: "array", cellDates: false });
     } catch {
       return apiError("The Excel workbook could not be read.", 400);
