@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import * as XLSX from "xlsx";
 
 import { apiError, apiOk } from "@/lib/apiResponse";
 import {
@@ -65,8 +64,9 @@ export async function POST(request: Request) {
       return apiError("The uploaded file is not a valid .xlsx workbook.", 400);
     }
 
-    let workbook: XLSX.WorkBook;
+    let workbook: import("xlsx").WorkBook;
     try {
+      const XLSX = await import("xlsx");
       workbook = XLSX.read(bytes, { type: "array", cellDates: false });
     } catch {
       return apiError("The Excel workbook could not be read.", 400);

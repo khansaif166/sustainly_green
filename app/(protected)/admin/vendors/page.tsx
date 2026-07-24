@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, XCircle, ExternalLink, Search, Trash2, Upload, Download, FileSpreadsheet } from "lucide-react";
-import * as XLSX from "xlsx";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { getVendorBadgeMeta, VENDOR_BADGES, type VendorBadgeType } from "@/lib/vendorBadges";
 
@@ -103,7 +102,8 @@ export default function AdminVendorsPage() {
     fetchVendors();
   }
 
-  function downloadTemplate() {
+  async function downloadTemplate() {
+    const XLSX = await import("xlsx");
     const sheet = XLSX.utils.aoa_to_sheet([
       IMPORT_COLUMNS,
       ["https://example.com/logo.png", "Example Green Company", "Renewable Energy, Solar", "Solar panels; Installation", "12 Example Road", "Karnataka", "Mon-Sat, 9:00 AM-6:00 PM", "Sustainable energy products and services."],
@@ -134,6 +134,7 @@ export default function AdminVendorsPage() {
         setFileValidation({ status: "invalid", message: "This is not a valid .xlsx Excel workbook." });
         return;
       }
+      const XLSX = await import("xlsx");
       const workbook = XLSX.read(bytes, { type: "array", cellDates: false });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       if (!sheet) {
@@ -334,7 +335,7 @@ export default function AdminVendorsPage() {
               </div>
             </div>
             <div className="av-import-actions">
-              <button type="button" onClick={downloadTemplate} className="av-btn av-btn-outline"><Download size={13} />Download template</button>
+              <button type="button" onClick={() => void downloadTemplate()} className="av-btn av-btn-outline"><Download size={13} />Download template</button>
               <button type="button" onClick={() => { setImportOpen((value) => !value); setImportMessage(null); }} className="av-btn av-btn-green"><Upload size={13} />Upload Excel</button>
             </div>
           </div>

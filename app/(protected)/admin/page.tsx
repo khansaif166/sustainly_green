@@ -1,29 +1,65 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import {
   Users, Building2, Package, ClipboardList, Clock, CheckCircle2,
   AlertTriangle, TrendingUp, ArrowRight,
 } from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend,
-} from "recharts";
+const AdminCharts = dynamic(() => import("./_components/AdminCharts"), {
+  ssr: false,
+  loading: () => <div className="ad-card" style={{ height: 296 }} />,
+});
 
-const DONUT_COLORS = ["#16a34a", "#3b82f6", "#f59e0b", "#a855f7", "#ef4444"];
+type OverviewCounts = {
+  users: number;
+  vendors: number;
+  pendingVendors: number;
+  approvedVendors: number;
+  products: number;
+  pendingProducts: number;
+  approvedProducts: number;
+  rfqs: number;
+};
+
+type RecentRfq = {
+  id: string;
+  requirementTitle?: string;
+  buyerName?: string;
+  estimatedQuantity?: string;
+  deliveryCountry?: string;
+  requiredTimeline?: string;
+  status?: string;
+};
+
+type RecentProduct = {
+  id: string;
+  title: string;
+  listingType?: string;
+  price?: number | string;
+  status?: string;
+};
+
+const EMPTY_COUNTS: OverviewCounts = {
+  users: 0,
+  vendors: 0,
+  pendingVendors: 0,
+  approvedVendors: 0,
+  products: 0,
+  pendingProducts: 0,
+  approvedProducts: 0,
+  rfqs: 0,
+};
 
 export default function AdminDashboard() {
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState("");
-  const [users,          setUsers]          = useState<any[]>([]);
-  const [vendors,        setVendors]        = useState<any[]>([]);
-  const [products,       setProducts]       = useState<any[]>([]);
-  const [rfqs,           setRfqs]           = useState<any[]>([]);
-  const [recentRFQs,     setRecentRFQs]     = useState<any[]>([]);
-  const [recentProducts, setRecentProducts] = useState<any[]>([]);
-  const [categories,     setCategories]     = useState<Record<string, string>>({});
+  const [counts,         setCounts]         = useState<OverviewCounts>(EMPTY_COUNTS);
+  const [recentRFQs,     setRecentRFQs]     = useState<RecentRfq[]>([]);
+  const [recentProducts, setRecentProducts] = useState<RecentProduct[]>([]);
+  const [productsByCategory, setProductsByCategory] = useState<Array<{ name: string; value: number }>>([]);
 
   useEffect(() => {
     async function load() {
@@ -33,13 +69,10 @@ export default function AdminDashboard() {
         const res     = await fetch("/api/admin/overview", { headers: { Authorization: `Bearer ${session.accessToken}` } });
         const payload = await res.json();
         if (!res.ok) throw new Error(payload?.error?.message || "Unable to load.");
-        setUsers(payload.users || []);
-        setVendors(payload.vendors || []);
-        setProducts(payload.products || []);
-        setRfqs(payload.rfqs || []);
+        setCounts({ ...EMPTY_COUNTS, ...(payload.counts || {}) });
         setRecentRFQs(payload.recentRFQs || []);
         setRecentProducts(payload.recentProducts || []);
-        setCategories(payload.categories || {});
+        setProductsByCategory(payload.productsByCategory || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load.");
       } finally { setLoading(false); }
@@ -47,22 +80,11 @@ export default function AdminDashboard() {
     load();
   }, []);
 
-  const pendingVendors  = vendors.filter(v => !v.approved).length;
-  const approvedVendors = vendors.filter(v => v.approved).length;
-  const pendingProducts = products.filter(p => p.status === "PENDING").length;
-  const approvedProducts= products.filter(p => p.status === "APPROVED").length;
-
-  const productsByCategory = useMemo(() => {
-    const map: Record<string, number> = {};
-    products.forEach(p => { if (p.categoryId) map[p.categoryId] = (map[p.categoryId] || 0) + 1; });
-    return Object.entries(map).map(([id, count]) => ({ name: categories[id] || "Other", value: count }));
-  }, [products, categories]);
-
   const barData = [
-    { name: "Users",    count: users.length },
-    { name: "Vendors",  count: vendors.length },
-    { name: "Products", count: products.length },
-    { name: "RFQs",     count: rfqs.length },
+    { name: "Users",    count: counts.users },
+    { name: "Vendors",  count: counts.vendors },
+    { name: "Products", count: counts.products },
+    { name: "RFQs",     count: counts.rfqs },
   ];
 
   const RFQ_STATUS: Record<string, { bg: string; color: string }> = {
@@ -144,11 +166,11 @@ export default function AdminDashboard() {
             </div>
             <div className="ad-hero-stats">
               <div style={{ textAlign: "right" }}>
-                <p className="ad-hero-stat-val">{users.length}</p>
+                <p className="ad-hero-stat-val">{counts.users}</p>
                 <p className="ad-hero-stat-label">Total Users</p>
               </div>
               <div style={{ textAlign: "right" }}>
-                <p className="ad-hero-stat-val">{rfqs.length}</p>
+                <p className="ad-hero-stat-val">{counts.rfqs}</p>
                 <p className="ad-hero-stat-label">Total RFQs</p>
               </div>
             </div>
@@ -158,10 +180,10 @@ export default function AdminDashboard() {
         {/* KPI cards */}
         <div className="ad-kpi-grid">
           {[
-            { label: "Users",     val: users.length,    icon: Users,       bg: "#eff6ff", color: "#3b82f6" },
-            { label: "Vendors",   val: vendors.length,  icon: Building2,   bg: "#f0fdf4", color: "#16a34a" },
-            { label: "Products",  val: products.length, icon: Package,     bg: "#faf5ff", color: "#9333ea" },
-            { label: "RFQs",      val: rfqs.length,     icon: ClipboardList, bg: "#fefce8", color: "#f59e0b" },
+            { label: "Users",     val: counts.users,    icon: Users,       bg: "#eff6ff", color: "#3b82f6" },
+            { label: "Vendors",   val: counts.vendors,  icon: Building2,   bg: "#f0fdf4", color: "#16a34a" },
+            { label: "Products",  val: counts.products, icon: Package,     bg: "#faf5ff", color: "#9333ea" },
+            { label: "RFQs",      val: counts.rfqs,     icon: ClipboardList, bg: "#fefce8", color: "#f59e0b" },
           ].map(({ label, val, icon: Icon, bg, color }) => (
             <div key={label} className="ad-kpi">
               <div>
@@ -180,7 +202,7 @@ export default function AdminDashboard() {
               <AlertTriangle size={18} color="#f59e0b" />
             </div>
             <div>
-              <p className="ad-alert-val" style={{ color: "#92400e" }}>{pendingVendors}</p>
+              <p className="ad-alert-val" style={{ color: "#92400e" }}>{counts.pendingVendors}</p>
               <p className="ad-alert-label" style={{ color: "#92400e" }}>Vendors Pending</p>
             </div>
           </div>
@@ -189,7 +211,7 @@ export default function AdminDashboard() {
               <CheckCircle2 size={18} color="#16a34a" />
             </div>
             <div>
-              <p className="ad-alert-val" style={{ color: "#15803d" }}>{approvedVendors}</p>
+              <p className="ad-alert-val" style={{ color: "#15803d" }}>{counts.approvedVendors}</p>
               <p className="ad-alert-label" style={{ color: "#15803d" }}>Vendors Approved</p>
             </div>
           </div>
@@ -198,7 +220,7 @@ export default function AdminDashboard() {
               <Clock size={18} color="#f59e0b" />
             </div>
             <div>
-              <p className="ad-alert-val" style={{ color: "#92400e" }}>{pendingProducts}</p>
+              <p className="ad-alert-val" style={{ color: "#92400e" }}>{counts.pendingProducts}</p>
               <p className="ad-alert-label" style={{ color: "#92400e" }}>Products Pending</p>
             </div>
           </div>
@@ -207,56 +229,14 @@ export default function AdminDashboard() {
               <TrendingUp size={18} color="#16a34a" />
             </div>
             <div>
-              <p className="ad-alert-val" style={{ color: "#15803d" }}>{approvedProducts}</p>
+              <p className="ad-alert-val" style={{ color: "#15803d" }}>{counts.approvedProducts}</p>
               <p className="ad-alert-label" style={{ color: "#15803d" }}>Products Approved</p>
             </div>
           </div>
         </div>
 
         {/* Charts */}
-        <div className="ad-charts">
-          <div className="ad-card">
-            <div className="ad-card-head">
-              <p className="ad-card-title">Platform Overview</p>
-              <p className="ad-card-sub">All-time counts</p>
-            </div>
-            <div className="ad-card-body" style={{ height: 260 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} barSize={36}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} cursor={{ fill: "rgba(22,163,74,.06)" }} />
-                  <Bar dataKey="count" fill="#16a34a" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="ad-card">
-            <div className="ad-card-head">
-              <p className="ad-card-title">By Category</p>
-              <p className="ad-card-sub">Product distribution</p>
-            </div>
-            <div className="ad-card-body" style={{ height: 260 }}>
-              {productsByCategory.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={productsByCategory} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={3}>
-                      {productsByCategory.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <p style={{ fontSize: 13, color: "#9ca3af" }}>No product data yet</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <AdminCharts barData={barData} productsByCategory={productsByCategory} />
 
         {/* Recent RFQs */}
         <div className="ad-card">
