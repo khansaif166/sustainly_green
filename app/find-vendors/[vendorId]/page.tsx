@@ -9,6 +9,7 @@ import {
   fetchApprovedProducts,
   fetchApprovedVendorById,
   submitVendorClaim,
+  type PublicProduct,
   type PublicVendor,
 } from "@/lib/supabasePublic";
 import { getValidSession } from "@/lib/supabaseAuth";
@@ -21,7 +22,9 @@ import {
 import { HiOutlineSparkles } from "react-icons/hi2";
 
 type Vendor = PublicVendor;
-type Product = { id: string; title: string; images?: string[]; priceType?: string; ecoScore?: number; };
+type Product = Pick<PublicProduct, "id" | "title" | "images" | "priceType" | "ecoVerified"> & {
+  ecoScore?: number;
+};
 type VendorDisplayFields = Vendor & {
   category?: string;
   ecoTier?: string;

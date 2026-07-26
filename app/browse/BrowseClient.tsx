@@ -38,6 +38,7 @@ const BADGES = [
   { val: "approved", label: "Approved", color: "#0369a1", bg: "rgba(3,105,161,0.1)" },
   { val: "listed", label: "Listed", color: "#b45309", bg: "rgba(180,83,9,0.1)" },
   { val: "claim_requested", label: "Claim Requested", color: "#7c3aed", bg: "rgba(124,58,237,0.1)" },
+  { val: "eco_verified", label: "Eco Verified", color: "#047857", bg: "rgba(4,120,87,0.1)" },
 ];
 
 function badgeStyle(badge?: string) {
@@ -121,7 +122,7 @@ export default function BrowsePage() {
             const s = search.toLowerCase();
             list = list.filter(p => (p.title || "").toLowerCase().includes(s) || (p.description || "").toLowerCase().includes(s) || (p.tags || []).some(t => t.toLowerCase().includes(s)));
           }
-          if (filters.badge) list = list.filter(p => (p.certifications || []).some(c => c.toLowerCase().includes(filters.badge)));
+          if (filters.badge === "eco_verified") list = list.filter(p => p.ecoVerified);
           if (filters.sortBy === "eco_score") list = list.sort((a, b) => (b.ecoScore || 0) - (a.ecoScore || 0));
           if (filters.sortBy === "name_az") list = list.sort((a, b) => vt(a.title).localeCompare(vt(b.title)));
           setProducts(list); setVendors([]); setTotalCount(list.length);
@@ -186,7 +187,14 @@ export default function BrowsePage() {
         {expanded.type && (
           <div className="bs-opts">
             {[{ val: "Product", label: "Products", icon: FiPackage }, { val: "Vendor", label: "Vendors", icon: FiUsers }, { val: "Service", label: "Services", icon: FiTool }].map(({ val, label, icon: Icon }) => (
-              <button key={val} className={`bs-opt${type === val ? " bs-opt-active" : ""}`} onClick={() => updateUrl("type", val)}>
+              <button
+                key={val}
+                className={`bs-opt${type === val ? " bs-opt-active" : ""}`}
+                onClick={() => {
+                  setFilters(current => ({ ...current, badge: "" }));
+                  updateUrl("type", val);
+                }}
+              >
                 <Icon size={13} />{label}
               </button>
             ))}
@@ -218,7 +226,10 @@ export default function BrowsePage() {
         </button>
         {expanded.eco && (
           <div className="bs-opts">
-            {BADGES.map(({ val, label }) => (
+            {(type === "Vendor"
+              ? BADGES.filter(({ val }) => val !== "eco_verified")
+              : BADGES.filter(({ val }) => val === "" || val === "eco_verified")
+            ).map(({ val, label }) => (
               <button key={val} className={`bs-opt${filters.badge === val ? " bs-opt-active" : ""}`} onClick={() => setFilters(f => ({ ...f, badge: val }))}>{label}</button>
             ))}
           </div>

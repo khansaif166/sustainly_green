@@ -57,6 +57,7 @@ type ProductCard = {
   unit: string;
   vendor: string;
   image?: string;
+  ecoVerified?: boolean;
 };
 
 type SupplierCard = {
@@ -434,6 +435,7 @@ export default function HomePage() {
             unit: product.moq ? `MOQ ${product.moq}` : "Unit",
             vendor: product.vendorName,
             image: product.images[0]?.startsWith("/") ? product.images[0] : undefined,
+            ecoVerified: product.ecoVerified,
           }));
 
           setBestSellers(cards.slice(0, 4));
@@ -853,6 +855,12 @@ export default function HomePage() {
               {bestSellers.map((product, index) => (
                 <Link key={product.id} href={productHref(product.id)} className="product-card">
                   <div className={`product-media media-${index % 4}`}>
+                    {product.ecoVerified && (
+                      <span className="home-eco-badge">
+                        <img src="/eco-verified-badge.png" alt="" />
+                        Eco Verified
+                      </span>
+                    )}
                     {product.image ? (
                       <Image src={product.image} alt={product.title} width={140} height={140} />
                     ) : (
@@ -951,6 +959,12 @@ export default function HomePage() {
             {featuredProducts.map((product, index) => (
               <Link key={product.id} href={productHref(product.id)} className="product-card compact-product-card">
                 <div className={`product-media media-${index % 4}`}>
+                  {product.ecoVerified && (
+                    <span className="home-eco-badge">
+                      <img src="/eco-verified-badge.png" alt="" />
+                      Eco Verified
+                    </span>
+                  )}
                   {product.image ? (
                     <Image src={product.image} alt={product.title} width={130} height={130} />
                   ) : (
@@ -2430,6 +2444,7 @@ export default function HomePage() {
         }
 
         .product-media {
+          position: relative;
           border-radius: 16px;
           min-height: 160px;
           display: grid;
@@ -2437,6 +2452,32 @@ export default function HomePage() {
           margin-bottom: 14px;
           overflow: hidden;
           transition: background-color 180ms ease, transform 180ms ease;
+        }
+
+        .home-eco-badge {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 2;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          border: 1px solid rgba(4,120,87,.18);
+          border-radius: 999px;
+          padding: 3px 7px;
+          background: rgba(236,253,245,.96);
+          color: #047857;
+          font-size: 9px;
+          font-weight: 800;
+          line-height: 1;
+          box-shadow: 0 2px 8px rgba(4,120,87,.12);
+        }
+
+        .home-eco-badge img {
+          width: 12px;
+          height: 15px;
+          border-radius: 2px;
+          object-fit: cover;
         }
 
         .split-section .product-card:hover .product-media {
