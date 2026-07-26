@@ -103,7 +103,7 @@ function mapVendor(row: VendorRow) {
       Boolean(row.listing_verified) && typeof row.public_contact?.sustainlyBadgeType === "string"
         ? row.public_contact.sustainlyBadgeType
         : Boolean(row.listing_verified)
-          ? "eco_verified"
+          ? "verified_supplier"
           : "",
     publicContact: row.public_contact || {},
     status: row.status,
@@ -235,10 +235,9 @@ export async function PATCH(
     }
 
     if (body.listingBadgeType !== undefined) {
-      const badgeType =
-        body.listingBadgeType === "verified_supplier" || body.listingBadgeType === "eco_verified"
-          ? body.listingBadgeType
-          : "";
+      const badgeType = body.listingBadgeType === "verified_supplier"
+        ? body.listingBadgeType
+        : "";
       const contactRows = await supabaseServiceFetch<Array<{ public_contact: Record<string, unknown> | null }>>(
         `/rest/v1/vendors?${new URLSearchParams({
           select: "public_contact",

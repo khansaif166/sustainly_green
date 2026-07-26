@@ -65,6 +65,7 @@ export async function PATCH(
 
     if (body.featured !== undefined) patch.featured = Boolean(body.featured);
     if (body.isAd !== undefined) patch.is_ad = Boolean(body.isAd);
+    if (body.ecoVerified !== undefined) patch.eco_verified = Boolean(body.ecoVerified);
     if (body.adActive !== undefined) patch.ad_active = Boolean(body.adActive);
 
     if (!Object.keys(patch).length) {

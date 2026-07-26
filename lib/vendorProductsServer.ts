@@ -29,6 +29,7 @@ export type ProductRow = {
   in_stock: boolean;
   featured: boolean;
   is_ad: boolean;
+  eco_verified: boolean;
   sustainability_claim: string | null;
   approved: boolean;
   status: string;
@@ -68,6 +69,7 @@ export const PRODUCT_SELECT = [
   "in_stock",
   "featured",
   "is_ad",
+  "eco_verified",
   "sustainability_claim",
   "approved",
   "status",
@@ -125,6 +127,7 @@ export function mapProduct(row: ProductRow) {
     inStock: row.in_stock,
     featured: row.featured,
     isAd: row.is_ad,
+    ecoVerified: Boolean(row.eco_verified),
     sustainabilityClaim: row.sustainability_claim || "",
     sustainabilityTagIds: tags.map((tag) => tag.id),
     sustainabilityTagNames: tags.map((tag) => tag.name),

@@ -18,6 +18,7 @@ type Product = {
   status: "PENDING" | "APPROVED" | "REJECTED";
   featured?: boolean;
   isAd?: boolean;
+  ecoVerified?: boolean;
 };
 
 const STATUS_META: Record<string, { bg: string; color: string; dot: string; label: string }> = {
@@ -97,6 +98,22 @@ export default function AdminProductsPage() {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, isAd: !current } : p));
   }
 
+  async function toggleEcoVerified(id: string, current: boolean) {
+    const session = getStoredSession();
+    if (!session) return;
+    const res = await fetch(`/api/admin/products/${id}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ ecoVerified: !current }),
+    });
+    if (!res.ok) {
+      const payload = await res.json().catch(() => null);
+      setError(payload?.error?.message || "Unable to update Eco Verified badge.");
+      return;
+    }
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, ecoVerified: !current } : p));
+  }
+
   const filtered = useMemo(() => products.filter(p => {
     const q = search.toLowerCase();
     const matchSearch = p.title?.toLowerCase().includes(q) || p.vendorName?.toLowerCase().includes(q);
@@ -158,6 +175,8 @@ export default function AdminProductsPage() {
         .apr-btn-feat-off{background:#f9fafb;color:#6b7280;border:1.5px solid rgba(0,0,0,.08)}
         .apr-btn-ad-on{background:#faf5ff;color:#9333ea}
         .apr-btn-ad-off{background:#f9fafb;color:#6b7280;border:1.5px solid rgba(0,0,0,.08)}
+        .apr-btn-eco-on{background:#ecfdf5;color:#047857;border:1.5px solid rgba(4,120,87,.18)}
+        .apr-btn-eco-off{background:#f9fafb;color:#6b7280;border:1.5px solid rgba(0,0,0,.08)}
         .apr-btn-approve{background:#16a34a;color:#fff;box-shadow:0 2px 6px rgba(22,163,74,.2)}
         .apr-btn-reject{background:#fef2f2;color:#dc2626}
         .apr-btn-del{width:30px;height:30px;padding:0;border-radius:50%;background:#fef2f2;color:#dc2626;border:1.5px solid rgba(220,38,38,.15);margin-left:auto}
@@ -248,6 +267,12 @@ export default function AdminProductsPage() {
                     <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
                       {p.featured && <span style={{ fontSize: 10.5, background: "#fefce8", color: "#92400e", padding: "2px 8px", borderRadius: 50, fontWeight: 700 }}>★ Featured</span>}
                       {p.isAd && <span style={{ fontSize: 10.5, background: "#faf5ff", color: "#9333ea", padding: "2px 8px", borderRadius: 50, fontWeight: 700 }}>Ad</span>}
+                      {p.ecoVerified && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10.5, background: "#ecfdf5", color: "#047857", padding: "2px 8px", borderRadius: 50, fontWeight: 800 }}>
+                          <img src="/eco-verified-badge.png" alt="" style={{ width: 14, height: 17, objectFit: "cover", borderRadius: 2 }} />
+                          Eco Verified
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -259,6 +284,10 @@ export default function AdminProductsPage() {
                     </button>
                     <button onClick={() => toggleAd(p.id, !!p.isAd)} className={`apr-btn ${p.isAd ? "apr-btn-ad-on" : "apr-btn-ad-off"}`}>
                       <Megaphone size={11} />{p.isAd ? "Ad On" : "Run Ad"}
+                    </button>
+                    <button onClick={() => toggleEcoVerified(p.id, !!p.ecoVerified)} className={`apr-btn ${p.ecoVerified ? "apr-btn-eco-on" : "apr-btn-eco-off"}`}>
+                      <img src="/eco-verified-badge.png" alt="" style={{ width: 13, height: 16, objectFit: "cover", borderRadius: 2 }} />
+                      {p.ecoVerified ? "Eco Verified" : "Verify Eco"}
                     </button>
                     {p.status !== "APPROVED" && (
                       <button onClick={() => updateStatus(p.id, "APPROVED")} className="apr-btn apr-btn-approve">

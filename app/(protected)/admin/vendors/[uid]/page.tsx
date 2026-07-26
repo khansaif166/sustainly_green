@@ -231,10 +231,6 @@ export default function AdminVendorDetailsPage() {
                       {submitting ? <div className="avd-spinner" /> : <ShieldCheck size={14} />}
                       Verified Supplier
                     </button>
-                    <button onClick={() => handleSetVendorBadge("eco_verified")} disabled={submitting} className={getVendorBadgeMeta(vendorData)?.type === "eco_verified" ? "avd-btn avd-btn-green" : "avd-btn avd-btn-outline"}>
-                      {submitting ? <div className="avd-spinner" /> : <ShieldCheck size={14} />}
-                      Eco Verified
-                    </button>
                     {vendorData.listingVerified && <button onClick={() => handleSetVendorBadge("")} disabled={submitting} className="avd-btn avd-btn-red">Remove Badge</button>}
                     {!vendorData.approved && <button onClick={handleApprove} disabled={submitting} className="avd-btn avd-btn-green">{submitting ? <div className="avd-spinner" /> : <CheckCircle2 size={14} />}Approve</button>}
                     {vendorData.approved && <button onClick={handleReject} disabled={submitting} className="avd-btn avd-btn-red"><XCircle size={14} />Suspend</button>}
@@ -383,9 +379,6 @@ export default function AdminVendorDetailsPage() {
                 <div className="avd-badge-choice-grid">
                   <button type="button" onClick={() => handleSetVendorBadge("verified_supplier")} disabled={submitting} className={getVendorBadgeMeta(vendorData)?.type === "verified_supplier" ? "avd-btn avd-btn-green avd-badge-choice" : "avd-btn avd-btn-outline avd-badge-choice"}>
                     {VENDOR_BADGES.verified_supplier.label}
-                  </button>
-                  <button type="button" onClick={() => handleSetVendorBadge("eco_verified")} disabled={submitting} className={getVendorBadgeMeta(vendorData)?.type === "eco_verified" ? "avd-btn avd-btn-green avd-badge-choice" : "avd-btn avd-btn-outline avd-badge-choice"}>
-                    {VENDOR_BADGES.eco_verified.label}
                   </button>
                   {vendorData.listingVerified && (
                     <button type="button" onClick={() => handleSetVendorBadge("")} disabled={submitting} className="avd-btn avd-btn-red avd-badge-choice">

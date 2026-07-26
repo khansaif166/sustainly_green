@@ -43,6 +43,7 @@ type SupabaseProductRow = {
   sustainability_claim: string | null;
   approved: boolean | null;
   featured: boolean | null;
+  eco_verified: boolean | null;
   product_images?: Array<{ url: string | null; sort_order: number | null }>;
 };
 
@@ -119,6 +120,7 @@ export type PublicProduct = {
   tagNames: string[];
   approved: boolean;
   featured: boolean;
+  ecoVerified: boolean;
 };
 
 export type PublicBlog = {
@@ -195,6 +197,7 @@ const PRODUCT_SELECT = [
   "sustainability_claim",
   "approved",
   "featured",
+  "eco_verified",
   "product_images(url,sort_order)",
 ].join(",");
 
@@ -301,7 +304,7 @@ function mapVendor(row: SupabaseVendorRow): PublicVendor {
       Boolean(row.listing_verified) && typeof row.public_contact?.sustainlyBadgeType === "string"
         ? row.public_contact.sustainlyBadgeType
         : Boolean(row.listing_verified)
-          ? "eco_verified"
+          ? "verified_supplier"
           : undefined,
     isClaimed: claimStatus === "CLAIMED",
     isUnclaimed: claimStatus === "UNCLAIMED",
@@ -359,6 +362,7 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
     tagNames: sustainabilityClaim ? [sustainabilityClaim] : [],
     approved: Boolean(row.approved),
     featured: Boolean(row.featured),
+    ecoVerified: Boolean(row.eco_verified),
   };
 }
 

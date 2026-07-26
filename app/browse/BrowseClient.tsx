@@ -24,7 +24,7 @@ type Product = {
   id: string; title?: string; description?: string; images?: string[];
   listingType?: string; categoryId?: string; priceType?: string;
   price?: number; vendorName?: string; ecoScore?: number;
-  certifications?: string[]; tags?: string[];
+  certifications?: string[]; tags?: string[]; ecoVerified?: boolean;
 };
 type Vendor = PublicVendor & { GreenLensScore?: number };
 type Category = { id: string; name: string; imageUrl?: string };
@@ -273,6 +273,12 @@ export default function BrowsePage() {
           ? <img src={p.images[0]} alt={p.title || ""} className="bs-card-img-el" />
           : <div className="bs-card-img-ph"><FiPackage size={28} /></div>}
         {p.listingType && <span className="bs-card-badge">{p.listingType}</span>}
+        {p.ecoVerified && (
+          <span className="bs-card-eco" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <img src="/eco-verified-badge.png" alt="" style={{ width: 13, height: 16, borderRadius: 2, objectFit: "cover" }} />
+            Eco Verified
+          </span>
+        )}
         {p.ecoScore && <span className="bs-card-eco"><HiOutlineSparkles size={11} />{p.ecoScore}</span>}
       </div>
       <div className="bs-card-body">
@@ -306,6 +312,12 @@ export default function BrowsePage() {
         )}
       </div>
       <div className="bs-row-right">
+        {p.ecoVerified && (
+          <span className="bs-card-eco" style={{ position: "static", display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <img src="/eco-verified-badge.png" alt="" style={{ width: 13, height: 16, borderRadius: 2, objectFit: "cover" }} />
+            Eco Verified
+          </span>
+        )}
         {p.ecoScore && <span className="bs-card-eco"><HiOutlineSparkles size={11} />{p.ecoScore}</span>}
         <span className="bs-card-price">{p.priceType || "On request"}</span>
         <span className="bs-view-cta">View <FiExternalLink size={10} /></span>

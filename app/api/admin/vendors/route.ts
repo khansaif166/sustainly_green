@@ -72,7 +72,7 @@ function mapVendor(row: VendorRow) {
       Boolean(row.listing_verified) && typeof row.public_contact?.sustainlyBadgeType === "string"
         ? row.public_contact.sustainlyBadgeType
         : Boolean(row.listing_verified)
-          ? "eco_verified"
+          ? "verified_supplier"
           : "",
   };
 }

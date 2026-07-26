@@ -725,6 +725,12 @@ export default function VendorProfilePage() {
                         <div className="vp-prod-body">
                           <h3 className="vp-prod-title">{p.title}</h3>
                           <p className="vp-prod-price">{p.priceType || "Price on request"}</p>
+                          {p.ecoVerified && (
+                            <span className="vp-prod-eco">
+                              <img src="/eco-verified-badge.png" alt="" style={{ width: 13, height: 16, borderRadius: 2, objectFit: "cover" }} />
+                              Eco Verified
+                            </span>
+                          )}
                           {p.ecoScore && <span className="vp-prod-eco"><HiOutlineSparkles size={10} />Eco {p.ecoScore}</span>}
                         </div>
                       </Link>

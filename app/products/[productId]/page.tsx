@@ -165,6 +165,12 @@ export default function ProductDetailPage() {
               </h1>
 
               <div className="flex flex-wrap items-center gap-2 mt-3">
+                {product.ecoVerified && (
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+                    <img src="/eco-verified-badge.png" alt="" className="h-5 w-4 rounded-sm object-cover" />
+                    Eco Verified
+                  </span>
+                )}
                 {product.approved && (
                   <span
                     className="inline-flex items-center gap-1 px-3 py-1 rounded-full

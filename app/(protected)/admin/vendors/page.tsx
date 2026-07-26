@@ -165,7 +165,7 @@ export default function AdminVendorsPage() {
       const seen = new Map<string, number>();
       for (const { row, excelRow } of populatedRows) {
         const values = IMPORT_COLUMNS.map((column) => clean(row[headers.indexOf(column)]));
-        const missing = IMPORT_COLUMNS.filter((_, index) => !values[index]);
+        const missing = IMPORT_COLUMNS.filter((column, index) => column !== "Logo" && !values[index]);
         if (missing.length) errors.push(`Row ${excelRow}: missing ${missing.join(", ")}.`);
         if (values[0] && !/^https?:\/\/\S+$/i.test(values[0])) errors.push(`Row ${excelRow}: Logo must be an http(s) URL.`);
         const key = [values[1], values[4], values[5]].map((value) => value.toLocaleLowerCase()).join("|");
@@ -284,7 +284,7 @@ export default function AdminVendorsPage() {
         .av-unclaimed{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:50px;font-size:10.5px;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid rgba(194,65,12,.15)}
         .av-verified-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:50px;font-size:10.5px;font-weight:800;background:#ecfdf5;color:#047857;border:1px solid rgba(4,120,87,.18)}
         .av-verified-badge img{width:18px;height:22px;object-fit:cover;border-radius:3px}
-        .av-badge-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;flex:1 1 100%}
+        .av-badge-actions{display:grid;grid-template-columns:1fr;gap:7px;flex:1 1 100%}
         .av-import{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px}
         .av-import-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
         .av-import-actions{display:flex;gap:9px;flex-wrap:wrap}
@@ -331,7 +331,7 @@ export default function AdminVendorsPage() {
               <div style={{ width: 38, height: 38, borderRadius: 12, background: "#f0fdf4", color: "#15803d", display: "flex", alignItems: "center", justifyContent: "center" }}><FileSpreadsheet size={19} /></div>
               <div>
                 <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 800, color: "#17251c" }}>Add vendors via Excel</p>
-                <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Only .xlsx files using the exact template columns are accepted. Logo values must be image URLs.</p>
+                <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Only .xlsx files using the exact template columns are accepted. Logo is optional; when provided, it must be an image URL.</p>
               </div>
             </div>
             <div className="av-import-actions">
@@ -479,9 +479,6 @@ export default function AdminVendorsPage() {
                     <div className="av-badge-actions">
                       <button onClick={() => setVendorBadge(v.uid, "verified_supplier")} className={getVendorBadgeMeta(v)?.type === "verified_supplier" ? "av-btn av-btn-green" : "av-btn av-btn-outline"}>
                         {VENDOR_BADGES.verified_supplier.label}
-                      </button>
-                      <button onClick={() => setVendorBadge(v.uid, "eco_verified")} className={getVendorBadgeMeta(v)?.type === "eco_verified" ? "av-btn av-btn-green" : "av-btn av-btn-outline"}>
-                        {VENDOR_BADGES.eco_verified.label}
                       </button>
                       {v.listingVerified && (
                         <button onClick={() => setVendorBadge(v.uid, "")} className="av-btn av-btn-ghost" style={{ gridColumn: "1 / -1" }}>

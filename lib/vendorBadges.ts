@@ -1,4 +1,4 @@
-export type VendorBadgeType = "verified_supplier" | "eco_verified";
+export type VendorBadgeType = "verified_supplier";
 
 export type VendorBadgeLike = {
   listingVerified?: boolean | null;
@@ -11,14 +11,10 @@ export const VENDOR_BADGES: Record<VendorBadgeType, { label: string; src: string
     label: "Verified Supplier",
     src: "/verified-supplier-badge.png",
   },
-  eco_verified: {
-    label: "Eco Verified",
-    src: "/eco-verified-badge.png",
-  },
 };
 
 export function normalizeVendorBadgeType(value: unknown): VendorBadgeType | null {
-  return value === "verified_supplier" || value === "eco_verified" ? value : null;
+  return value === "verified_supplier" ? value : null;
 }
 
 export function getVendorBadgeType(vendor: VendorBadgeLike): VendorBadgeType | null {
@@ -27,7 +23,7 @@ export function getVendorBadgeType(vendor: VendorBadgeLike): VendorBadgeType | n
   return (
     normalizeVendorBadgeType(vendor.listingBadgeType) ||
     normalizeVendorBadgeType(vendor.publicContact?.sustainlyBadgeType) ||
-    "eco_verified"
+    "verified_supplier"
   );
 }
 

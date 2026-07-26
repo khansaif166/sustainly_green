@@ -106,7 +106,9 @@ export async function POST(request: Request) {
       );
       const excelRow = index + 2;
       const values = [logo, companyName, categoriesValue, productsValue, address, state, operatingHours, description];
-      const missing = REQUIRED_HEADERS.filter((_, columnIndex) => !values[columnIndex]);
+      const missing = REQUIRED_HEADERS.filter(
+        (header, columnIndex) => header !== "Logo" && !values[columnIndex],
+      );
       if (missing.length) rowErrors.push({ row: excelRow, message: `Missing ${missing.join(", ")}.` });
       if (logo && !/^https?:\/\/\S+$/i.test(logo)) {
         rowErrors.push({ row: excelRow, message: "Logo must be a valid http(s) image URL." });
