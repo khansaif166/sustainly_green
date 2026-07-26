@@ -10,6 +10,10 @@ const LISTING_TYPES = ["Product", "Service"];
 const AVAILABILITY   = ["B2B", "B2C"];
 const PRICE_TYPES    = ["Fixed Price", "Starts From", "Price on Request"];
 const SHIP_REGIONS   = ["Local Only", "Countrywide", "Regional", "Worldwide"];
+const MAX_PRODUCT_IMAGES = 5;
+const MAX_PRODUCT_IMAGE_BYTES = 10 * 1024 * 1024;
+const PRODUCT_IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
+const PRODUCT_IMAGE_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
 
 export default function AdminEditProductPage() {
   const { id }   = useParams();
@@ -18,6 +22,7 @@ export default function AdminEditProductPage() {
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
+  const [imageError, setImageError] = useState("");
 
   const [categories,    setCategories]    = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
@@ -95,6 +100,35 @@ export default function AdminEditProductPage() {
   const filteredSubCats = subCategories.filter(s => s.categoryId === categoryId);
   const allImages       = [...existingImages, ...newImages];
 
+  function selectNewImages(fileList: FileList | null) {
+    if (!fileList?.length) return;
+    setImageError("");
+
+    const selected = Array.from(fileList);
+    const invalidType = selected.find(file =>
+      !(PRODUCT_IMAGE_TYPES.has(file.type.toLowerCase()) || (!file.type && PRODUCT_IMAGE_EXTENSIONS.test(file.name))),
+    );
+    if (invalidType) {
+      setImageError(`${invalidType.name} is not supported. Choose JPG, PNG, or WebP images.`);
+      return;
+    }
+    const oversized = selected.find(file => file.size > MAX_PRODUCT_IMAGE_BYTES);
+    if (oversized) {
+      setImageError(`${oversized.name} is larger than 10 MB.`);
+      return;
+    }
+
+    const remaining = MAX_PRODUCT_IMAGES - allImages.length;
+    if (remaining <= 0) {
+      setImageError("A product can have a maximum of 5 images. Remove one before adding another.");
+      return;
+    }
+    setNewImages(previous => [...previous, ...selected.slice(0, remaining)]);
+    if (selected.length > remaining) {
+      setImageError(`Only ${remaining} more image${remaining === 1 ? "" : "s"} can be added. The extra files were not selected.`);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedVendorId) { alert("Please select a vendor"); return; }
@@ -105,7 +139,11 @@ export default function AdminEditProductPage() {
       if (!session) { router.push("/login"); return; }
       const uploadedImages = await Promise.all(
         newImages.map(file => uploadFileToSupabaseStorage(file, { bucket: "marketplace", folder: "products", accessToken: session.accessToken })),
-      );
+      ).catch(uploadError => {
+        const message = uploadError instanceof Error ? uploadError.message : "Unknown storage error";
+        setImageError(`Image upload failed: ${message}`);
+        throw uploadError;
+      });
       const combined       = [...existingImages, ...uploadedImages.map(img => img.url)];
       const orderedImages  = [combined[coverIndex], ...combined.filter((_, i) => i !== coverIndex)].filter(Boolean);
       const res = await fetch(`/api/admin/products/${id}`, {
@@ -162,6 +200,7 @@ export default function AdminEditProductPage() {
         .ape-select{width:100%;padding:10px 12px;border:1.5px solid rgba(0,0,0,.1);border-radius:12px;font-size:13px;outline:none;font-family:inherit;background:#fff;appearance:none;cursor:pointer;color:#111;box-sizing:border-box;transition:border .15s}
         .ape-select:focus{border-color:#16a34a}
         .ape-help{font-size:11.5px;color:#9ca3af;margin:4px 0 0}
+        .ape-image-error{font-size:11.5px;color:#dc2626;margin:6px 0 0}
 
         .ape-chips{display:flex;gap:8px;flex-wrap:wrap}
         .ape-chip{padding:7px 14px;border-radius:50px;font-size:12.5px;font-weight:600;border:1.5px solid rgba(0,0,0,.1);background:#fff;color:#374151;cursor:pointer;font-family:inherit;transition:all .15s}
@@ -272,14 +311,14 @@ export default function AdminEditProductPage() {
               <div>
                 <p className="ape-label">Add More Images</p>
                 <label className="ape-upload">
-                  <input type="file" multiple accept="image/*" style={{ display: "none" }} onChange={e => {
-                    if (!e.target.files) return;
-                    setNewImages(prev => [...prev, ...Array.from(e.target.files!)].slice(0, 5 - existingImages.length));
+                  <input type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={e => {
+                    selectNewImages(e.target.files);
                     e.target.value = "";
                   }} />
                   {newImages.length === 0 ? "Click to upload new images" : newImages.map(f => f.name).join(", ")}
                 </label>
-                <p className="ape-help">Existing images can be removed. New selected files will be uploaded on save.</p>
+                <p className="ape-help">JPG, PNG, or WebP; maximum 10 MB each and 5 images total. New selections upload when you save.</p>
+                {imageError && <p className="ape-image-error" role="alert">{imageError}</p>}
               </div>
               {allImages.length > 0 && (
                 <div className="ape-preview">

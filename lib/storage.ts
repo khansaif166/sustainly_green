@@ -12,8 +12,8 @@ type UploadOptions = {
 };
 
 const BUCKET_ALLOWED_TYPES: Record<string, string[]> = {
-  marketplace: ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"],
-  "vendor-private": ["image/jpeg", "image/png", "image/webp", "application/pdf"],
+  marketplace: ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "application/pdf"],
+  "vendor-private": ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
   resumes: ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
 };
 
