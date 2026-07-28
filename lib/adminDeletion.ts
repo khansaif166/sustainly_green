@@ -3,6 +3,7 @@ import "server-only";
 import { supabaseServiceFetch } from "@/lib/supabaseServer";
 
 type VendorFilesRow = {
+  id?: string;
   logo_url: string | null;
   certificate_file_url: string | null;
   awards_image_url: string | null;
@@ -14,7 +15,12 @@ type ProductImageRow = {
 };
 
 type ProductWithImagesRow = {
+  vendor_id?: string;
   product_images: ProductImageRow[] | null;
+};
+
+type ImageUrlRow = {
+  image_url: string | null;
 };
 
 const MARKETPLACE_FOLDERS = ["products/", "vendors/"];
@@ -84,7 +90,51 @@ export async function deleteVendorStorageFiles(vendorId: string) {
 
   if (!paths.size) return 0;
 
-  const allPaths = Array.from(paths);
+  // Never delete a physical object that another vendor or product still
+  // references, even if the same URL/path was copied between records.
+  const [otherVendors, otherProducts, categories, blogs] = await Promise.all([
+    supabaseServiceFetch<VendorFilesRow[]>(
+      `/rest/v1/vendors?${new URLSearchParams({
+        select: "id,logo_url,certificate_file_url,awards_image_url",
+        id: `neq.${vendorId}`,
+        limit: "10000",
+      })}`,
+    ),
+    supabaseServiceFetch<ProductWithImagesRow[]>(
+      `/rest/v1/products?${new URLSearchParams({
+        select: "vendor_id,product_images(url,storage_path)",
+        vendor_id: `neq.${vendorId}`,
+        limit: "10000",
+      })}`,
+    ),
+    supabaseServiceFetch<ImageUrlRow[]>(
+      "/rest/v1/categories?select=image_url&limit=10000",
+    ),
+    supabaseServiceFetch<ImageUrlRow[]>(
+      "/rest/v1/blogs?select=image_url&limit=10000",
+    ),
+  ]);
+
+  const protectedPaths = new Set<string>();
+  otherVendors.forEach(otherVendor => {
+    [otherVendor.logo_url, otherVendor.certificate_file_url, otherVendor.awards_image_url]
+      .forEach(value => {
+        const path = marketplacePathFromUrl(value);
+        if (path) protectedPaths.add(path);
+      });
+  });
+  otherProducts.flatMap(product => product.product_images || []).forEach(image => {
+    const urlPath = marketplacePathFromUrl(image.url);
+    const storedPath = safeMarketplacePath(image.storage_path);
+    if (urlPath) protectedPaths.add(urlPath);
+    if (storedPath) protectedPaths.add(storedPath);
+  });
+  [...categories, ...blogs].forEach(record => {
+    const path = marketplacePathFromUrl(record.image_url);
+    if (path) protectedPaths.add(path);
+  });
+
+  const allPaths = Array.from(paths).filter(path => !protectedPaths.has(path));
   for (let index = 0; index < allPaths.length; index += 100) {
     await supabaseServiceFetch<unknown>("/storage/v1/object/marketplace", {
       method: "DELETE",
@@ -92,5 +142,5 @@ export async function deleteVendorStorageFiles(vendorId: string) {
     });
   }
 
-  return paths.size;
+  return allPaths.length;
 }
