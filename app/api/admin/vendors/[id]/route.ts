@@ -5,6 +5,7 @@ import {
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
+import { deleteVendorStorageFiles } from "@/lib/adminDeletion";
 
 
 async function getVendorProfileId(id: string) {
@@ -293,15 +294,85 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireRole(request, ["ADMIN"]);
+    const actor = await requireRole(request, ["ADMIN"]);
     const { id } = await context.params;
 
-    await supabaseServiceFetch<void>(
-      `/rest/v1/vendors?${new URLSearchParams({ id: `eq.${id}` })}`,
-      { method: "DELETE", headers: { Prefer: "return=minimal" } },
+    const vendors = await supabaseServiceFetch<Array<{
+      id: string;
+      profile_id: string | null;
+      company_name: string;
+    }>>(
+      `/rest/v1/vendors?${new URLSearchParams({
+        select: "id,profile_id,company_name",
+        id: `eq.${id}`,
+        limit: "1",
+      })}`,
     );
+    const vendor = vendors[0];
 
-    return apiOk({ ok: true });
+    if (!vendor) return apiError("Vendor not found.", 404);
+    if (vendor.profile_id === actor.profile.id) {
+      return apiError("Admins cannot delete a vendor linked to their own account.", 403);
+    }
+
+    const deletedFiles = await deleteVendorStorageFiles(vendor.id);
+
+    if (vendor.profile_id) {
+      const profiles = await supabaseServiceFetch<Array<{
+        id: string;
+        auth_user_id: string | null;
+        legacy_firebase_uid: string | null;
+      }>>(
+        `/rest/v1/profiles?${new URLSearchParams({
+          select: "id,auth_user_id,legacy_firebase_uid",
+          id: `eq.${vendor.profile_id}`,
+          limit: "1",
+        })}`,
+      );
+      const profile = profiles[0];
+
+      if (profile?.auth_user_id) {
+        if (!profile.legacy_firebase_uid) {
+          await supabaseServiceFetch<void>(
+            `/rest/v1/profiles?${new URLSearchParams({ id: `eq.${profile.id}` })}`,
+            {
+              method: "PATCH",
+              headers: { Prefer: "return=minimal" },
+              body: JSON.stringify({
+                legacy_firebase_uid: `pending-delete:${profile.auth_user_id}`,
+              }),
+            },
+          );
+        }
+        await supabaseServiceFetch<void>(
+          `/auth/v1/admin/users/${encodeURIComponent(profile.auth_user_id)}`,
+          { method: "DELETE" },
+        );
+      }
+
+      if (profile) {
+        await supabaseServiceFetch<void>(
+          `/rest/v1/profiles?${new URLSearchParams({ id: `eq.${profile.id}` })}`,
+          { method: "DELETE", headers: { Prefer: "return=minimal" } },
+        );
+      } else {
+        await supabaseServiceFetch<void>(
+          `/rest/v1/vendors?${new URLSearchParams({ id: `eq.${vendor.id}` })}`,
+          { method: "DELETE", headers: { Prefer: "return=minimal" } },
+        );
+      }
+    } else {
+      await supabaseServiceFetch<void>(
+        `/rest/v1/vendors?${new URLSearchParams({ id: `eq.${vendor.id}` })}`,
+        { method: "DELETE", headers: { Prefer: "return=minimal" } },
+      );
+    }
+
+    return apiOk({
+      ok: true,
+      deletedVendor: { id: vendor.id, companyName: vendor.company_name },
+      deletedFiles,
+    });
   } catch (error) {
     const authError = toAuthError(error);
     if (authError) return apiError(authError.message, authError.status);

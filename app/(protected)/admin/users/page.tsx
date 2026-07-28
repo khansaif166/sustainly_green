@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Filter, X, Ban, CheckCircle2, ChevronLeft, ChevronRight, Users, ShieldCheck, ShoppingCart, Building2 } from "lucide-react";
+import { Search, X, Ban, CheckCircle2, ChevronLeft, ChevronRight, Users, ShieldCheck, ShoppingCart, Building2, Trash2 } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
 
 type UserType = {
@@ -23,6 +23,8 @@ export default function AdminUsers() {
   const [search,  setSearch]  = useState("");
   const [role,    setRole]    = useState<"ALL" | "ADMIN" | "VENDOR" | "BUYER">("ALL");
   const [page,    setPage]    = useState(1);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
   const pageSize = 10;
 
   useEffect(() => {
@@ -42,6 +44,42 @@ export default function AdminUsers() {
     if (!session) return;
     await fetch(`/api/admin/users/${user.id}`, { method: "PATCH", headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ blocked: !user.blocked }) });
     setUsers(prev => prev.map(u => u.id === user.id ? { ...u, blocked: !u.blocked } : u));
+  }
+
+  async function deleteUser(user: UserType) {
+    const consequence = user.role === "VENDOR"
+      ? "This permanently deletes the user, vendor profile, products, product images, logo, certificates, awards, and related records."
+      : user.role === "BUYER"
+        ? "This permanently deletes the user and buyer profile. Existing RFQs will be retained without the buyer reference."
+        : "This permanently deletes the administrator account.";
+
+    if (!window.confirm(`${consequence}\n\nDelete ${user.email}? This cannot be undone.`)) return;
+
+    const session = getStoredSession();
+    if (!session) {
+      setActionError("Your session has expired. Please sign in again.");
+      return;
+    }
+
+    setDeletingId(user.id);
+    setActionError("");
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload?.error?.message || "Unable to delete user.");
+      }
+
+      setUsers(previous => previous.filter(existing => existing.id !== user.id));
+      setPage(current => Math.max(1, Math.min(current, Math.ceil((filtered.length - 1) / pageSize))));
+    } catch (deleteError) {
+      setActionError(deleteError instanceof Error ? deleteError.message : "Unable to delete user.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   const filtered = useMemo(() => {
@@ -105,6 +143,11 @@ export default function AdminUsers() {
         .au-avatar{width:34px;height:34px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#16a34a;flex-shrink:0}
         .au-role-badge{display:inline-flex;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700}
         .au-action{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:50px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid transparent;transition:all .15s}
+        .au-actions{display:flex;justify-content:flex-end;align-items:center;gap:7px}
+        .au-action:disabled{opacity:.55;cursor:not-allowed}
+        .au-delete{background:#fff;color:#dc2626;border-color:rgba(220,38,38,.18)}
+        .au-delete:hover:not(:disabled){background:#fef2f2}
+        .au-error{background:#fef2f2;border:1px solid rgba(220,38,38,.15);border-radius:14px;padding:11px 15px;color:#dc2626;font-size:12.5px}
 
         .au-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid #f3f4f6}
         .au-page-btn{width:32px;height:32px;border-radius:10px;border:1.5px solid rgba(0,0,0,.1);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
@@ -151,6 +194,8 @@ export default function AdminUsers() {
         </div>
 
         {/* Filter bar */}
+        {actionError && <div className="au-error" role="alert">{actionError}</div>}
+
         <div className="au-bar">
           <div className="au-search">
             <Search size={14} color="#9ca3af" className="au-search-icon" />
@@ -204,14 +249,25 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td style={{ textAlign: "right" }}>
-                      <button onClick={() => toggleBlock(u)} className="au-action"
-                        style={u.blocked
-                          ? { background: "#f0fdf4", color: "#16a34a", borderColor: "rgba(22,163,74,.15)" }
-                          : { background: "#fef2f2", color: "#dc2626", borderColor: "rgba(220,38,38,.15)" }
-                        }>
-                        {u.blocked ? <CheckCircle2 size={13} /> : <Ban size={13} />}
-                        {u.blocked ? "Unblock" : "Block"}
-                      </button>
+                      <div className="au-actions">
+                        <button onClick={() => toggleBlock(u)} className="au-action"
+                          disabled={deletingId === u.id}
+                          style={u.blocked
+                            ? { background: "#f0fdf4", color: "#16a34a", borderColor: "rgba(22,163,74,.15)" }
+                            : { background: "#fef2f2", color: "#dc2626", borderColor: "rgba(220,38,38,.15)" }
+                          }>
+                          {u.blocked ? <CheckCircle2 size={13} /> : <Ban size={13} />}
+                          {u.blocked ? "Unblock" : "Block"}
+                        </button>
+                        <button
+                          onClick={() => deleteUser(u)}
+                          className="au-action au-delete"
+                          disabled={deletingId !== null}
+                        >
+                          <Trash2 size={13} />
+                          {deletingId === u.id ? "Deleting…" : "Delete"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

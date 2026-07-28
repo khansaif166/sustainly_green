@@ -434,7 +434,7 @@ export default function HomePage() {
                 : `${product.currency} ${product.price.toFixed(2)}`,
             unit: product.moq ? `MOQ ${product.moq}` : "Unit",
             vendor: product.vendorName,
-            image: product.images[0]?.startsWith("/") ? product.images[0] : undefined,
+            image: product.images[0] || undefined,
             ecoVerified: product.ecoVerified,
           }));
 
@@ -862,7 +862,12 @@ export default function HomePage() {
                       </span>
                     )}
                     {product.image ? (
-                      <Image src={product.image} alt={product.title} width={140} height={140} />
+                      <img
+                        src={product.image}
+                        alt={product.title}
+                        className="home-product-image"
+                        loading="lazy"
+                      />
                     ) : (
                       <div className="product-placeholder" />
                     )}
@@ -966,7 +971,12 @@ export default function HomePage() {
                     </span>
                   )}
                   {product.image ? (
-                    <Image src={product.image} alt={product.title} width={130} height={130} />
+                    <img
+                      src={product.image}
+                      alt={product.title}
+                      className="home-product-image"
+                      loading="lazy"
+                    />
                   ) : (
                     <div className="product-placeholder" />
                   )}
@@ -2506,6 +2516,19 @@ export default function HomePage() {
           max-width: 100%;
           max-height: 146px;
           object-fit: contain;
+        }
+
+        .product-media .home-product-image {
+          width: 100%;
+          height: 146px;
+          object-fit: contain;
+        }
+
+        .product-media .home-eco-badge img {
+          width: 12px;
+          height: 15px;
+          max-width: 12px;
+          max-height: 15px;
         }
 
         .product-placeholder {

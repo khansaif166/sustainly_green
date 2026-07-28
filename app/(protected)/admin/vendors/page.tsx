@@ -53,6 +53,8 @@ export default function AdminVendorsPage() {
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const [fileValidation, setFileValidation] = useState<FileValidation | null>(null);
+  const [deletingVendorId, setDeletingVendorId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function fetchVendors() {
@@ -94,12 +96,35 @@ export default function AdminVendorsPage() {
     fetchVendors();
   }
 
-  async function deleteVendor(uid: string) {
-    if (!confirm("Delete this vendor? This cannot be undone.")) return;
+  async function deleteVendor(vendor: Vendor) {
+    const confirmed = window.confirm(
+      `Permanently delete ${vendor.companyName}?\n\n` +
+      "This deletes the vendor account, profile, products, product images, logo, certificates, awards, and related records. " +
+      "This cannot be undone.",
+    );
+    if (!confirmed) return;
+
     const session = getStoredSession();
-    if (!session) return;
-    await fetch(`/api/admin/vendors/${uid}`, { method: "DELETE", headers: { Authorization: `Bearer ${session.accessToken}` } });
-    fetchVendors();
+    if (!session) {
+      setDeleteError("Your session has expired. Please sign in again.");
+      return;
+    }
+
+    setDeletingVendorId(vendor.uid);
+    setDeleteError("");
+    try {
+      const res = await fetch(`/api/admin/vendors/${vendor.uid}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error?.message || "Unable to delete vendor.");
+      setVendors(previous => previous.filter(item => item.uid !== vendor.uid));
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Unable to delete vendor.");
+    } finally {
+      setDeletingVendorId(null);
+    }
   }
 
   async function downloadTemplate() {
@@ -279,6 +304,8 @@ export default function AdminVendorsPage() {
         .av-btn-ghost:hover{background:#f9fafb}
         .av-btn-danger{width:34px;height:34px;padding:0;border-radius:50%;background:#fef2f2;color:#dc2626;border:1.5px solid rgba(220,38,38,.15)}
         .av-btn-danger:hover{background:#fee2e2}
+        .av-btn:disabled{opacity:.55;cursor:not-allowed}
+        .av-delete-error{padding:11px 14px;border:1px solid rgba(220,38,38,.16);border-radius:12px;background:#fef2f2;color:#991b1b;font-size:12.5px}
 
         .av-empty{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:18px;padding:40px 24px;text-align:center;font-size:13.5px;color:#9ca3af}
         .av-unclaimed{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:50px;font-size:10.5px;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid rgba(194,65,12,.15)}
@@ -324,6 +351,8 @@ export default function AdminVendorsPage() {
             </div>
           </div>
         </div>
+
+        {deleteError && <div className="av-delete-error" role="alert">{deleteError}</div>}
 
         <div className="av-import">
           <div className="av-import-head">
@@ -486,7 +515,12 @@ export default function AdminVendorsPage() {
                         </button>
                       )}
                     </div>
-                    <button onClick={() => deleteVendor(v.uid)} className="av-btn av-btn-danger" title="Delete vendor">
+                    <button
+                      onClick={() => deleteVendor(v)}
+                      className="av-btn av-btn-danger"
+                      title="Delete vendor"
+                      disabled={deletingVendorId !== null}
+                    >
                       <Trash2 size={13} />
                     </button>
                   </div>
