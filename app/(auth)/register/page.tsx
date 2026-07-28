@@ -66,11 +66,19 @@ export default function RegisterPage() {
           email: result.email ?? email,
           role,
         });
+        const requestedPath = new URLSearchParams(window.location.search).get("next");
+        if (requestedPath?.startsWith("/") && !requestedPath.startsWith("//")) {
+          params.set("next", requestedPath);
+        }
         router.push(`/check-email?${params.toString()}`);
         return;
       }
 
-      router.push(role === "VENDOR" ? "/vendor/onboarding" : redirectForRole(null));
+      const requestedPath = new URLSearchParams(window.location.search).get("next");
+      const safeNext = requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
+        ? requestedPath
+        : null;
+      router.push(role === "VENDOR" ? "/vendor/onboarding" : safeNext || redirectForRole(null));
     } catch (err: unknown) {
       console.error(err);
       setError(getRegistrationErrorMessage(err));

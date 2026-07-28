@@ -24,6 +24,16 @@ export default function CheckEmailClient() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const role = searchParams.get("role");
+  const requestedPath = searchParams.get("next");
+  const safeNext = requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
+    ? requestedPath
+    : null;
+  const registerHref = safeNext
+    ? `/register?role=${role === "VENDOR" ? "VENDOR" : "BUYER"}&next=${encodeURIComponent(safeNext)}`
+    : "/register";
+  const loginHref = safeNext
+    ? `/login?next=${encodeURIComponent(safeNext)}`
+    : "/login";
   const inboxUrl = getInboxUrl(email);
   const isVendor = role === "VENDOR";
 
@@ -69,7 +79,7 @@ export default function CheckEmailClient() {
         <section className="flex items-center justify-center px-6 py-12 md:justify-start md:px-16 lg:px-24">
           <div className="w-full max-w-md">
             <Link
-              href="/register"
+              href={registerHref}
               className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-950"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -126,7 +136,7 @@ export default function CheckEmailClient() {
                   </a>
                 )}
                 <Link
-                  href="/login"
+                  href={loginHref}
                   className="flex w-full items-center justify-center rounded-full border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50"
                 >
                   I confirmed my email

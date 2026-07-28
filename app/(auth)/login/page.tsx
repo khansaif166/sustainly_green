@@ -63,7 +63,11 @@ export default function LoginPage() {
       const session = await signInWithSupabase(email, password);
       const profile = await ensureCurrentProfile(session.accessToken);
 
-      router.push(redirectForRole(profile));
+      const requestedPath = new URLSearchParams(window.location.search).get("next");
+      const safeNext = requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
+        ? requestedPath
+        : null;
+      router.push(safeNext || redirectForRole(profile));
     } catch (err: unknown) {
       if (err instanceof SupabaseAuthError) {
         if (err.code === "email_not_confirmed") {
