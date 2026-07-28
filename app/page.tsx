@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   fetchActiveCategories,
   fetchApprovedProducts,
@@ -74,6 +74,19 @@ type SupplierCard = {
   listingBadgeType?: string;
   publicContact?: Record<string, unknown>;
 };
+
+const sellerCities = [
+  { name: "Mumbai", search: "Mumbai" },
+  { name: "Delhi–NCR", search: "Delhi" },
+  { name: "Bengaluru", search: "Bengaluru" },
+  { name: "Chennai", search: "Chennai" },
+  { name: "Hyderabad", search: "Hyderabad" },
+  { name: "Pune", search: "Pune" },
+  { name: "Ahmedabad", search: "Ahmedabad" },
+  { name: "Kolkata", search: "Kolkata" },
+  { name: "Chandigarh", search: "Chandigarh" },
+  { name: "Indore", search: "Indore" },
+] as const;
 
 type HomepageAdSlide = {
   id: string;
@@ -324,12 +337,22 @@ function productHref(id: string) {
 
 export default function HomePage() {
   const router = useRouter();
+  const cityStripRef = useRef<HTMLDivElement>(null);
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [profile, setProfile] = useState<SupabaseProfile | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryItem[]>(sidebarCategories);
+
+  function scrollCities(direction: -1 | 1) {
+    const strip = cityStripRef.current;
+    if (!strip) return;
+    strip.scrollBy({
+      left: direction * Math.max(320, strip.clientWidth * 0.75),
+      behavior: "smooth",
+    });
+  }
   const [bestSellers, setBestSellers] = useState<ProductCard[]>(staticProducts);
   const [featuredProducts, setFeaturedProducts] = useState<ProductCard[]>(staticFeaturedProducts);
   const [featuredSuppliers, setFeaturedSuppliers] = useState<SupplierCard[]>(staticSuppliers);
@@ -842,6 +865,50 @@ export default function HomePage() {
                 <span>{category.name}</span>
               </Link>
             ))}
+          </div>
+        </section>
+
+        <section className="section-block city-sellers-section">
+          <div className="section-head">
+            <div>
+              <h2>Sellers by Cities</h2>
+              <p className="city-sellers-subtitle">Discover verified suppliers across India&apos;s leading business hubs</p>
+            </div>
+            <Link href="/browse?type=Vendor">View all vendors</Link>
+          </div>
+          <div className="city-strip-shell">
+            <button
+              type="button"
+              className="city-scroll-button city-scroll-left"
+              onClick={() => scrollCities(-1)}
+              aria-label="Scroll cities left"
+            >
+              <ChevronLeft size={21} />
+            </button>
+            <div className="city-card-strip" ref={cityStripRef}>
+              {sellerCities.map((city, index) => (
+                <Link
+                  key={city.name}
+                  href={`/browse?type=Vendor&q=${encodeURIComponent(city.search)}`}
+                  className="city-card"
+                  aria-label={`Browse sellers in ${city.name}`}
+                  style={{
+                    backgroundImage: "url('/sellers-by-cities.jpg')",
+                    backgroundPosition: `${(index % 5) * 25}% ${index < 5 ? 0 : 100}%`,
+                  }}
+                >
+                  <span>{city.name}</span>
+                </Link>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="city-scroll-button city-scroll-right"
+              onClick={() => scrollCities(1)}
+              aria-label="Scroll cities right"
+            >
+              <ChevronRight size={21} />
+            </button>
           </div>
         </section>
 
@@ -2353,6 +2420,115 @@ export default function HomePage() {
           font-size: 13px;
           font-weight: 500;
           line-height: 1.25;
+        }
+
+        .city-sellers-section .section-head {
+          align-items: flex-end;
+        }
+
+        .city-sellers-subtitle {
+          margin: 4px 0 0;
+          color: #6b7d70;
+          font-size: 13px;
+        }
+
+        .city-strip-shell {
+          position: relative;
+        }
+
+        .city-card-strip {
+          display: grid;
+          grid-auto-flow: column;
+          grid-auto-columns: minmax(154px, 1fr);
+          gap: 12px;
+          overflow-x: auto;
+          padding: 2px 2px 10px;
+          scroll-snap-type: x mandatory;
+          scrollbar-width: thin;
+          scrollbar-color: #b9d5c0 transparent;
+        }
+
+        .city-scroll-button {
+          position: absolute;
+          z-index: 3;
+          top: calc(50% - 5px);
+          width: 42px;
+          height: 42px;
+          border: 1px solid rgba(25, 78, 42, 0.18);
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.96);
+          color: #176d35;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 8px 22px rgba(18, 46, 32, 0.2);
+          transform: translateY(-50%);
+          transition: transform 160ms ease, background-color 160ms ease, color 160ms ease;
+        }
+
+        .city-scroll-button:hover {
+          color: #fff;
+          background: #238141;
+          transform: translateY(-50%) scale(1.07);
+        }
+
+        .city-scroll-button:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.3);
+          outline-offset: 2px;
+        }
+
+        .city-scroll-left {
+          left: -14px;
+        }
+
+        .city-scroll-right {
+          right: -14px;
+        }
+
+        .city-card {
+          position: relative;
+          height: 154px;
+          overflow: hidden;
+          border-radius: 16px;
+          border: 1px solid #dfe9e2;
+          background-color: #eaf2ec;
+          background-repeat: no-repeat;
+          background-size: 500% 200%;
+          box-shadow: 0 6px 18px rgba(18, 46, 32, 0.08);
+          scroll-snap-align: start;
+          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+
+        .city-card::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, transparent 42%, rgba(4, 18, 10, 0.78) 100%);
+        }
+
+        .city-card span {
+          position: absolute;
+          z-index: 1;
+          left: 14px;
+          right: 14px;
+          bottom: 12px;
+          color: #fff;
+          font-size: 15px;
+          font-weight: 800;
+          letter-spacing: -0.01em;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+        }
+
+        .city-card:hover {
+          transform: translateY(-4px);
+          border-color: #9fc8aa;
+          box-shadow: 0 14px 28px rgba(18, 46, 32, 0.16);
+        }
+
+        .city-card:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.3);
+          outline-offset: 3px;
         }
 
         .split-section {
