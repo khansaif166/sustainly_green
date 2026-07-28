@@ -96,6 +96,8 @@ export default function BuyerRFQModal({
     const session = getStoredSession();
     if (!session) return;
     let cancelled = false;
+    const accessToken = session.accessToken;
+    const accountEmail = session.user.email || "";
 
     const metadata = session.user.user_metadata || {};
     const accountName =
@@ -108,14 +110,14 @@ export default function BuyerRFQModal({
     setForm((current) => ({
       ...current,
       buyerName: current.buyerName || accountName,
-      buyerEmail: current.buyerEmail || session.user.email || "",
+      buyerEmail: current.buyerEmail || accountEmail,
     }));
 
     async function loadBuyerContact() {
       try {
         const response = await fetch("/api/buyer/profile", {
           headers: {
-            Authorization: `Bearer ${session.accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
           },
         });
         const payload = await response.json();
@@ -131,11 +133,10 @@ export default function BuyerRFQModal({
               ? companyInfo.contactPerson || profile.name || accountName
               : current.buyerName,
           buyerEmail:
-            !current.buyerEmail || current.buyerEmail === session.user.email
+            !current.buyerEmail || current.buyerEmail === accountEmail
               ? companyInfo.email ||
                 profile.email ||
-                session.user.email ||
-                ""
+                accountEmail
               : current.buyerEmail,
           buyerPhone:
             current.buyerPhone ||

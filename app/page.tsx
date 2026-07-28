@@ -204,28 +204,28 @@ const staticProducts: ProductCard[] = [
   {
     id: "mono-perc-solar-module",
     title: "Mono PERC Solar Module 550W",
-    price: "$0.28",
+    price: "₹23",
     unit: "Watt",
     vendor: "SunPeak Energy",
   },
   {
     id: "solar-led-street-light",
     title: "Solar LED Street Light 100W",
-    price: "$82.00",
+    price: "₹6,800",
     unit: "Piece",
     vendor: "BrightLite Solutions",
   },
   {
     id: "on-grid-solar-inverter",
     title: "On-Grid Solar Inverter 10kW",
-    price: "$680.00",
+    price: "₹56,000",
     unit: "Unit",
     vendor: "VoltEdge Power",
   },
   {
     id: "biogas-plant-25m3",
     title: "Biogas Plant 25m3",
-    price: "$4,250.00",
+    price: "₹3,50,000",
     unit: "Unit",
     vendor: "GreenGas Systems",
   },
@@ -235,42 +235,42 @@ const staticFeaturedProducts: ProductCard[] = [
   {
     id: "evaporative-air-cooler",
     title: "Evaporative Air Cooler 15000 CMH",
-    price: "$320.00",
+    price: "₹26,500",
     unit: "Unit",
     vendor: "CoolBreeze Tech",
   },
   {
     id: "recycled-paper-board",
     title: "Recycled Paper Board 1.5mm",
-    price: "$0.68",
+    price: "₹56",
     unit: "Sq.ft.",
     vendor: "EcoPulp Industries",
   },
   {
     id: "rainwater-harvesting-tank",
     title: "Rainwater Harvesting Tank 1000 Ltr",
-    price: "$95.00",
+    price: "₹7,900",
     unit: "Unit",
     vendor: "AquaSave Solutions",
   },
   {
     id: "ac-ev-charger",
     title: "AC EV Charger 7.4kW Type 2",
-    price: "$410.00",
+    price: "₹34,000",
     unit: "Unit",
     vendor: "ChargeGreen",
   },
   {
     id: "organic-waste-composter",
     title: "Organic Waste Composter 200kg/day",
-    price: "$1,280.00",
+    price: "₹1,06,000",
     unit: "Unit",
     vendor: "CompoTech",
   },
   {
     id: "stainless-water-purifier",
     title: "Stainless Steel Water Purifier 25 LPH",
-    price: "$210.00",
+    price: "₹17,500",
     unit: "Unit",
     vendor: "PureFlow Systems",
   },
@@ -452,9 +452,13 @@ export default function HomePage() {
             id: product.id,
             title: product.title || `Product ${index + 1}`,
             price:
-              product.priceType === "Price on Request" || product.price === undefined
+              product.priceType === "Price on Request" ||
+              product.price === undefined ||
+              product.price <= 0
                 ? "Price on request"
-                : `${product.currency} ${product.price.toFixed(2)}`,
+                : product.currency === "INR"
+                  ? `₹${product.price.toLocaleString("en-IN")}`
+                  : `${product.currency} ${product.price.toLocaleString()}`,
             unit: product.moq ? `MOQ ${product.moq}` : "Unit",
             vendor: product.vendorName,
             image: product.images[0] || undefined,
@@ -918,7 +922,7 @@ export default function HomePage() {
               <h2>Best Sellers</h2>
               <Link href="/browse">View all</Link>
             </div>
-            <div className="card-grid four-up">
+            <div className="card-grid best-seller-grid">
               {bestSellers.map((product, index) => (
                 <Link key={product.id} href={productHref(product.id)} className="product-card">
                   <div className={`product-media media-${index % 4}`}>
@@ -941,11 +945,14 @@ export default function HomePage() {
                   </div>
                   <div className="product-info">
                     <h3>{product.title}</h3>
-                    <p className="product-price">
-                      {product.price} <span>/ {product.unit}</span>
-                    </p>
+                    <div className="product-price-row">
+                      <p className="product-price">{product.price}</p>
+                      {!product.price.toLowerCase().includes("request") && (
+                        <span className="product-unit">/ {product.unit}</span>
+                      )}
+                    </div>
                     <p className="product-vendor">By: {product.vendor}</p>
-                    <p className="verified-label">Verified Supplier</p>
+                    <p className="verified-label">Approved listing</p>
                   </div>
                 </Link>
               ))}
@@ -1050,11 +1057,14 @@ export default function HomePage() {
                 </div>
                 <div className="product-info">
                   <h3>{product.title}</h3>
-                  <p className="product-price">
-                    {product.price} <span>/ {product.unit}</span>
-                  </p>
+                  <div className="product-price-row">
+                    <p className="product-price">{product.price}</p>
+                    {!product.price.toLowerCase().includes("request") && (
+                      <span className="product-unit">/ {product.unit}</span>
+                    )}
+                  </div>
                   <p className="product-vendor">By: {product.vendor}</p>
-                  <p className="verified-label">Verified Supplier</p>
+                  <p className="verified-label">Approved listing</p>
                 </div>
               </Link>
             ))}
@@ -2565,6 +2575,11 @@ export default function HomePage() {
           grid-template-columns: repeat(4, minmax(0, 1fr));
         }
 
+        .best-seller-grid {
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          align-items: stretch;
+        }
+
         .six-up {
           grid-template-columns: repeat(6, minmax(0, 1fr));
         }
@@ -2575,10 +2590,13 @@ export default function HomePage() {
           overflow: hidden;
         }
 
-        .split-section .product-card,
         .split-section .supplier-card {
           height: 260px;
           min-height: 260px;
+        }
+
+        .split-section .product-card,
+        .split-section .supplier-card {
           cursor: pointer;
           transition:
             transform 180ms ease,
@@ -2606,21 +2624,29 @@ export default function HomePage() {
 
         .product-card {
           padding: 10px;
+          box-sizing: border-box;
         }
 
         .split-section .product-card {
           display: flex;
           flex-direction: column;
+          height: 100%;
+          min-height: 320px;
         }
 
         .split-section .product-media {
-          min-height: 105px;
-          margin-bottom: 8px;
-          border-radius: 8px;
+          aspect-ratio: 4 / 3;
+          min-height: 0;
+          flex: 0 0 auto;
+          margin-bottom: 12px;
+          border-radius: 10px;
         }
 
-        .split-section .product-media img {
-          max-height: 96px;
+        .split-section .product-media .home-product-image {
+          width: 100%;
+          height: 100%;
+          max-height: none;
+          object-fit: cover;
         }
 
         .split-section .product-placeholder {
@@ -2708,11 +2734,20 @@ export default function HomePage() {
         }
 
         .product-placeholder {
-          width: 86px;
-          height: 104px;
-          border-radius: 18px;
-          background: linear-gradient(180deg, #313d42, #97ab9f);
-          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+          width: 100%;
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(145deg, #f3f7f4, #e5eee8);
+          box-shadow: inset 0 0 0 1px rgba(31, 111, 53, 0.06);
+          display: grid;
+          place-items: center;
+        }
+
+        .product-placeholder::after {
+          content: "Image unavailable";
+          color: #789083;
+          font-size: 11px;
+          font-weight: 600;
         }
 
         .product-info h3 {
@@ -2722,21 +2757,41 @@ export default function HomePage() {
         }
 
         .split-section .product-info h3 {
-          min-height: 36px;
-          margin-bottom: 5px;
-          font-size: 13px;
-          line-height: 1.22;
+          display: -webkit-box;
+          min-height: 2.7em;
+          margin-bottom: 10px;
+          overflow: hidden;
+          font-size: 14px;
+          font-weight: 700;
+          line-height: 1.35;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+
+        .product-price-row {
+          display: flex;
+          min-width: 0;
+          align-items: baseline;
+          gap: 5px;
+          margin-bottom: 8px;
         }
 
         .split-section .product-price {
-          margin-bottom: 3px;
+          margin: 0;
           font-size: 14px;
+          line-height: 1.3;
         }
 
-        .split-section .product-price span,
+        .product-unit,
         .split-section .product-vendor,
         .split-section .verified-label {
           font-size: 12px;
+        }
+
+        .product-unit {
+          flex: 0 0 auto;
+          color: #60796b;
+          font-weight: 500;
         }
 
         .split-section .product-info {
@@ -2744,6 +2799,15 @@ export default function HomePage() {
           flex: 1 1 auto;
           flex-direction: column;
           min-height: 0;
+        }
+
+        .split-section .product-vendor {
+          display: -webkit-box;
+          min-height: 2.8em;
+          overflow: hidden;
+          line-height: 1.4;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
         }
 
         .product-price {
@@ -2769,6 +2833,7 @@ export default function HomePage() {
 
         .split-section .product-info .verified-label {
           margin-top: auto;
+          padding-top: 10px;
         }
 
         .verified-label::before {
@@ -3053,8 +3118,31 @@ export default function HomePage() {
         }
 
         .featured-products-section .product-card {
+          display: flex;
+          height: 100%;
+          flex-direction: column;
           cursor: pointer;
           transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .featured-products-section .product-info {
+          display: flex;
+          flex: 1 1 auto;
+          flex-direction: column;
+        }
+
+        .featured-products-section .product-vendor {
+          display: -webkit-box;
+          min-height: 2.8em;
+          overflow: hidden;
+          line-height: 1.4;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+
+        .featured-products-section .verified-label {
+          margin-top: auto;
+          padding-top: 10px;
         }
 
         .featured-products-section .product-card:hover {
@@ -3081,7 +3169,13 @@ export default function HomePage() {
         }
 
         .compact-product-card .product-info h3 {
+          display: -webkit-box;
+          min-height: 2.7em;
+          overflow: hidden;
           font-size: 15px;
+          line-height: 1.35;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
         }
 
         @media (max-width: 1220px) {
