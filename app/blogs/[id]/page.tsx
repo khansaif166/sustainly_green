@@ -1,26 +1,81 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { cache } from "react";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Footer from "@/app/components/layouts/Footer";
 import Header from "@/app/components/Header";
 import Link from "next/link";
 import { fetchPublishedBlogById } from "@/lib/supabasePublic";
+import { getSiteUrl, SITE_NAME } from "@/lib/site";
 
-export default function BlogDetail() {
-  const { id } = useParams();
-  const [blog, setBlog] = useState<any>(null);
+export const revalidate = 3600;
 
-  useEffect(() => {
-    const fetchBlog = async () => {
-      const row = await fetchPublishedBlogById(id as string);
-      setBlog(row);
+type BlogPageProps = {
+  params: Promise<{ id: string }>;
+};
+
+const getBlog = cache(async (id: string) => {
+  try {
+    return await fetchPublishedBlogById(id);
+  } catch {
+    return null;
+  }
+});
+
+function compact(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+export async function generateMetadata({
+  params,
+}: BlogPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const blog = await getBlog(id);
+  const canonical = `${getSiteUrl()}/blogs/${encodeURIComponent(id)}`;
+
+  if (!blog) {
+    return {
+      title: "Blog not found",
+      robots: { index: false, follow: false },
+      alternates: { canonical },
     };
+  }
 
-    fetchBlog();
-  }, [id]);
+  const title = compact(`${blog.title} | ${SITE_NAME}`, 60);
+  const description = compact(
+    blog.excerpt ||
+      blog.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() ||
+      `Read ${blog.title} on ${SITE_NAME}.`,
+    155,
+  );
+  const image = blog.image || "/logo.png";
 
-  if (!blog) return <p className="text-center mt-20">Loading...</p>;
+  return {
+    title: { absolute: title },
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "article",
+      title,
+      description,
+      url: canonical,
+      siteName: SITE_NAME,
+      images: [{ url: image, alt: blog.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
+  };
+}
+
+export default async function BlogDetail({ params }: BlogPageProps) {
+  const { id } = await params;
+  const blog = await getBlog(id);
+
+  if (!blog) notFound();
 
   return (
     <>
