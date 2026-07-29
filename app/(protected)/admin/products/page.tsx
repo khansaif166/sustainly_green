@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Trash2, Search, Star, Megaphone, Package, Clock, ShoppingBag } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
 
@@ -30,28 +30,57 @@ const STATUS_META: Record<string, { bg: string; color: string; dot: string; labe
 export default function AdminProductsPage() {
   const [products,    setProducts]    = useState<Product[]>([]);
   const [categories,  setCategories]  = useState<Record<string, string>>({});
+  const [counts,      setCounts]      = useState({ total: 0, pending: 0, approved: 0 });
+  const [page,        setPage]        = useState(1);
+  const [hasMore,     setHasMore]     = useState(false);
+  const [booting,     setBooting]     = useState(true);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState("");
   const [search,      setSearch]      = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status,      setStatus]      = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
   const [category,    setCategory]    = useState("ALL");
 
+  // Debounce typing and snap back to page 1 when the query changes, so we don't
+  // fire a request per keystroke or get stranded on an out-of-range page.
   useEffect(() => {
+    const timer = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Server-driven load: the API returns just one page (24) already matching the
+  // active search/status/category, plus the global counts for the hero.
+  useEffect(() => {
+    let cancelled = false;
     async function load() {
       const session = getStoredSession();
-      if (!session) { setError("Please login again."); setLoading(false); return; }
+      if (!session) { setError("Please login again."); setLoading(false); setBooting(false); return; }
+      setLoading(true);
       try {
-        const res = await fetch("/api/admin/products", { headers: { Authorization: `Bearer ${session.accessToken}` } });
+        const params = new URLSearchParams({ page: String(page) });
+        if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
+        if (status   !== "ALL") params.set("status", status);
+        if (category !== "ALL") params.set("category", category);
+        const res = await fetch(`/api/admin/products?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
         const payload = await res.json();
         if (!res.ok) throw new Error(payload?.error?.message || "Unable to load products.");
+        if (cancelled) return;
         setProducts(payload.products || []);
         setCategories(payload.categories || {});
+        setCounts(payload.counts || { total: 0, pending: 0, approved: 0 });
+        setHasMore(Boolean(payload.hasMore));
+        setError("");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to load products.");
-      } finally { setLoading(false); }
+        if (!cancelled) setError(err instanceof Error ? err.message : "Unable to load products.");
+      } finally {
+        if (!cancelled) { setLoading(false); setBooting(false); }
+      }
     }
     load();
-  }, []);
+    return () => { cancelled = true; };
+  }, [debouncedSearch, status, category, page]);
 
   async function updateStatus(id: string, newStatus: Product["status"]) {
     const session = getStoredSession();
@@ -114,18 +143,7 @@ export default function AdminProductsPage() {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ecoVerified: !current } : p));
   }
 
-  const filtered = useMemo(() => products.filter(p => {
-    const q = search.toLowerCase();
-    const matchSearch = p.title?.toLowerCase().includes(q) || p.vendorName?.toLowerCase().includes(q);
-    const matchStatus   = status   === "ALL" || p.status   === status;
-    const matchCategory = category === "ALL" || p.categoryId === category;
-    return matchSearch && matchStatus && matchCategory;
-  }), [products, search, status, category]);
-
-  const pending  = products.filter(p => p.status === "PENDING").length;
-  const approved = products.filter(p => p.status === "APPROVED").length;
-
-  if (loading) return (
+  if (booting) return (
     <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ width: 30, height: 30, border: "4px solid #dcfce7", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -197,15 +215,15 @@ export default function AdminProductsPage() {
             </div>
             <div className="apr-hero-stats">
               <div className="apr-hero-stat">
-                <p className="apr-hero-stat-val">{products.length}</p>
+                <p className="apr-hero-stat-val">{counts.total}</p>
                 <p className="apr-hero-stat-label">Total</p>
               </div>
               <div className="apr-hero-stat">
-                <p className="apr-hero-stat-val" style={{ color: "#fbbf24" }}>{pending}</p>
+                <p className="apr-hero-stat-val" style={{ color: "#fbbf24" }}>{counts.pending}</p>
                 <p className="apr-hero-stat-label">Pending</p>
               </div>
               <div className="apr-hero-stat">
-                <p className="apr-hero-stat-val">{approved}</p>
+                <p className="apr-hero-stat-val">{counts.approved}</p>
                 <p className="apr-hero-stat-label">Approved</p>
               </div>
             </div>
@@ -220,13 +238,13 @@ export default function AdminProductsPage() {
             <Search size={14} color="#9ca3af" className="apr-search-icon" />
             <input placeholder="Search product or vendor…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select className="apr-select" value={status} onChange={e => setStatus(e.target.value as any)}>
+          <select className="apr-select" value={status} onChange={e => { setStatus(e.target.value as any); setPage(1); }}>
             <option value="ALL">All Status</option>
             <option value="PENDING">Pending</option>
             <option value="APPROVED">Approved</option>
             <option value="REJECTED">Rejected</option>
           </select>
-          <select className="apr-select" value={category} onChange={e => setCategory(e.target.value)}>
+          <select className="apr-select" value={category} onChange={e => { setCategory(e.target.value); setPage(1); }}>
             <option value="ALL">All Categories</option>
             {Object.entries(categories).map(([id, name]) => (
               <option key={id} value={id}>{name}</option>
@@ -238,11 +256,11 @@ export default function AdminProductsPage() {
         </div>
 
         {/* Grid */}
-        {filtered.length === 0 ? (
-          <div className="apr-empty">No products match your filters.</div>
+        {products.length === 0 ? (
+          <div className="apr-empty">{loading ? "Loading…" : "No products match your filters."}</div>
         ) : (
-          <div className="apr-grid">
-            {filtered.map(p => {
+          <div className="apr-grid" style={{ opacity: loading ? 0.55 : 1, transition: "opacity .15s" }}>
+            {products.map(p => {
               const sm = STATUS_META[p.status] || STATUS_META.PENDING;
               return (
                 <div key={p.id} className="apr-card">
@@ -306,6 +324,29 @@ export default function AdminProductsPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {(page > 1 || hasMore) && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, paddingTop: 4 }}>
+            <button
+              className="apr-btn apr-btn-edit"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+              style={{ padding: "8px 16px", opacity: page <= 1 || loading ? 0.5 : 1, cursor: page <= 1 || loading ? "not-allowed" : "pointer" }}
+            >
+              Previous
+            </button>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#6b7280" }}>Page {page}</span>
+            <button
+              className="apr-btn apr-btn-edit"
+              onClick={() => setPage(p => p + 1)}
+              disabled={!hasMore || loading}
+              style={{ padding: "8px 16px", opacity: !hasMore || loading ? 0.5 : 1, cursor: !hasMore || loading ? "not-allowed" : "pointer" }}
+            >
+              Next
+            </button>
           </div>
         )}
       </div>

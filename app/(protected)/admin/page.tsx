@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getStoredSession } from "@/lib/supabaseAuth";
+import { readApiJson } from "@/lib/clientApiResponse";
 import {
   Users, Building2, Package, ClipboardList, Clock, CheckCircle2,
   AlertTriangle, TrendingUp, ArrowRight,
@@ -66,9 +67,15 @@ export default function AdminDashboard() {
       const session = getStoredSession();
       if (!session) { setError("Please log in again."); setLoading(false); return; }
       try {
-        const res     = await fetch("/api/admin/overview", { headers: { Authorization: `Bearer ${session.accessToken}` } });
-        const payload = await res.json();
-        if (!res.ok) throw new Error(payload?.error?.message || "Unable to load.");
+        const res = await fetch("/api/admin/overview", {
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
+        const payload = await readApiJson<{
+          counts?: Partial<OverviewCounts>;
+          recentRFQs?: RecentRfq[];
+          recentProducts?: RecentProduct[];
+          productsByCategory?: Array<{ name: string; value: number }>;
+        }>(res, "Unable to load the admin dashboard.");
         setCounts({ ...EMPTY_COUNTS, ...(payload.counts || {}) });
         setRecentRFQs(payload.recentRFQs || []);
         setRecentProducts(payload.recentProducts || []);

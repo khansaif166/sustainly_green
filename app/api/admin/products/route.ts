@@ -1,22 +1,27 @@
 import { apiError, apiOk } from "@/lib/apiResponse";
 import {
   requireRole,
+  supabaseServiceCount,
   supabaseServiceFetch,
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
 import {
+  buildAdminProductFilterParams,
   buildAdminProductPayload,
+  getAdminCategoryMap,
   getAdminProductMasters,
   loadAdminVendor,
   mapMastersForForms,
-  mapMastersForList,
-  mapProduct,
-  PRODUCT_SELECT,
+  mapProductListItem,
+  PRODUCT_LIST_SELECT,
+  type ProductListRow,
   type ProductRow,
   replaceImages,
   replaceTags,
 } from "@/lib/adminProductsServer";
+
+const PRODUCTS_PAGE_SIZE = 24;
 
 
 export async function GET(request: Request) {
@@ -26,18 +31,51 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const includeMasters = url.searchParams.get("masters") === "1";
 
-    const [products, masters] = await Promise.all([
-      supabaseServiceFetch<ProductRow[]>(
-        `/rest/v1/products?${new URLSearchParams({ select: PRODUCT_SELECT, order: "created_at.desc", limit: "500" })}`,
-      ),
-      getAdminProductMasters(),
+    // The new-product form only needs master lists for its dropdowns; it never
+    // reads the product list. Skip the 500-row product scan + per-row mapping
+    // in that case — that work was blowing the Worker CPU budget for no reason.
+    if (includeMasters) {
+      const masters = await getAdminProductMasters();
+      return apiOk({
+        ok: true,
+        masters: mapMastersForForms(masters),
+      });
+    }
+
+    // On-demand list: return one page (24) that already matches the current
+    // search/status/category, so the Worker never scans or transfers the whole
+    // catalogue. Search and filtering run in Postgres, not the browser.
+    const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
+    const offset = (page - 1) * PRODUCTS_PAGE_SIZE;
+
+    const filters = buildAdminProductFilterParams({
+      q: url.searchParams.get("q") || "",
+      status: url.searchParams.get("status") || "",
+      category: url.searchParams.get("category") || "",
+    });
+
+    const listParams = new URLSearchParams(filters);
+    listParams.set("select", PRODUCT_LIST_SELECT);
+    listParams.set("order", "created_at.desc");
+    listParams.set("limit", String(PRODUCTS_PAGE_SIZE));
+    listParams.set("offset", String(offset));
+
+    const [products, categories, total, pending, approved] = await Promise.all([
+      supabaseServiceFetch<ProductListRow[]>(`/rest/v1/products?${listParams.toString()}`),
+      getAdminCategoryMap(),
+      supabaseServiceCount("/rest/v1/products"),
+      supabaseServiceCount("/rest/v1/products?status=eq.PENDING"),
+      supabaseServiceCount("/rest/v1/products?status=eq.APPROVED"),
     ]);
 
     return apiOk({
       ok: true,
-      products: products.map(mapProduct),
-      ...mapMastersForList(masters),
-      ...(includeMasters ? { masters: mapMastersForForms(masters) } : {}),
+      products: products.map(mapProductListItem),
+      categories,
+      page,
+      pageSize: PRODUCTS_PAGE_SIZE,
+      hasMore: products.length === PRODUCTS_PAGE_SIZE,
+      counts: { total, pending, approved },
     });
   } catch (error) {
     const authError = toAuthError(error);
