@@ -15,6 +15,7 @@ export function proxy(request: NextRequest) {
   ) {
     url.hostname = CANONICAL_HOST;
     url.protocol = "https:";
+    url.port = "";
     redirect = true;
   }
 
