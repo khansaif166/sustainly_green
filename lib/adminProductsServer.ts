@@ -36,6 +36,91 @@ function numberOrNull(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+// Lean projection for the admin product LIST view. It renders only a handful of
+// fields, so we avoid the tags join and the unused columns that the full
+// PRODUCT_SELECT pulls — smaller payload to parse, less mapping CPU per row.
+export const PRODUCT_LIST_SELECT = [
+  "id",
+  "vendor_name",
+  "title",
+  "price",
+  "price_type",
+  "status",
+  "featured",
+  "is_ad",
+  "eco_verified",
+  "category_id",
+  "created_at",
+  "product_images(url,sort_order)",
+].join(",");
+
+export type ProductListRow = {
+  id: string;
+  vendor_name: string | null;
+  title: string;
+  price: number | null;
+  price_type: string | null;
+  status: string;
+  featured: boolean;
+  is_ad: boolean;
+  eco_verified: boolean | null;
+  category_id: string | null;
+  product_images?: Array<{ url: string | null; sort_order: number | null }>;
+};
+
+// Translates the admin list filters into PostgREST query params, shared by the
+// page query and the pagination count so they always agree on what's matched.
+export function buildAdminProductFilterParams(opts: {
+  q?: string;
+  status?: string;
+  category?: string;
+}) {
+  const params = new URLSearchParams();
+
+  if (opts.status && opts.status !== "ALL") {
+    params.set("status", `eq.${opts.status}`);
+  }
+  if (opts.category && opts.category !== "ALL") {
+    params.set("category_id", `eq.${opts.category}`);
+  }
+
+  const q = (opts.q || "").trim().replace(/[(),*]/g, " ").trim();
+  if (q) {
+    params.set("or", `(title.ilike.*${q}*,vendor_name.ilike.*${q}*)`);
+  }
+
+  return params;
+}
+
+export function mapProductListItem(row: ProductListRow) {
+  const firstImage = (row.product_images || [])
+    .slice()
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    .map((image) => image.url)
+    .find((url): url is string => Boolean(url));
+
+  return {
+    id: row.id,
+    title: row.title,
+    vendorName: row.vendor_name || "",
+    price: row.price === null ? "" : String(row.price),
+    priceType: row.price_type || "",
+    status: row.status,
+    featured: row.featured,
+    isAd: row.is_ad,
+    ecoVerified: Boolean(row.eco_verified),
+    categoryId: row.category_id || "",
+    images: firstImage ? [firstImage] : [],
+  };
+}
+
+export async function getAdminCategoryMap() {
+  const rows = await supabaseServiceFetch<CategoryRow[]>(
+    "/rest/v1/categories?select=id,name&order=name.asc&limit=2000",
+  );
+  return Object.fromEntries(rows.map((category) => [category.id, category.name]));
+}
+
 export async function getAdminProductMasters() {
   const [vendors, categories, subcategories, tags] = await Promise.all([
     supabaseServiceFetch<VendorRow[]>("/rest/v1/vendors?select=id,company_name&order=company_name.asc&limit=10000"),
