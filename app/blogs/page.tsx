@@ -1,96 +1,36 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import Header from "../components/Header";
-import Footer from "../components/layouts/Footer";
+import type { Metadata } from "next";
 import { fetchPublishedBlogs } from "@/lib/supabasePublic";
+import { getSiteUrl, SITE_NAME } from "@/lib/site";
+import BlogsClient from "./BlogsClient";
 
-export default function BlogsPage() {
-  const [blogs, setBlogs] = useState<any[]>([]);
-  const [offset, setOffset] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+export const revalidate = 3600;
 
-  const fetchBlogs = async (next = false) => {
-    setLoading(true);
+export const metadata: Metadata = {
+  title: "Sustainability Insights and Responsible Sourcing Blog",
+  description:
+    "Read practical sustainability, ESG procurement, responsible sourcing, and green marketplace insights from Sustainly Green.",
+  alternates: { canonical: `${getSiteUrl()}/blogs` },
+  openGraph: {
+    type: "website",
+    title: "Sustainability Insights and Responsible Sourcing Blog",
+    description:
+      "Read practical sustainability, ESG procurement, responsible sourcing, and green marketplace insights from Sustainly Green.",
+    url: `${getSiteUrl()}/blogs`,
+    siteName: SITE_NAME,
+    images: [{ url: "/logo.png", alt: SITE_NAME }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sustainability Insights and Responsible Sourcing Blog",
+    description:
+      "Sustainability, ESG procurement, and responsible sourcing insights.",
+    images: ["/logo.png"],
+  },
+};
 
-    const nextOffset = next ? offset : 0;
-    const data = await fetchPublishedBlogs({ limit: 10, offset: nextOffset });
-
-    setBlogs(next ? [...blogs, ...data] : data);
-    setOffset(nextOffset + data.length);
-    setHasMore(data.length === 10);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchBlogs();
-  }, []);
-
-  return (
-    <>
-    <Header/>
-     <nav className="text-sm text-gray-500 flex items-center gap-2 p-[2%]">
-          <Link href="/" className="hover:text-black">
-            Home
-          </Link>
-
-          <span>/</span>
-
-          <Link href="/blogs" className="hover:text-black">
-            Blogs
-          </Link>
-        </nav>
-    <div className="w-full mx-auto px-[2%] pb-16">
-
-      <h1 className="text-4xl font-bold mb-10">Blogs</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-
-        {blogs.map((blog) => (
-          <Link
-            key={blog.id}
-            href={`/blogs/${blog.id}`}
-            className="border border-gray-400 rounded-2xl overflow-hidden hover:shadow-lg transition"
-          >
-
-            {blog.image && (
-              <img
-                src={blog.image}
-                className="w-full h-68 object-cover"
-              />
-            )}
-
-            <div className="p-5">
-              <h2 className="text-lg font-semibold mb-2">
-                {blog.title}
-              </h2>
-
-              <p className="text-gray-500 text-sm line-clamp-3">
-                {blog.excerpt || blog.content}
-              </p>
-            </div>
-
-          </Link>
-        ))}
-
-      </div>
-
-      {/* Load More */}
-      <div className="flex justify-center mt-12">
-        {hasMore && (
-          <button
-            onClick={() => fetchBlogs(true)}
-            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800"
-          >
-            {loading ? "Loading..." : "Load More"}
-          </button>
-        )}
-      </div>
-
-    </div>
-    <Footer/>
-    </>
+export default async function BlogsPage() {
+  const blogs = await fetchPublishedBlogs({ limit: 10, offset: 0 }).catch(
+    () => [],
   );
+  return <BlogsClient initialBlogs={blogs} />;
 }

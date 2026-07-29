@@ -239,7 +239,7 @@ export default function BuyerDashboardPage() {
             </div>
             <div className="bd-greeting-actions">
               <Link href="/buyer/rfq/new" className="bd-btn-primary"><Plus size={14} />New RFQ</Link>
-              <Link href="/browse?type=Vendor" className="bd-btn-ghost"><Search size={13} />Browse Vendors</Link>
+              <Link href="/browse?type=vendor" className="bd-btn-ghost"><Search size={13} />Browse Vendors</Link>
             </div>
           </div>
         </div>
@@ -307,7 +307,7 @@ export default function BuyerDashboardPage() {
               <div className="bd-quick-icon" style={{ background: "#f0fdf4" }}><Plus size={18} color="#16a34a" /></div>
               <div><p className="bd-quick-title">Submit RFQ</p><p className="bd-quick-sub">Request quotes from vendors</p></div>
             </Link>
-            <Link href="/browse?type=Vendor" className="bd-quick-card">
+            <Link href="/browse?type=vendor" className="bd-quick-card">
               <div className="bd-quick-icon" style={{ background: "#eff6ff" }}><Search size={18} color="#3b82f6" /></div>
               <div><p className="bd-quick-title">Find Vendors</p><p className="bd-quick-sub">Browse verified suppliers</p></div>
             </Link>

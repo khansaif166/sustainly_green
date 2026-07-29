@@ -6,9 +6,9 @@ import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import {
-  fetchActiveCategories,
   fetchApprovedProducts,
   fetchApprovedVendors,
+  type PublicProduct,
   type PublicVendor,
 } from "@/lib/supabasePublic";
 import { getVendorBadgeMeta } from "@/lib/vendorBadges";
@@ -20,14 +20,14 @@ import {
 import { HiOutlineSparkles, HiOutlineShieldCheck } from "react-icons/hi2";
 
 /* ---------------- TYPES ---------------- */
-type Product = {
-  id: string; title?: string; description?: string; images?: string[];
-  listingType?: string; categoryId?: string; priceType?: string;
-  price?: number; vendorName?: string; ecoScore?: number;
-  certifications?: string[]; tags?: string[]; ecoVerified?: boolean;
+type Product = PublicProduct & {
+  categoryId?: string;
+  ecoScore?: number;
+  certifications?: string[];
+  tags?: string[];
 };
 type Vendor = PublicVendor & { GreenLensScore?: number };
-type Category = { id: string; name: string; imageUrl?: string };
+type Category = { id: string; name: string; slug?: string; imageUrl?: string };
 interface FilterState { badge: string; location: string; sortBy: string; }
 const DEFAULT_FILTERS: FilterState = { badge: "", location: "", sortBy: "newest" };
 const PAGE_SIZE = 12;
@@ -80,7 +80,15 @@ function vendorSearchText(v: Vendor) {
 /* ============================================================
    MAIN COMPONENT
 ============================================================ */
-export default function BrowsePage() {
+export default function BrowsePage({
+  initialProducts = [],
+  initialVendors = [],
+  initialCategories = [],
+}: {
+  initialProducts?: Product[];
+  initialVendors?: Vendor[];
+  initialCategories?: Category[];
+}) {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -89,10 +97,16 @@ export default function BrowsePage() {
   const category = params.get("category") || "";
   const search = params.get("q") || "";
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [vendors, setVendors] = useState<Vendor[]>(initialVendors);
+  const [categories] = useState<Category[]>(initialCategories);
+  const categoryId =
+    categories.find(
+      (item) =>
+        item.id === category ||
+        item.slug?.toLowerCase() === category.toLowerCase(),
+    )?.id || category;
+  const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
@@ -100,7 +114,9 @@ export default function BrowsePage() {
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(
+    initialVendors.length || initialProducts.length,
+  );
   const [expanded, setExpanded] = useState({ type: true, category: true, eco: true, location: false, sort: true });
   const vendorLocations = useMemo(() => Array.from(new Set(
     vendors.flatMap((vendor) => [vendor.city, vendor.state, vendor.country])
@@ -109,15 +125,11 @@ export default function BrowsePage() {
   )).sort((a, b) => a.localeCompare(b)), [vendors]);
 
   useEffect(() => {
-    fetchActiveCategories().then(setCategories).catch(() => setCategories([]));
-  }, []);
-
-  useEffect(() => {
     async function load() {
       setLoading(true);
       try {
         if (type !== "Vendor") {
-          let list: Product[] = await fetchApprovedProducts({ listingType: type, categoryId: category || undefined, limit: 100 });
+          let list: Product[] = await fetchApprovedProducts({ listingType: type, categoryId: categoryId || undefined, limit: 100 });
           if (search) {
             const s = search.toLowerCase();
             list = list.filter(p => (p.title || "").toLowerCase().includes(s) || (p.description || "").toLowerCase().includes(s) || (p.tags || []).some(t => t.toLowerCase().includes(s)));
@@ -145,7 +157,7 @@ export default function BrowsePage() {
       } catch (e) { console.error(e); } finally { setLoading(false); }
     }
     load();
-  }, [type, category, search, filters]);
+  }, [type, categoryId, search, filters]);
 
   useEffect(() => { setLocalSearch(search); }, [search]);
   useEffect(() => { setCurrentPage(1); }, [type, category, search, filters.badge, filters.location, filters.sortBy]);

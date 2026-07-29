@@ -521,17 +521,11 @@ export default function HomePage() {
   }
 
   const dashboardLink = profile ? redirectForRole(profile) : "/login";
-  const certificationCategory = categoryOptions.find((item) =>
-    /certification|esg|advisory/i.test(item.name),
-  );
-
   function hrefForTopTab(tab: string) {
     if (tab === "Suppliers") return "/browse?type=vendor";
-    if (tab === "Services") return "/browse?type=Service";
+    if (tab === "Services") return "/browse?type=service";
     if (tab === "Certifications") {
-      const params = new URLSearchParams({ type: "Service" });
-      if (certificationCategory) params.set("category", certificationCategory.id);
-      return `/browse?${params.toString()}`;
+      return "/certification";
     }
     return "/browse";
   }
@@ -878,7 +872,7 @@ export default function HomePage() {
               <h2>Sellers by Cities</h2>
               <p className="city-sellers-subtitle">Discover verified suppliers across India&apos;s leading business hubs</p>
             </div>
-            <Link href="/browse?type=Vendor">View all vendors</Link>
+            <Link href="/browse?type=vendor">View all vendors</Link>
           </div>
           <div className="city-strip-shell">
             <button
@@ -893,7 +887,7 @@ export default function HomePage() {
               {sellerCities.map((city, index) => (
                 <Link
                   key={city.name}
-                  href={`/browse?type=Vendor&q=${encodeURIComponent(city.search)}`}
+                  href={`/browse?type=vendor&q=${encodeURIComponent(city.search)}`}
                   className="city-card"
                   aria-label={`Browse sellers in ${city.name}`}
                   style={{
