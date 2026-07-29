@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 const CANONICAL_HOST = "www.sustainlygreen.com";
 
-export function proxy(request: NextRequest) {
+export const runtime = "experimental-edge";
+
+export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const forwardedHost =
     request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
