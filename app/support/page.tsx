@@ -129,7 +129,7 @@ export default function HelpContactPage() {
               <ContactRow
                 icon={MapPin}
                 label="Office"
-                value="Sustainly Green India Pvt Ltd Chennai, Tamil Nadu, India"
+                value="Sustainly Ecohub India Pvt Ltd, Newtown, Vaniyambadi - 635 751, Tamil Nadu, India"
               />
             </div>
 

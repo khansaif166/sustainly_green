@@ -79,7 +79,7 @@ export default function Footer() {
       <div className="footer-bottom">
         <div className="footer-bottom-left">
           <p>
-            {`© ${COPYRIGHT_YEAR} Sustainly Ecohub India Pvt Ltd · Vaniyambadi, Tamil Nadu, India `}
+            {`© ${COPYRIGHT_YEAR} Sustainly Ecohub India Pvt Ltd · Newtown, Vaniyambadi - 635 751, Tamil Nadu, India `}
             <span className="cin">grow@sustainlygreen.com</span>
           </p>
         </div>
