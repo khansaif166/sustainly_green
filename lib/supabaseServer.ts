@@ -129,26 +129,26 @@ export async function supabaseServiceFetch<T>(
   return parseSupabaseResponse<T>(response);
 }
 
-// Returns just the row count for a query without transferring any rows. Uses
-// PostgREST's exact-count header (Content-Range: <from>-<to>/<total>) with a
-// zero-width range, so the Worker parses a header instead of a result set.
+// Returns just the row count for a query. Uses PostgREST's select=count()
+// to get the count as a single-row result, which is more reliable than
+// trying to read the Content-Range header.
 export async function supabaseServiceCount(path: string): Promise<number> {
-  const url = `${requireSupabaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = new URL(`${requireSupabaseUrl()}${path.startsWith("/") ? path : `/${path}`}`);
+  // Add select=count() to the query to get just the count
+  url.searchParams.set("select", "count()");
+
   const serviceRoleKey = requireServiceRoleKey();
 
-  const response = await fetch(url, {
-    method: "HEAD",
+  const response = await fetch(url.toString(), {
     headers: {
       apikey: serviceRoleKey,
       Authorization: `Bearer ${serviceRoleKey}`,
-      Prefer: "count=exact",
-      Range: "0-0",
-      "Range-Unit": "items",
+      "Content-Type": "application/json",
     },
   });
 
-  const total = Number((response.headers.get("content-range") || "").split("/")[1]);
-  return Number.isFinite(total) ? total : 0;
+  const data = await parseSupabaseResponse<Array<{ count: number }>>(response);
+  return data[0]?.count || 0;
 }
 
 function getBearerToken(request: Request) {

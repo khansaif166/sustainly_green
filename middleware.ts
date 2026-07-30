@@ -5,23 +5,28 @@ const CANONICAL_HOST = "www.sustainlygreen.com";
 export const runtime = "experimental-edge";
 
 export function middleware(request: NextRequest) {
-  const url = request.nextUrl.clone();
-  const forwardedHost =
-    request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
-  const requestHost = forwardedHost.split(",")[0].trim().split(":")[0];
-  let redirect = false;
+  // On Cloudflare Workers, check both the URL and headers for the hostname
+  const rawUrl = new URL(request.url);
+  let hostname = rawUrl.hostname;
 
-  if (
-    url.hostname === "sustainlygreen.com" ||
-    requestHost === "sustainlygreen.com"
-  ) {
+  // Fallback to headers if URL hostname is not available
+  if (!hostname) {
+    const hostHeader =
+      request.headers.get("x-forwarded-host") ||
+      request.headers.get("host") ||
+      "";
+    hostname = hostHeader.split(",")[0].trim().split(":")[0];
+  }
+
+  // Redirect if hostname is the non-www version
+  if (hostname === "sustainlygreen.com") {
+    const url = request.nextUrl.clone();
     url.hostname = CANONICAL_HOST;
     url.protocol = "https:";
     url.port = "";
-    redirect = true;
+    return NextResponse.redirect(url, 301);
   }
 
-  if (redirect) return NextResponse.redirect(url, 301);
   return NextResponse.next();
 }
 
