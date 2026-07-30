@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const CANONICAL_HOST = "www.sustainlygreen.com";
 
-export const runtime = "nodejs";
+export const runtime = "experimental-edge";
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
