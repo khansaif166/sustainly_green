@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Trash2, Search, Star, Megaphone, Package, Clock, ShoppingBag } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
+import { readApiJson } from "@/lib/clientApiResponse";
 
 type Product = {
   vendorName: string;
@@ -64,8 +65,12 @@ export default function AdminProductsPage() {
         const res = await fetch(`/api/admin/products?${params.toString()}`, {
           headers: { Authorization: `Bearer ${session.accessToken}` },
         });
-        const payload = await res.json();
-        if (!res.ok) throw new Error(payload?.error?.message || "Unable to load products.");
+        const payload = await readApiJson<{
+          products?: Product[];
+          categories?: Record<string, string>;
+          counts?: { total: number; pending: number; approved: number };
+          hasMore?: boolean;
+        }>(res, "Unable to load admin products.");
         if (cancelled) return;
         setProducts(payload.products || []);
         setCategories(payload.categories || {});

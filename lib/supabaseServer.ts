@@ -129,26 +129,32 @@ export async function supabaseServiceFetch<T>(
   return parseSupabaseResponse<T>(response);
 }
 
-// Returns just the row count for a query. Uses PostgREST's select=count()
-// to get the count as a single-row result, which is more reliable than
-// trying to read the Content-Range header.
+// Return a count without downloading rows. PostgREST supports exact counts
+// through the Prefer/Content-Range protocol even when database aggregates are
+// disabled, which is the default on many Supabase projects.
 export async function supabaseServiceCount(path: string): Promise<number> {
-  const url = new URL(`${requireSupabaseUrl()}${path.startsWith("/") ? path : `/${path}`}`);
-  // Add select=count() to the query to get just the count
-  url.searchParams.set("select", "count()");
-
+  const url = `${requireSupabaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
   const serviceRoleKey = requireServiceRoleKey();
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
+    method: "HEAD",
     headers: {
       apikey: serviceRoleKey,
       Authorization: `Bearer ${serviceRoleKey}`,
-      "Content-Type": "application/json",
+      Prefer: "count=exact",
+      Range: "0-0",
+      "Range-Unit": "items",
     },
   });
 
-  const data = await parseSupabaseResponse<Array<{ count: number }>>(response);
-  return data[0]?.count || 0;
+  if (!response.ok) {
+    throw new Error(`Unable to count Supabase rows: ${response.status}`);
+  }
+
+  const contentRange = response.headers.get("content-range") || "";
+  const totalText = contentRange.slice(contentRange.lastIndexOf("/") + 1);
+  const total = Number(totalText);
+  return Number.isFinite(total) ? total : 0;
 }
 
 function getBearerToken(request: Request) {
@@ -230,10 +236,12 @@ export async function requireProfile(request: Request): Promise<CurrentActor> {
     throw new ApiAuthError("Profile not found for the current user.", 403);
   }
 
-  const [buyerId, vendorId] = await Promise.all([
-    getCurrentBuyerId(profile.id),
-    getCurrentVendorId(profile.id),
-  ]);
+  // Admin endpoints do not need buyer/vendor ownership lookups. Avoiding those
+  // two extra network calls is important on Cloudflare's Worker CPU budget.
+  const buyerId =
+    profile.role === "BUYER" ? await getCurrentBuyerId(profile.id) : null;
+  const vendorId =
+    profile.role === "VENDOR" ? await getCurrentVendorId(profile.id) : null;
 
   return {
     user,

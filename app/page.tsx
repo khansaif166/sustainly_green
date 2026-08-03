@@ -719,10 +719,16 @@ export default function HomePage() {
                   <Link
                     href={homepageAds[heroSlide - 1].linkUrl}
                     className="hero-ad-main-link"
-                    aria-label={`View advertisement: ${homepageAds[heroSlide - 1].title}`}
+                    aria-label={
+                      homepageAds[heroSlide - 1].id === "homepage-banner"
+                        ? "View featured banner"
+                        : `View advertisement: ${homepageAds[heroSlide - 1].title}`
+                    }
                   />
                   <span className="hero-ad-label">Sponsored</span>
-                  <span className="hero-ad-title">{homepageAds[heroSlide - 1].title}</span>
+                  {homepageAds[heroSlide - 1].title && (
+                    <span className="hero-ad-title">{homepageAds[heroSlide - 1].title}</span>
+                  )}
                   <div className="hero-buttons hero-ad-buttons">
                     <Link href="/browse" className="primary-hero-button">Explore Products</Link>
                     <Link href="/browse?type=vendor" className="secondary-hero-button">Find Suppliers</Link>
