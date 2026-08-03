@@ -27,7 +27,7 @@ export async function GET() {
     if (banner?.active !== false && banner?.imageUrl) {
       slides.push({
         id: "homepage-banner",
-        title: "Sustainly Green featured banner",
+        title: "",
         imageUrl: banner.imageUrl,
         linkUrl: banner.linkUrl || "/browse",
       });
