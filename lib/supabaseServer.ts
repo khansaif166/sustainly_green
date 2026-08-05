@@ -109,6 +109,47 @@ async function parseSupabaseResponse<T>(response: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
+// Supabase (and the Cloudflare Worker running this app) can both go slow under
+// bursty traffic — e.g. an admin uploading several product images while the
+// products list keeps polling. Without a timeout, a stalled fetch hangs until
+// the Worker's own wall-clock limit kills it and Cloudflare serves its own
+// HTML error page instead of anything our API routes can catch. A bounded
+// timeout plus a couple of retries on transient failures keeps a single slow
+// request from taking the whole page down.
+const SUPABASE_FETCH_TIMEOUT_MS = 8000;
+const SUPABASE_FETCH_RETRIES = 2;
+
+function isRetryableStatus(status: number) {
+  return status === 429 || status >= 500;
+}
+
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= SUPABASE_FETCH_RETRIES; attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(SUPABASE_FETCH_TIMEOUT_MS),
+      });
+
+      if (!isRetryableStatus(response.status) || attempt === SUPABASE_FETCH_RETRIES) {
+        return response;
+      }
+
+      lastError = new Error(`Supabase request failed: ${response.status}`);
+    } catch (error) {
+      lastError = error;
+      if (attempt === SUPABASE_FETCH_RETRIES) break;
+    }
+
+    // Short exponential backoff (200ms, 400ms, ...) before retrying.
+    await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Supabase request failed.");
+}
+
 export async function supabaseServiceFetch<T>(
   path: string,
   options: RequestInit = {},
@@ -116,7 +157,7 @@ export async function supabaseServiceFetch<T>(
   const url = `${requireSupabaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
   const serviceRoleKey = requireServiceRoleKey();
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     ...options,
     headers: {
       apikey: serviceRoleKey,
@@ -136,7 +177,7 @@ export async function supabaseServiceCount(path: string): Promise<number> {
   const url = `${requireSupabaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
   const serviceRoleKey = requireServiceRoleKey();
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     method: "HEAD",
     headers: {
       apikey: serviceRoleKey,
