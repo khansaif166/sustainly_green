@@ -37,6 +37,7 @@ export default function AdminProductsPage() {
   const [booting,     setBooting]     = useState(true);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState("");
+  const [retryTick,   setRetryTick]   = useState(0);
   const [search,      setSearch]      = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status,      setStatus]      = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
@@ -49,8 +50,37 @@ export default function AdminProductsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Hero counts + category dropdown rarely change and don't depend on the
+  // active filters, so they're fetched once on mount instead of on every
+  // search/status/category/page change — keeps the filtered list request the
+  // only thing that fires while an admin is typing or paging.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSummary() {
+      const session = getStoredSession();
+      if (!session) return;
+      try {
+        const res = await fetch(`/api/admin/products?summary=1`, {
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
+        const payload = await readApiJson<{
+          categories?: Record<string, string>;
+          counts?: { total: number; pending: number; approved: number };
+        }>(res, "Unable to load admin product summary.");
+        if (cancelled) return;
+        setCategories(payload.categories || {});
+        setCounts(payload.counts || { total: 0, pending: 0, approved: 0 });
+      } catch {
+        // Non-critical: the hero stats and category filter can stay stale/empty
+        // without blocking the product list itself.
+      }
+    }
+    loadSummary();
+    return () => { cancelled = true; };
+  }, []);
+
   // Server-driven load: the API returns just one page (24) already matching the
-  // active search/status/category, plus the global counts for the hero.
+  // active search/status/category.
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -67,17 +97,15 @@ export default function AdminProductsPage() {
         });
         const payload = await readApiJson<{
           products?: Product[];
-          categories?: Record<string, string>;
-          counts?: { total: number; pending: number; approved: number };
           hasMore?: boolean;
         }>(res, "Unable to load admin products.");
         if (cancelled) return;
         setProducts(payload.products || []);
-        setCategories(payload.categories || {});
-        setCounts(payload.counts || { total: 0, pending: 0, approved: 0 });
         setHasMore(Boolean(payload.hasMore));
         setError("");
       } catch (err) {
+        // Keep whatever products are already on screen — a transient failure
+        // shouldn't blank out a list the admin was just looking at.
         if (!cancelled) setError(err instanceof Error ? err.message : "Unable to load products.");
       } finally {
         if (!cancelled) { setLoading(false); setBooting(false); }
@@ -85,7 +113,7 @@ export default function AdminProductsPage() {
     }
     load();
     return () => { cancelled = true; };
-  }, [debouncedSearch, status, category, page]);
+  }, [debouncedSearch, status, category, page, retryTick]);
 
   async function updateStatus(id: string, newStatus: Product["status"]) {
     const session = getStoredSession();
@@ -235,7 +263,18 @@ export default function AdminProductsPage() {
           </div>
         </div>
 
-        {error && <div className="apr-err">{error}</div>}
+        {error && (
+          <div className="apr-err" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <span>{error}</span>
+            <button
+              onClick={() => setRetryTick(t => t + 1)}
+              disabled={loading}
+              style={{ flexShrink: 0, background: "#fff", border: "1.5px solid rgba(220,38,38,.25)", color: "#dc2626", borderRadius: 50, padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Filter + Add bar */}
         <div className="apr-bar">

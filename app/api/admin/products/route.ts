@@ -42,6 +42,24 @@ export async function GET(request: Request) {
       });
     }
 
+    // The hero counts and category dropdown don't change per keystroke/filter —
+    // let the client fetch them once on mount instead of on every list request,
+    // so a search/status/category/page change only costs one Supabase call.
+    if (url.searchParams.get("summary") === "1") {
+      const [categories, total, pending, approved] = await Promise.all([
+        getAdminCategoryMap(),
+        supabaseServiceCount("/rest/v1/products"),
+        supabaseServiceCount("/rest/v1/products?status=eq.PENDING"),
+        supabaseServiceCount("/rest/v1/products?status=eq.APPROVED"),
+      ]);
+
+      return apiOk({
+        ok: true,
+        categories,
+        counts: { total, pending, approved },
+      });
+    }
+
     // On-demand list: return one page (24) that already matches the current
     // search/status/category, so the Worker never scans or transfers the whole
     // catalogue. Search and filtering run in Postgres, not the browser.
@@ -60,22 +78,16 @@ export async function GET(request: Request) {
     listParams.set("limit", String(PRODUCTS_PAGE_SIZE));
     listParams.set("offset", String(offset));
 
-    const [products, categories, total, pending, approved] = await Promise.all([
-      supabaseServiceFetch<ProductListRow[]>(`/rest/v1/products?${listParams.toString()}`),
-      getAdminCategoryMap(),
-      supabaseServiceCount("/rest/v1/products"),
-      supabaseServiceCount("/rest/v1/products?status=eq.PENDING"),
-      supabaseServiceCount("/rest/v1/products?status=eq.APPROVED"),
-    ]);
+    const products = await supabaseServiceFetch<ProductListRow[]>(
+      `/rest/v1/products?${listParams.toString()}`,
+    );
 
     return apiOk({
       ok: true,
       products: products.map(mapProductListItem),
-      categories,
       page,
       pageSize: PRODUCTS_PAGE_SIZE,
       hasMore: products.length === PRODUCTS_PAGE_SIZE,
-      counts: { total, pending, approved },
     });
   } catch (error) {
     const authError = toAuthError(error);
