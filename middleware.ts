@@ -27,6 +27,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
 
+  // Redirect if the pathname contains any uppercase character
+  const pathname = rawUrl.pathname;
+  if (pathname !== pathname.toLowerCase()) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.toLowerCase();
+    return NextResponse.redirect(url, 301);
+  }
+
   return NextResponse.next();
 }
 
