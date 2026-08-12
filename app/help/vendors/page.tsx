@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
 import { ArrowLeft } from "lucide-react";
+import { getSiteUrl, SITE_NAME } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Vendor FAQs",
+  description: `Answers to common vendor questions on ${SITE_NAME}: listing your business, managing categories, editing your profile, and handling enquiries.`,
+  alternates: { canonical: `${getSiteUrl()}/help/vendors` },
+};
 
 const faqs = [
   ["How do I list my business?", "Register as a vendor and complete the onboarding steps with company, category, sustainability and marketplace information."],

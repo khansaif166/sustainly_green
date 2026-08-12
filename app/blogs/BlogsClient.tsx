@@ -54,6 +54,7 @@ export default function BlogsClient({ initialBlogs }: { initialBlogs: any[] }) {
             {blog.image && (
               <img
                 src={blog.image}
+                alt={blog.title}
                 className="w-full h-68 object-cover"
               />
             )}

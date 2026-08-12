@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
 import { ArrowLeft } from "lucide-react";
+import { getSiteUrl, SITE_NAME } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Buyer FAQs",
+  description: `Answers to common buyer questions on ${SITE_NAME}: submitting RFQs, finding vendors, comparing quotations, and tracking requests.`,
+  alternates: { canonical: `${getSiteUrl()}/help/buyers` },
+};
 
 const faqs = [
   ["How do I submit an RFQ?", "Create a buyer account, open Submit RFQ, describe the product or service required, add quantity and delivery details, and submit the request."],

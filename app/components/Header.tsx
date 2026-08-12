@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   Bell,
   ShoppingCart,
@@ -213,7 +214,14 @@ export default function Header() {
       <nav className={`nav ${scrolled ? "nav-scrolled" : ""} ${!show && "-translate-y-full"} transition-all duration-300`}>
         <div className="nav-inner">
           <Link href="/" className="nav-logo">
-            <img src="/log.webp" alt="Sustainly Green" className="w-[100px] md:w-[150px]"  />
+            <Image
+              src="/log.webp"
+              alt="Sustainly Green"
+              width={150}
+              height={40}
+              priority
+              className="h-auto w-[100px] md:w-[150px]"
+            />
           </Link>
 
           <div className="nav-search relative hidden lg:flex">

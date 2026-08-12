@@ -9,7 +9,6 @@ const routes = [
   "/blogs",
   "/about",
   "/certification",
-  "/certification/bodies",
   "/sdg-commitment",
   "/resources",
   "/careers",
