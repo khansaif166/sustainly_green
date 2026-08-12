@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
+import { getSiteUrl, SITE_NAME } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Cookie Policy",
+  description: `Understand how ${SITE_NAME} uses cookies to improve your experience on our sustainability marketplace.`,
+  alternates: { canonical: `${getSiteUrl()}/cookie-policy` },
+};
 
 export default function CookiePolicyPage() {
   return (

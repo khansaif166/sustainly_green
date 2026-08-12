@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -10,6 +11,13 @@ import {
 } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
+import { getSiteUrl, SITE_NAME } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Resources",
+  description: `Guides, policies, and helpful links for buyers and vendors using ${SITE_NAME}, India's B2B sustainability marketplace.`,
+  alternates: { canonical: `${getSiteUrl()}/resources` },
+};
 
 const resources = [
   {

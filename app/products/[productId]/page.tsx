@@ -76,11 +76,60 @@ export async function generateMetadata({
   };
 }
 
+function productStructuredData(
+  product: NonNullable<Awaited<ReturnType<typeof getProduct>>>,
+  canonical: string,
+) {
+  const hasPrice = typeof product.price === "number" && product.price > 0;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.title,
+    description: product.description || undefined,
+    image: product.images.length ? product.images : undefined,
+    sku: product.id,
+    category: product.tagNames[0] || product.listingType || undefined,
+    brand: {
+      "@type": "Brand",
+      name: product.vendorName,
+    },
+    ...(hasPrice
+      ? {
+          offers: {
+            "@type": "Offer",
+            url: canonical,
+            priceCurrency: product.currency,
+            price: product.price,
+            availability: "https://schema.org/InStock",
+            seller: {
+              "@type": "Organization",
+              name: product.vendorName,
+            },
+          },
+        }
+      : {}),
+  };
+}
+
 export default async function ProductPage({ params }: ProductPageProps) {
   const { productId } = await params;
   const product = await getProduct(productId);
 
   if (!product) notFound();
 
-  return <ProductDetailClient product={product} />;
+  const canonical = `${getSiteUrl()}/products/${encodeURIComponent(productId)}`;
+  const structuredData = productStructuredData(product, canonical);
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+        }}
+      />
+      <ProductDetailClient product={product} />
+    </>
+  );
 }

@@ -71,14 +71,50 @@ export async function generateMetadata({
   };
 }
 
+function blogStructuredData(
+  blog: NonNullable<Awaited<ReturnType<typeof getBlog>>>,
+  canonical: string,
+) {
+  const siteUrl = getSiteUrl();
+  const description =
+    blog.excerpt ||
+    blog.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: blog.title,
+    description: description || undefined,
+    image: blog.image ? [blog.image] : undefined,
+    datePublished: blog.createdAt || undefined,
+    dateModified: blog.createdAt || undefined,
+    mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
+    author: { "@type": "Organization", name: SITE_NAME },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
+    },
+  };
+}
+
 export default async function BlogDetail({ params }: BlogPageProps) {
   const { id } = await params;
   const blog = await getBlog(id);
 
   if (!blog) notFound();
 
+  const canonical = `${getSiteUrl()}/blogs/${encodeURIComponent(id)}`;
+  const structuredData = blogStructuredData(blog, canonical);
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+        }}
+      />
       <Header />
       <div className="w-full mx-auto px-6 pt-10">
         <nav className="text-sm text-gray-500 flex items-center gap-2">
@@ -103,6 +139,7 @@ export default async function BlogDetail({ params }: BlogPageProps) {
           {blog.image && (
             <img
               src={blog.image}
+              alt={blog.title}
               className="w-[350px] rounded-2xl shadow-md object-cover"
             />
           )}

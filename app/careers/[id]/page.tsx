@@ -1,123 +1,152 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { MapPin, Clock, ArrowLeft, UploadCloud } from "lucide-react";
+import { cache } from "react";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { MapPin, Clock, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
-import { fetchActiveCareerById } from "@/lib/supabasePublic";
-import { uploadFileToSupabaseStorage } from "@/lib/storage";
+import { fetchActiveCareerById, type PublicCareer } from "@/lib/supabasePublic";
+import { getSiteUrl, SITE_NAME } from "@/lib/site";
+import JobApplyForm from "./JobApplyForm";
 
-/* ================= TYPES ================= */
+export const revalidate = 900;
 
-type Job = {
-  id: string;
-  title: string;
-  department: string;
-  location: string;
-  type: string;
-  description: string;
+type JobPageProps = {
+  params: Promise<{ id: string }>;
 };
 
-/* ================= PAGE ================= */
+function compact(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
 
-export default function JobDetailPage() {
-  const { id } = useParams();
-  const [job, setJob] = useState<Job | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-  });
-
-  const [resume, setResume] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  /* ================= LOAD JOB ================= */
-
-  useEffect(() => {
-    async function loadJob() {
-      const row = await fetchActiveCareerById(id as string);
-      setJob(row);
-      setLoading(false);
-    }
-
-    loadJob();
-  }, [id]);
-
-  /* ================= APPLY ================= */
-
-  async function apply() {
-    if (!job || !form.name || !form.email) {
-      alert("Please fill all required fields.");
-      return;
-    }
-
-    if (!resume) {
-      alert("Please upload your resume before submitting.");
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const uploadedResume = resume
-        ? await uploadFileToSupabaseStorage(resume, {
-            bucket: "resumes",
-            folder: `applications/${id}`,
-          })
-        : null;
-
-      const response = await fetch("/api/careers/applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          careerId: id,
-          jobTitle: job.title,
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          resumeUrl: "",
-          resumeStoragePath: uploadedResume?.path || "",
-        }),
-      });
-
-      if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload?.error?.message || "Unable to submit application.");
-      }
-
-      setSuccess(true);
-      setForm({ name: "", email: "", phone: "" });
-      setResume(null);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Unable to submit application.");
-    } finally {
-      setSubmitting(false);
-    }
+const getJob = cache(async (id: string) => {
+  try {
+    return await fetchActiveCareerById(id);
+  } catch {
+    return null;
   }
+});
 
-  if (loading) {
-    return (
-      <p className="p-6 text-sm text-[var(--color-text-secondary)]">
-        Loading job…
-      </p>
-    );
-  }
+export async function generateMetadata({
+  params,
+}: JobPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const job = await getJob(id);
+  const canonical = `${getSiteUrl()}/careers/${encodeURIComponent(id)}`;
 
   if (!job) {
-    return (
-      <p className="p-6 text-sm text-[var(--color-text-secondary)]">
-        Job not found.
-      </p>
-    );
+    return {
+      title: "Job not found",
+      robots: { index: false, follow: false },
+      alternates: { canonical },
+    };
   }
+
+  const title = compact(`${job.title} - ${job.department} | ${SITE_NAME}`, 60);
+  const description = compact(
+    job.description ||
+      `Apply for the ${job.title} role at ${SITE_NAME}, based in ${job.location}.`,
+    155,
+  );
+
+  return {
+    title: { absolute: title },
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: SITE_NAME,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
+
+const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
+  FULLTIME: "FULL_TIME",
+  FULL_TIME: "FULL_TIME",
+  PARTTIME: "PART_TIME",
+  PART_TIME: "PART_TIME",
+  CONTRACT: "CONTRACTOR",
+  CONTRACTOR: "CONTRACTOR",
+  TEMPORARY: "TEMPORARY",
+  TEMP: "TEMPORARY",
+  INTERN: "INTERN",
+  INTERNSHIP: "INTERN",
+  VOLUNTEER: "VOLUNTEER",
+};
+
+function jobStructuredData(job: PublicCareer, canonical: string) {
+  const siteUrl = getSiteUrl();
+  const normalizedType = job.type
+    ? EMPLOYMENT_TYPE_MAP[job.type.toUpperCase().replace(/[\s-]/g, "_")] ||
+      EMPLOYMENT_TYPE_MAP[job.type.toUpperCase().replace(/[\s_-]/g, "")]
+    : undefined;
+  const isRemote = /remote/i.test(job.location || "");
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    title: job.title,
+    description: job.description || job.title,
+    identifier: {
+      "@type": "PropertyValue",
+      name: SITE_NAME,
+      value: job.id,
+    },
+    datePosted: job.createdAt || undefined,
+    employmentType: normalizedType || undefined,
+    hiringOrganization: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      sameAs: siteUrl,
+    },
+    ...(isRemote
+      ? {
+          jobLocationType: "TELECOMMUTE",
+          applicantLocationRequirements: {
+            "@type": "Country",
+            name: "IN",
+          },
+        }
+      : {
+          jobLocation: {
+            "@type": "Place",
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: job.location || undefined,
+              addressCountry: "IN",
+            },
+          },
+        }),
+    url: canonical,
+  };
+}
+
+export default async function JobDetailPage({ params }: JobPageProps) {
+  const { id } = await params;
+  const job = await getJob(id);
+
+  if (!job) notFound();
+
+  const canonical = `${getSiteUrl()}/careers/${encodeURIComponent(id)}`;
+  const structuredData = jobStructuredData(job, canonical);
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+        }}
+      />
       <Header />
       <main className="max-w-7xl mx-auto px-6 py-14 space-y-10">
         <Link
@@ -166,78 +195,7 @@ export default function JobDetailPage() {
         </section>
 
         {/* ================= APPLY FORM ================= */}
-        <section className="rounded-3xl bg-[var(--color-bg-white)] border border-[var(--color-border)] shadow-[0_10px_30px_rgba(0,0,0,0.06)] p-6 space-y-5">
-          <h2 className="text-lg font-semibold">Apply for this position</h2>
-
-          {success && (
-            <p className="text-sm text-[var(--color-primary-green)]">
-              Application submitted successfully.
-            </p>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Name */}
-            <input
-              placeholder="Full Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border text-sm"
-            />
-
-            {/* Email */}
-            <input
-              placeholder="Email Address"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border text-sm"
-            />
-
-            {/* Phone */}
-            <input
-              placeholder="Phone (optional)"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border text-sm md:col-span-2"
-            />
-          </div>
-
-          {/* ================= RESUME UPLOAD ================= */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--color-text-secondary)]">
-              Upload Resume (PDF/DOC)
-            </label>
-
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--color-ocean-blue)]">
-                <UploadCloud className="h-4 w-4" />
-                {resume ? resume.name : "Choose File"}
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  hidden
-                  onChange={(e) => setResume(e.target.files?.[0] || null)}
-                />
-              </label>
-            </div>
-            <p className="text-xs text-[var(--color-text-secondary)]">
-              PDF, DOC, and DOCX files are accepted.
-            </p>
-          </div>
-
-          {/* ================= SUBMIT ================= */}
-          <button
-            onClick={apply}
-            disabled={submitting}
-            className="
-              inline-flex items-center gap-2
-              px-6 py-3 rounded-full text-sm font-medium text-white
-              bg-[linear-gradient(135deg,var(--color-primary-green),var(--color-ocean-blue))]
-              hover:opacity-90 disabled:opacity-50
-            "
-          >
-            {submitting ? "Submitting…" : "Submit Application"}
-          </button>
-        </section>
+        <JobApplyForm jobId={job.id} jobTitle={job.title} />
       </main>
       <Footer />
     </>

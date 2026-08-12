@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
+import { getSiteUrl, SITE_NAME } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: `Learn how ${SITE_NAME} collects, uses, and protects your data across our B2B sustainability marketplace.`,
+  alternates: { canonical: `${getSiteUrl()}/privacy-policy` },
+};
 
 export default function PrivacyPolicyPage() {
   return (
