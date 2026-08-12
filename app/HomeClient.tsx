@@ -27,11 +27,9 @@ import {
   BarChart3,
   Box,
   Building2,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Droplets,
-  Globe,
   Leaf,
   Menu,
   Recycle,
@@ -478,11 +476,6 @@ export default function HomeClient({
               <Link href="/vendor/dashboard">Supplier</Link>
               <Link href="/resources">Resources</Link>
               <Link href="/sdg-commitment">Our SDG Commitment</Link>
-              <button type="button" className="utility-link globe-link">
-                <Globe size={14} />
-                EN
-                <ChevronDown size={14} />
-              </button>
             </div>
           </div>
 
