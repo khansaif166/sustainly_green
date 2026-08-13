@@ -6,9 +6,6 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import {
   Download, FileText, TrendingUp, Clock, CheckCircle2,
@@ -71,7 +68,8 @@ export default function BuyerRFQReportPage() {
   const totalPages = Math.ceil(rfqs.length / PAGE_SIZE);
   const paginated = rfqs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  function exportExcel() {
+  async function exportExcel() {
+    const XLSX = await import("xlsx");
     const data = rfqs.map(r => ({
       Requirement: r.requirementTitle, Quantity: r.estimatedQuantity,
       Timeline: r.requiredTimeline, Country: r.deliveryCountry,
@@ -83,7 +81,11 @@ export default function BuyerRFQReportPage() {
     XLSX.writeFile(wb, "rfq-report.xlsx");
   }
 
-  function exportPDF() {
+  async function exportPDF() {
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
     const doc = new jsPDF();
     doc.text("Sustainly Green — RFQ Report", 14, 14);
     autoTable(doc, {

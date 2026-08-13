@@ -11,10 +11,6 @@ import {
   Package, BarChart3, CheckCircle2, MessageSquare,
   Clock, TrendingUp, FileDown, Eye,
 } from "lucide-react";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export type Product = { id: string; title: string; approved: boolean; active?: boolean; views?: number };
 type Enquiry = { status: string };
@@ -76,7 +72,11 @@ export default function VendorReportsPage() {
     { name: "Rejected", value: rejected },
   ].filter(d => d.value > 0);
 
-  function exportExcel() {
+  async function exportExcel() {
+    const [XLSX, { default: saveAs }] = await Promise.all([
+      import("xlsx"),
+      import("file-saver"),
+    ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(products.map((p, i) => ({
       "S.No": i + 1, "Product Name": p.title, Approved: p.approved ? "Yes" : "No", Views: p.views || 0,
@@ -88,7 +88,11 @@ export default function VendorReportsPage() {
     saveAs(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `Vendor_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  function exportPDF() {
+  async function exportPDF() {
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
     const doc = new jsPDF();
     doc.setFontSize(18); doc.text("Vendor Report", 14, 20);
     doc.setFontSize(12); doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 30);
