@@ -73,7 +73,7 @@ export default function VendorReportsPage() {
   ].filter(d => d.value > 0);
 
   async function exportExcel() {
-    const [XLSX, { saveAs }] = await Promise.all([
+    const [XLSX, { default: saveAs }] = await Promise.all([
       import("xlsx"),
       import("file-saver"),
     ]);
@@ -89,7 +89,7 @@ export default function VendorReportsPage() {
   }
 
   async function exportPDF() {
-    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
       import("jspdf"),
       import("jspdf-autotable"),
     ]);

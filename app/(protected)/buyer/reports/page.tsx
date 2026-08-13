@@ -82,7 +82,7 @@ export default function BuyerRFQReportPage() {
   }
 
   async function exportPDF() {
-    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
       import("jspdf"),
       import("jspdf-autotable"),
     ]);
