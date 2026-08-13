@@ -13,16 +13,32 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
-      - name: Install dependencies
+      - name: Install dependencies (no cache, forcing a fully clean install)
         run: npm ci
 
-      - name: Build and deploy
-        run: npm run deploy
+      - name: Build (Next.js + OpenNext Cloudflare bundle)
+        run: npm run cf:build
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NEXT_PUBLIC_SUPABASE_URL: https://nhrnynmkvbovwwradvgq.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ocm55bm1rdmJvdnd3cmFkdmdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxODkzMDMsImV4cCI6MjA5Nzc2NTMwM30.BOOOICozCmu-ViqvbDD19MPO-NbBJFL9kD_t4dcBO7I
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Report bundle size (diagnostic, always runs)
+        if: always()
+        run: |
+          FILE=.open-next/server-functions/default/handler.mjs
+          if [ -f "$FILE" ]; then
+            echo "--- $FILE ---"
+            ls -la "$FILE"
+            echo "Raw size: $(du -h "$FILE" | cut -f1)"
+            echo "Gzip size: $(gzip -c "$FILE" | wc -c | awk '{printf "%.2f MiB\n", $1/1024/1024}')"
+          else
+            echo "handler.mjs not found at $FILE — build likely failed before bundling."
+          fi
+
+      - name: Deploy to Cloudflare
+        run: npx opennextjs-cloudflare deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
