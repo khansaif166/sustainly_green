@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import * as XLSX from "xlsx";
 import { CalendarDays, FileSpreadsheet, Users, Globe, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
 
@@ -90,7 +89,8 @@ export default function LeadsPage() {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l));
   }
 
-  function exportExcel() {
+  async function exportExcel() {
+    const XLSX = await import("xlsx");
     const worksheet = XLSX.utils.json_to_sheet(filtered);
     const workbook  = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Leads");
