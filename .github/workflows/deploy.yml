@@ -1,3 +1,9 @@
+# Cloudflare Workers is on the Paid plan (10 MiB script size limit) as of
+# 2026-08-13 — the ~3.09 MiB gzip bundle that previously failed against the
+# Free plan's 3 MiB cap now deploys with headroom. See PR #11 for the
+# investigation (ruled out CI cache staleness, node_modules drift, and
+# dynamic-import code-splitting as the cause — the bundle size itself was
+# never the bug, it was always right at the free-tier edge).
 name: Deploy to Cloudflare Workers
 
 on:
