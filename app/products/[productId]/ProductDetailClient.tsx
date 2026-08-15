@@ -178,6 +178,14 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       </span>
                     </p>
                   )}
+                  {product.discount && (
+                    <p className="mt-1 text-sm text-emerald-700">
+                      Offer:{" "}
+                      <span className="font-semibold">
+                        {product.discount}
+                      </span>
+                    </p>
+                  )}
                 </div>
 
                 {(product.tagNames?.length ?? 0) > 0 && (

@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { apiError, apiOk } from "@/lib/apiResponse";
 import {
   requireRole,
@@ -15,6 +16,12 @@ import {
   replaceTags,
 } from "@/lib/vendorProductsServer";
 
+
+function revalidateProductSurfaces(id: string) {
+  revalidatePath(`/products/${id}`);
+  revalidatePath("/browse");
+  revalidatePath("/");
+}
 
 async function loadOwnedProduct(id: string, vendorId: string) {
   const params = new URLSearchParams({
@@ -101,6 +108,7 @@ export async function PUT(
     const refreshed = await loadOwnedProduct(id, actor.vendorId);
     if (!refreshed) return apiError("Product listing not found after update.", 404);
 
+    revalidateProductSurfaces(id);
     return apiOk({ ok: true, product: mapProduct(refreshed) });
   } catch (error) {
     const authError = toAuthError(error);
@@ -141,6 +149,7 @@ export async function DELETE(
       },
     );
 
+    revalidateProductSurfaces(id);
     return apiOk({ ok: true });
   } catch (error) {
     const authError = toAuthError(error);
