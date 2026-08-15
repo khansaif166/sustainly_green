@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { apiError, apiOk } from "@/lib/apiResponse";
+import { productHref } from "@/lib/slug";
 import {
   requireRole,
   supabaseServiceFetch,
@@ -19,8 +20,18 @@ import {
 } from "@/lib/adminProductsServer";
 
 
-function revalidateProductSurfaces(id: string) {
+// The live product page lives at /products/{id}/{slug} (see
+// app/products/[productId]/[productSlug]/page.tsx, ISR revalidate: 900s),
+// not at /products/{id} — that path only exists as the redirect route
+// handler. Revalidating just `/products/{id}` therefore never touched the
+// cached page itself, so edits (price, MOQ, discount, etc.) silently sat
+// stale for up to 15 minutes. Revalidate the real slugged path, plus the
+// dynamic route pattern as a safety net for any page still cached under a
+// stale slug from before a title change.
+function revalidateProductSurfaces(id: string, title?: string | null) {
   revalidatePath(`/products/${id}`);
+  if (title) revalidatePath(productHref(id, title));
+  revalidatePath("/products/[productId]/[productSlug]", "page");
   revalidatePath("/browse");
   revalidatePath("/");
 }
@@ -89,7 +100,7 @@ export async function PATCH(
     );
 
     const product = await refreshAdminProduct(id);
-    revalidateProductSurfaces(id);
+    revalidateProductSurfaces(id, product?.title);
     return apiOk({ ok: true, product });
   } catch (error) {
     const authError = toAuthError(error);
@@ -143,7 +154,7 @@ export async function PUT(
     ]);
 
     const product = await refreshAdminProduct(id);
-    revalidateProductSurfaces(id);
+    revalidateProductSurfaces(id, product?.title);
     return apiOk({ ok: true, product });
   } catch (error) {
     const authError = toAuthError(error);

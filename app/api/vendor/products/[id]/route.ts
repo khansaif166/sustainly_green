@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { apiError, apiOk } from "@/lib/apiResponse";
+import { productHref } from "@/lib/slug";
 import {
   requireRole,
   supabaseServiceFetch,
@@ -17,8 +18,14 @@ import {
 } from "@/lib/vendorProductsServer";
 
 
-function revalidateProductSurfaces(id: string) {
+// See the matching comment in app/api/admin/products/[id]/route.ts — the
+// live product page is at /products/{id}/{slug}, not /products/{id}, so
+// revalidating only the id-only path never invalidated the actual cached
+// page and vendor edits (MOQ, price, etc.) sat stale for up to 15 minutes.
+function revalidateProductSurfaces(id: string, title?: string | null) {
   revalidatePath(`/products/${id}`);
+  if (title) revalidatePath(productHref(id, title));
+  revalidatePath("/products/[productId]/[productSlug]", "page");
   revalidatePath("/browse");
   revalidatePath("/");
 }
@@ -108,8 +115,9 @@ export async function PUT(
     const refreshed = await loadOwnedProduct(id, actor.vendorId);
     if (!refreshed) return apiError("Product listing not found after update.", 404);
 
-    revalidateProductSurfaces(id);
-    return apiOk({ ok: true, product: mapProduct(refreshed) });
+    const mapped = mapProduct(refreshed);
+    revalidateProductSurfaces(id, mapped.title);
+    return apiOk({ ok: true, product: mapped });
   } catch (error) {
     const authError = toAuthError(error);
     if (authError) return apiError(authError.message, authError.status);
