@@ -1,0 +1,3529 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import {
+  fetchActiveCategories,
+  fetchApprovedProducts,
+  fetchApprovedVendors,
+} from "@/lib/supabasePublic";
+import {
+  AUTH_SESSION_CLEARED_EVENT,
+  AUTH_SESSION_SAVED_EVENT,
+  ensureCurrentProfile,
+  getCurrentUser,
+  getStoredSession,
+  redirectForRole,
+  signOutSupabase,
+  type SupabaseProfile,
+} from "@/lib/supabaseAuth";
+import { getVendorBadgeMeta } from "@/lib/vendorBadges";
+import Footer from "./components/layouts/Footer";
+import {
+  ArrowRight,
+  BadgeCheck,
+  BarChart3,
+  Box,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Droplets,
+  Leaf,
+  Menu,
+  Recycle,
+  Search,
+  ShieldCheck,
+  Sprout,
+  Sun,
+  Truck,
+  UserRound,
+  Zap,
+} from "lucide-react";
+
+export type CategoryItem = {
+  id: string;
+  name: string;
+  icon: string;
+};
+
+export type ProductCard = {
+  id: string;
+  title: string;
+  price: string;
+  unit: string;
+  vendor: string;
+  image?: string;
+  ecoVerified?: boolean;
+};
+
+export type SupplierCard = {
+  id: string;
+  name: string;
+  country: string;
+  state?: string;
+  subcategories?: string[];
+  rating: string;
+  mark: string;
+  badge: string;
+  isUnclaimed?: boolean;
+  listingVerified?: boolean;
+  listingBadgeType?: string;
+  publicContact?: Record<string, unknown>;
+};
+
+const sellerCities = [
+  { name: "Mumbai", search: "Mumbai" },
+  { name: "Delhi–NCR", search: "Delhi" },
+  { name: "Bengaluru", search: "Bengaluru" },
+  { name: "Chennai", search: "Chennai" },
+  { name: "Hyderabad", search: "Hyderabad" },
+  { name: "Pune", search: "Pune" },
+  { name: "Ahmedabad", search: "Ahmedabad" },
+  { name: "Kolkata", search: "Kolkata" },
+  { name: "Chandigarh", search: "Chandigarh" },
+  { name: "Indore", search: "Indore" },
+] as const;
+
+type HomepageAdSlide = {
+  id: string;
+  title: string;
+  imageUrl: string;
+  linkUrl: string;
+};
+
+const defaultHomepageAds: HomepageAdSlide[] = [
+  {
+    id: "advertise-with-sustainly",
+    title: "Put your sustainable business in front of verified buyers",
+    imageUrl: "/homepage-advertise-banner.svg",
+    linkUrl: "/contact",
+  },
+];
+
+const sideAdSlides = [
+  {
+    title: "Advertise Here",
+    text: "Reach 50k+ buyers every month",
+    image: "/logo.png",
+    imageAlt: "Sustainly Green",
+    href: "/contact",
+  },
+  {
+    title: "Promote Green Products",
+    text: "Reach sustainability-focused buyers",
+    image: "/favi.png",
+    imageAlt: "Sustainly Green marketplace",
+    href: "/contact",
+  },
+  {
+    title: "Grow Your Reach",
+    text: "Connect your responsible brand with new businesses",
+    image: "/log.webp",
+    imageAlt: "Sustainly Green business network",
+    href: "/register?role=VENDOR",
+  },
+];
+
+const sidebarCategories: CategoryItem[] = [
+  { id: "renewable-energy", name: "Renewable Energy", icon: "sun" },
+  { id: "energy-efficiency", name: "Energy Efficiency", icon: "zap" },
+  { id: "water-wastewater", name: "Water & Wastewater", icon: "drop" },
+  { id: "waste-management", name: "Waste Management", icon: "recycle" },
+  { id: "green-building", name: "Green Building", icon: "building" },
+  { id: "sustainable-materials", name: "Sustainable Materials", icon: "hex" },
+  { id: "eco-packaging", name: "Eco Packaging", icon: "box" },
+  { id: "electric-mobility", name: "Electric Mobility", icon: "truck" },
+  { id: "agriculture-organic", name: "Agriculture & Organic", icon: "sprout" },
+  { id: "environmental-monitoring", name: "Environmental Monitoring", icon: "chart" },
+];
+
+const quickActions = [
+  {
+    title: "Post Requirement",
+    text: "Share your need and get quotes from verified suppliers.",
+    action: "buyerRequirement",
+  },
+  {
+    title: "Request a Quote",
+    text: "Compare offers and choose the best deal.",
+    href: "/buyer/rfq/new",
+  },
+  {
+    title: "List Your Business",
+    text: "Showcase your products and grow your reach.",
+    href: "/register?role=VENDOR",
+  },
+  {
+    title: "Supplier Verification",
+    text: "Build trust with verified business badge.",
+    href: "/contact",
+  },
+];
+
+const topTabs = [
+  "Products",
+  "Suppliers",
+  "Certifications",
+  "Services",
+];
+
+const searchTags = [
+  "Solar Panels",
+  "Lithium Battery",
+  "LED High Bay Light",
+  "Rainwater Harvesting",
+  "Compost Machine",
+  "Bamboo Products",
+  "Recycled Plastic",
+  "Heat Pump",
+  "EV Charger",
+  "Water Purifier",
+];
+
+const trustItems = [
+  "Verified Suppliers",
+  "Quality Assured Products",
+  "Secure Transactions",
+  "Timely Delivery",
+  "Dedicated Support",
+];
+
+const certificationMarks = [
+  "ISO 14001",
+  "ISO 9001",
+  "CE",
+  "RoHS",
+  "Global Recycled Standard",
+];
+
+const staticProducts: ProductCard[] = [
+  {
+    id: "mono-perc-solar-module",
+    title: "Mono PERC Solar Module 550W",
+    price: "₹23",
+    unit: "Watt",
+    vendor: "SunPeak Energy",
+  },
+  {
+    id: "solar-led-street-light",
+    title: "Solar LED Street Light 100W",
+    price: "₹6,800",
+    unit: "Piece",
+    vendor: "BrightLite Solutions",
+  },
+  {
+    id: "on-grid-solar-inverter",
+    title: "On-Grid Solar Inverter 10kW",
+    price: "₹56,000",
+    unit: "Unit",
+    vendor: "VoltEdge Power",
+  },
+  {
+    id: "biogas-plant-25m3",
+    title: "Biogas Plant 25m3",
+    price: "₹3,50,000",
+    unit: "Unit",
+    vendor: "GreenGas Systems",
+  },
+];
+
+const staticFeaturedProducts: ProductCard[] = [
+  {
+    id: "evaporative-air-cooler",
+    title: "Evaporative Air Cooler 15000 CMH",
+    price: "₹26,500",
+    unit: "Unit",
+    vendor: "CoolBreeze Tech",
+  },
+  {
+    id: "recycled-paper-board",
+    title: "Recycled Paper Board 1.5mm",
+    price: "₹56",
+    unit: "Sq.ft.",
+    vendor: "EcoPulp Industries",
+  },
+  {
+    id: "rainwater-harvesting-tank",
+    title: "Rainwater Harvesting Tank 1000 Ltr",
+    price: "₹7,900",
+    unit: "Unit",
+    vendor: "AquaSave Solutions",
+  },
+  {
+    id: "ac-ev-charger",
+    title: "AC EV Charger 7.4kW Type 2",
+    price: "₹34,000",
+    unit: "Unit",
+    vendor: "ChargeGreen",
+  },
+  {
+    id: "organic-waste-composter",
+    title: "Organic Waste Composter 200kg/day",
+    price: "₹1,06,000",
+    unit: "Unit",
+    vendor: "CompoTech",
+  },
+  {
+    id: "stainless-water-purifier",
+    title: "Stainless Steel Water Purifier 25 LPH",
+    price: "₹17,500",
+    unit: "Unit",
+    vendor: "PureFlow Systems",
+  },
+];
+
+const staticSuppliers: SupplierCard[] = [
+  { id: "ecovolt", name: "EcoVolt Solutions", country: "India", state: "Tamil Nadu", rating: "4.8", mark: "EV", badge: "Claimed" },
+  { id: "greenbuild", name: "GreenBuild Exim", country: "Germany", state: "Bavaria", rating: "4.7", mark: "GB", badge: "Claimed" },
+  { id: "purewater", name: "PureWater Tech", country: "India", state: "Karnataka", rating: "4.9", mark: "PW", badge: "Claimed" },
+  { id: "sustainpack", name: "SustainPack Ltd.", country: "United Kingdom", state: "England", rating: "4.6", mark: "SP", badge: "Claimed" },
+];
+
+function categoryIcon(category: { id: string; name: string }, index: number) {
+  const key = `${category.id} ${category.name}`.toLowerCase();
+  if (key.includes("renewable")) return "sun";
+  if (key.includes("energy efficiency")) return "zap";
+  if (key.includes("water")) return "drop";
+  if (key.includes("waste")) return "recycle";
+  if (key.includes("building") || key.includes("infrastructure")) return "building";
+  if (key.includes("material")) return "hex";
+  if (key.includes("packag")) return "box";
+  if (key.includes("mobility") || key.includes("vehicle")) return "truck";
+  if (key.includes("agri") || key.includes("organic")) return "sprout";
+  if (key.includes("monitor") || key.includes("climate")) return "chart";
+  return sidebarCategories[index % sidebarCategories.length]?.icon || "sun";
+}
+
+function iconForCategory(icon: string) {
+  if (icon.startsWith("/")) {
+    return <Image src={icon} alt="" width={34} height={34} className="category-sdg-icon" />;
+  }
+
+  const commonProps = { size: 16, strokeWidth: 1.75 };
+
+  switch (icon) {
+    case "sun":
+      return <Sun {...commonProps} />;
+    case "zap":
+      return <Zap {...commonProps} />;
+    case "drop":
+      return <Droplets {...commonProps} />;
+    case "recycle":
+      return <Recycle {...commonProps} />;
+    case "building":
+      return <Building2 {...commonProps} />;
+    case "hex":
+      return <BadgeCheck {...commonProps} />;
+    case "box":
+      return <Box {...commonProps} />;
+    case "truck":
+      return <Truck {...commonProps} />;
+    case "sprout":
+      return <Sprout {...commonProps} />;
+    case "chart":
+      return <BarChart3 {...commonProps} />;
+    default:
+      return <Leaf {...commonProps} />;
+  }
+}
+
+function productHref(id: string) {
+  return `/products/${id}`;
+}
+
+type HomeClientProps = {
+  initialCategories: CategoryItem[];
+  initialBestSellers: ProductCard[];
+  initialFeaturedProducts: ProductCard[];
+  initialFeaturedSuppliers: SupplierCard[];
+};
+
+export default function HomeClient({
+  initialCategories,
+  initialBestSellers,
+  initialFeaturedProducts,
+  initialFeaturedSuppliers,
+}: HomeClientProps) {
+  const router = useRouter();
+  const cityStripRef = useRef<HTMLDivElement>(null);
+  const [searchText, setSearchText] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [profile, setProfile] = useState<SupabaseProfile | null>(null);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryItem[]>(initialCategories);
+
+  function scrollCities(direction: -1 | 1) {
+    const strip = cityStripRef.current;
+    if (!strip) return;
+    strip.scrollBy({
+      left: direction * Math.max(320, strip.clientWidth * 0.75),
+      behavior: "smooth",
+    });
+  }
+  const [bestSellers, setBestSellers] = useState<ProductCard[]>(initialBestSellers);
+  const [featuredProducts, setFeaturedProducts] = useState<ProductCard[]>(initialFeaturedProducts);
+  const [featuredSuppliers, setFeaturedSuppliers] = useState<SupplierCard[]>(initialFeaturedSuppliers);
+  const [homepageAds, setHomepageAds] = useState<HomepageAdSlide[]>(defaultHomepageAds);
+  const [heroSlide, setHeroSlide] = useState(0);
+  const [sideAdSlide, setSideAdSlide] = useState(0);
+
+  useEffect(() => {
+    async function loadAuth() {
+      try {
+        const user = await getCurrentUser();
+        const accessToken = getStoredSession()?.accessToken;
+
+        if (!user || !accessToken) {
+          setProfile(null);
+          return;
+        }
+
+        setProfile(await ensureCurrentProfile(accessToken));
+      } finally {
+        setAuthLoading(false);
+      }
+    }
+
+    void loadAuth();
+
+    function handleSessionSaved() {
+      void loadAuth();
+    }
+
+    function handleSessionCleared() {
+      setProfile(null);
+      setAuthLoading(false);
+    }
+
+    window.addEventListener(AUTH_SESSION_SAVED_EVENT, handleSessionSaved);
+    window.addEventListener(AUTH_SESSION_CLEARED_EVENT, handleSessionCleared);
+
+    return () => {
+      window.removeEventListener(AUTH_SESSION_SAVED_EVENT, handleSessionSaved);
+      window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, handleSessionCleared);
+    };
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/homepage/ads")
+      .then((response) => response.ok ? response.json() : { slides: [] })
+      .then((payload) => setHomepageAds([
+        ...defaultHomepageAds,
+        ...(Array.isArray(payload.slides) ? payload.slides : []),
+      ]))
+      .catch(() => setHomepageAds(defaultHomepageAds));
+  }, []);
+
+  useEffect(() => {
+    if (homepageAds.length === 0) {
+      setHeroSlide(0);
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setHeroSlide((current) => (current + 1) % (homepageAds.length + 1));
+    }, 5_000);
+    return () => window.clearInterval(timer);
+  }, [homepageAds.length]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setSideAdSlide((current) => (current + 1) % sideAdSlides.length);
+    }, 4_500);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function runSearch() {
+    const params = new URLSearchParams();
+
+    if (searchText.trim()) {
+      params.set("q", searchText.trim());
+    }
+
+    if (selectedCategory) {
+      params.set("category", selectedCategory);
+    }
+
+    router.push(`/browse${params.toString() ? `?${params.toString()}` : ""}`);
+  }
+
+  async function handleLogout() {
+    await signOutSupabase();
+    setProfile(null);
+    router.refresh();
+  }
+
+  const dashboardLink = profile ? redirectForRole(profile) : "/login";
+  function hrefForTopTab(tab: string) {
+    if (tab === "Suppliers") return "/browse?type=vendor";
+    if (tab === "Services") return "/browse?type=service";
+    if (tab === "Certifications") {
+      return "/certification";
+    }
+    return "/browse";
+  }
+
+  return (
+    <main className="market-home">
+      <div className="market-shell">
+        <header className="market-header">
+          <div className="utility-bar">
+            <div className="utility-spacer" />
+            <div className="utility-links">
+              <Link href="/buyer/dashboard">Buyer</Link>
+              <Link href="/vendor/dashboard">Supplier</Link>
+              <Link href="/resources">Resources</Link>
+              <Link href="/sdg-commitment">Our SDG Commitment</Link>
+            </div>
+          </div>
+
+          <div className="header-main">
+            <Link href="/" className="brand-lockup" aria-label="SustainlyGreen home">
+              <Image src="/log.webp" alt="SustainlyGreen" width={270} height={70} priority />
+            </Link>
+
+            <div className="mobile-menu-slot">
+              {!authLoading && profile ? (
+                <Link href={dashboardLink} className="mobile-auth-link mobile-auth-link-strong">
+                  Dashboard
+                </Link>
+              ) : (
+                <Link href="/login" className="mobile-auth-link">
+                  <UserRound size={15} />
+                  Sign In
+                </Link>
+              )}
+              <button
+                type="button"
+                className="mobile-menu-toggle"
+                onClick={() => setMobileMenuOpen((value) => !value)}
+                aria-label="Toggle menu"
+              >
+                <Menu size={20} />
+              </button>
+            </div>
+
+            <div className="search-bar">
+              <Search size={18} />
+              <input
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    runSearch();
+                  }
+                }}
+                placeholder="Search eco-friendly products, suppliers, categories..."
+              />
+              <select
+                value={selectedCategory}
+                onChange={(event) => setSelectedCategory(event.target.value)}
+                aria-label="Search category"
+              >
+                <option value="">All Categories</option>
+                {categoryOptions.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="search-button" onClick={runSearch}>
+                <Search size={18} />
+              </button>
+            </div>
+
+            <div className="account-actions">
+              {!authLoading && profile ? (
+                <>
+                  <span className="sign-in-link account-user">
+                    <UserRound size={18} />
+                    Hi, {profile.name || "User"}
+                  </span>
+                  <Link href={dashboardLink} className="join-button">
+                    Dashboard
+                  </Link>
+                  <button type="button" className="sign-in-link" onClick={handleLogout}>
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="sign-in-link">
+                    <UserRound size={18} />
+                    Sign In
+                  </Link>
+                  <Link href="/register?role=BUYER" className="join-button">
+                    Join Free
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className={`menu-row ${mobileMenuOpen ? "menu-row-open" : ""}`}>
+            <button type="button" className="menu-categories-button">
+              <Menu size={16} />
+              Categories
+            </button>
+            <nav className="menu-tabs" aria-label="Primary">
+              {topTabs.map((tab) => (
+                <Link
+                  key={tab}
+                  href={hrefForTopTab(tab)}
+                  className="menu-tab"
+                >
+                  {tab}
+                </Link>
+              ))}
+            </nav>
+            <div className="mobile-menu-auth">
+              {!authLoading && profile ? (
+                <>
+                  <Link href={dashboardLink} className="mobile-menu-auth-primary" onClick={() => setMobileMenuOpen(false)}>
+                    Dashboard
+                  </Link>
+                  <button
+                    type="button"
+                    className="mobile-menu-auth-secondary"
+                    onClick={() => {
+                      void handleLogout();
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="mobile-menu-auth-secondary" onClick={() => setMobileMenuOpen(false)}>
+                    Login
+                  </Link>
+                  <Link href="/register?role=BUYER" className="mobile-menu-auth-primary" onClick={() => setMobileMenuOpen(false)}>
+                    Sign up
+                  </Link>
+                  <Link href="/register?role=VENDOR" className="mobile-menu-auth-secondary" onClick={() => setMobileMenuOpen(false)}>
+                    List Business
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <section className="hero-composition">
+          <aside className="sidebar-card">
+            <div className="sidebar-list">
+              {categoryOptions.map((category) => (
+                <Link key={category.id} href={`/browse?category=${category.id}`} className="sidebar-link">
+                  <span className="sidebar-icon">{iconForCategory(category.icon)}</span>
+                  <span className="sidebar-label">{category.name}</span>
+                </Link>
+              ))}
+              <Link href="/categories" className="sidebar-link all-link">
+                <span className="sidebar-icon">{iconForCategory("sun")}</span>
+                <span className="sidebar-label">All Categories</span>
+                <span className="sidebar-arrow">
+                  <ArrowRight size={14} />
+                </span>
+              </Link>
+            </div>
+
+            <div className="sidebar-cta">
+              <p className="sidebar-cta-label">New to SustainlyGreen?</p>
+              <p>Join our network of sustainable businesses worldwide.</p>
+              <Link href="/register?role=VENDOR" className="sidebar-cta-button">
+                Join Free
+              </Link>
+            </div>
+          </aside>
+
+          <div className="hero-stack">
+            <div className={`hero-banner${heroSlide > 0 ? " hero-banner-ad" : ""}`}>
+              {heroSlide > 0 && homepageAds[heroSlide - 1] ? (
+                <div
+                  className="hero-ad-slide"
+                  style={{ backgroundImage: `url(${homepageAds[heroSlide - 1].imageUrl})` }}
+                >
+                  <Link
+                    href={homepageAds[heroSlide - 1].linkUrl}
+                    className="hero-ad-main-link"
+                    aria-label={
+                      homepageAds[heroSlide - 1].id === "homepage-banner"
+                        ? "View featured banner"
+                        : `View advertisement: ${homepageAds[heroSlide - 1].title}`
+                    }
+                  />
+                  <span className="hero-ad-label">Sponsored</span>
+                  {homepageAds[heroSlide - 1].title && (
+                    <span className="hero-ad-title">{homepageAds[heroSlide - 1].title}</span>
+                  )}
+                  <div className="hero-buttons hero-ad-buttons">
+                    <Link href="/browse" className="primary-hero-button">Explore Products</Link>
+                    <Link href="/browse?type=vendor" className="secondary-hero-button">Find Suppliers</Link>
+                  </div>
+                </div>
+              ) : (
+                <>
+              <div className="hero-copy">
+                <p className="hero-kicker">Powering a</p>
+                <h1>Sustainable Future</h1>
+                <p className="hero-text">
+                  Discover verified eco-friendly products and connect with trusted green suppliers.
+                </p>
+                <div className="hero-buttons">
+                  <Link href="/browse" className="primary-hero-button">
+                    Explore Products
+                  </Link>
+                  <Link href="/browse?type=vendor" className="secondary-hero-button">
+                    Find Suppliers
+                  </Link>
+                </div>
+              </div>
+
+              <div className="hero-visual" aria-hidden="true">
+                <Image
+                  src="/homepage-hero-visual.svg"
+                  alt=""
+                  width={820}
+                  height={430}
+                  className="hero-main-illustration"
+                />
+              </div>
+                </>
+              )}
+              {homepageAds.length > 0 && (
+                <div className="hero-slide-controls" aria-label="Homepage banner slides">
+                  {Array.from({ length: homepageAds.length + 1 }, (_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      aria-label={`Show banner ${index + 1}`}
+                      aria-current={heroSlide === index ? "true" : undefined}
+                      className={heroSlide === index ? "active" : ""}
+                      onClick={() => setHeroSlide(index)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          <aside className="ad-card">
+            <h3>{sideAdSlides[sideAdSlide].title}</h3>
+            <p>{sideAdSlides[sideAdSlide].text}</p>
+            <Image
+              src={sideAdSlides[sideAdSlide].image}
+              alt={sideAdSlides[sideAdSlide].imageAlt}
+              width={116}
+              height={116}
+              className="ad-visual"
+            />
+            <Link href={sideAdSlides[sideAdSlide].href} className="ad-button">
+              Learn More
+            </Link>
+            <div className="ad-dots" aria-label="Advertising slides">
+              {sideAdSlides.map((slide, index) => (
+                <button
+                  key={slide.title}
+                  type="button"
+                  aria-label={`Show advertisement ${index + 1}`}
+                  aria-current={sideAdSlide === index ? "true" : undefined}
+                  className={`ad-dot${sideAdSlide === index ? " ad-dot-active" : ""}`}
+                  onClick={() => setSideAdSlide(index)}
+                />
+              ))}
+            </div>
+          </aside>
+
+          <div className="quick-action-grid">
+            {quickActions.map((item, index) => {
+              const content = (
+                <>
+                <div className="quick-action-icon">
+                  <BadgeCheck size={20} />
+                </div>
+                <div className="quick-action-copy">
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </div>
+                <ArrowRight size={16} />
+                </>
+              );
+
+              if (item.action === "buyerRequirement") {
+                return (
+                  <button
+                    key={item.title}
+                    type="button"
+                    className={`quick-action-card quick-action-button quick-action-tone-${index + 1}`}
+                    onClick={() => {
+                      if (profile?.role === "BUYER") {
+                        router.push("/buyer/rfq/new");
+                      } else if (profile) {
+                        router.push(redirectForRole(profile));
+                      } else {
+                        router.push("/register?role=BUYER");
+                      }
+                    }}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.title}
+                  href={item.href || "/browse"}
+                  className={`quick-action-card quick-action-tone-${index + 1}${item.title === "Supplier Verification" ? " verification-card" : ""}`}
+                >
+                  {content}
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="section-block">
+          <div className="section-head">
+            <h2>Shop by Category</h2>
+            <Link href="/categories">View all categories</Link>
+          </div>
+          <div className="category-strip">
+            {categoryOptions.map((category) => (
+              <Link key={category.id} href={`/browse?category=${category.id}`} className="category-pill-card">
+                <span className="category-pill-icon">{iconForCategory(category.icon)}</span>
+                <span>{category.name}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="section-block city-sellers-section">
+          <div className="section-head">
+            <div>
+              <h2>Sellers by Cities</h2>
+              <p className="city-sellers-subtitle">Discover verified suppliers across India&apos;s leading business hubs</p>
+            </div>
+            <Link href="/browse?type=vendor">View all vendors</Link>
+          </div>
+          <div className="city-strip-shell">
+            <button
+              type="button"
+              className="city-scroll-button city-scroll-left"
+              onClick={() => scrollCities(-1)}
+              aria-label="Scroll cities left"
+            >
+              <ChevronLeft size={21} />
+            </button>
+            <div className="city-card-strip" ref={cityStripRef}>
+              {sellerCities.map((city, index) => (
+                <Link
+                  key={city.name}
+                  href={`/browse?type=vendor&q=${encodeURIComponent(city.search)}`}
+                  className="city-card"
+                  aria-label={`Browse sellers in ${city.name}`}
+                  style={{
+                    backgroundImage: "url('/sellers-by-cities.jpg')",
+                    backgroundPosition: `${(index % 5) * 25}% ${index < 5 ? 0 : 100}%`,
+                  }}
+                >
+                  <span>{city.name}</span>
+                </Link>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="city-scroll-button city-scroll-right"
+              onClick={() => scrollCities(1)}
+              aria-label="Scroll cities right"
+            >
+              <ChevronRight size={21} />
+            </button>
+          </div>
+        </section>
+
+        <section className="split-section">
+          <div className="split-panel">
+            <div className="section-head">
+              <h2>Best Sellers</h2>
+              <Link href="/browse">View all</Link>
+            </div>
+            <div className="card-grid best-seller-grid">
+              {bestSellers.map((product, index) => (
+                <Link key={product.id} href={productHref(product.id)} className="product-card">
+                  <div className={`product-media media-${index % 4}`}>
+                    {product.ecoVerified && (
+                      <span className="home-eco-badge">
+                        <img src="/eco-verified-badge.png" alt="" />
+                        Eco Verified
+                      </span>
+                    )}
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.title}
+                        className="home-product-image"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="product-placeholder" />
+                    )}
+                  </div>
+                  <div className="product-info">
+                    <h3>{product.title}</h3>
+                    <div className="product-price-row">
+                      <p className="product-price">{product.price}</p>
+                      {!product.price.toLowerCase().includes("request") && (
+                        <span className="product-unit">/ {product.unit}</span>
+                      )}
+                    </div>
+                    <p className="product-vendor">By: {product.vendor}</p>
+                    <p className="verified-label">Approved listing</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <button type="button" className="carousel-arrow carousel-arrow-left" aria-label="Previous best sellers">
+              <ChevronLeft size={18} />
+            </button>
+            <button type="button" className="carousel-arrow carousel-arrow-right" aria-label="Next best sellers">
+              <ChevronRight size={18} />
+            </button>
+          </div>
+
+          <div className="split-panel">
+            <div className="section-head">
+              <h2>Listed Green Vendors</h2>
+              <Link href="/browse?type=vendor">View all</Link>
+            </div>
+            <div className="card-grid four-up">
+              {featuredSuppliers.map((supplier, index) => (
+                <Link key={supplier.id} href={`/find-vendors/${supplier.id}`} className="supplier-card">
+                  {getVendorBadgeMeta(supplier) && (
+                    <img src={getVendorBadgeMeta(supplier)?.src} alt={getVendorBadgeMeta(supplier)?.label} className="supplier-verified-img" />
+                  )}
+                  <div className={`supplier-mark mark-${index % 4}`}>{supplier.mark}</div>
+                  <h3>{supplier.name}</h3>
+                  <p className="supplier-country">{supplier.state || supplier.country}</p>
+                  <p className="verified-label">
+                    {supplier.badge} vendor
+                  </p>
+                </Link>
+              ))}
+            </div>
+            <button type="button" className="carousel-arrow carousel-arrow-right" aria-label="Next suppliers">
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </section>
+
+        <section className="section-block compact-gap">
+          <div className="section-head left-heavy">
+            <h2>Popular Searches</h2>
+          </div>
+          <div className="tag-row">
+            {searchTags.map((tag) => (
+              <Link key={tag} href={`/browse?q=${encodeURIComponent(tag)}`} className="tag-chip">
+                <Search size={13} />
+                {tag}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="trust-band">
+          <div className="trust-head">
+            <h2>Trusted, Verified &amp; Certified</h2>
+          </div>
+          <div className="trust-points">
+            {trustItems.map((item) => (
+              <div key={item} className="trust-point">
+                <ShieldCheck size={16} />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+          <div className="trust-certifications">
+            <p>Our Certifications</p>
+            <div className="certification-list">
+              {certificationMarks.map((item) => (
+                <span key={item} className="certification-badge">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section-block featured-products-section">
+          <div className="section-head">
+            <h2>Featured Products</h2>
+            <Link href="/browse">View all products</Link>
+          </div>
+          <div className="card-grid six-up">
+            {featuredProducts.map((product, index) => (
+              <Link key={product.id} href={productHref(product.id)} className="product-card compact-product-card">
+                <div className={`product-media media-${index % 4}`}>
+                  {product.ecoVerified && (
+                    <span className="home-eco-badge">
+                      <img src="/eco-verified-badge.png" alt="" />
+                      Eco Verified
+                    </span>
+                  )}
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.title}
+                      className="home-product-image"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="product-placeholder" />
+                  )}
+                </div>
+                <div className="product-info">
+                  <h3>{product.title}</h3>
+                  <div className="product-price-row">
+                    <p className="product-price">{product.price}</p>
+                    {!product.price.toLowerCase().includes("request") && (
+                      <span className="product-unit">/ {product.unit}</span>
+                    )}
+                  </div>
+                  <p className="product-vendor">By: {product.vendor}</p>
+                  <p className="verified-label">Approved listing</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <Footer />
+
+      <style>{`
+        .market-home {
+          background: #fcfdfb;
+          color: #10241b;
+          width: 100%;
+          max-width: 100%;
+          overflow-x: hidden;
+        }
+
+        .market-shell {
+          width: 100%;
+          max-width: none;
+          margin: 0;
+          padding: 0 0 48px;
+          overflow-x: hidden;
+        }
+
+        .quick-action-button {
+          border: 0;
+          text-align: left;
+          width: 100%;
+          font: inherit;
+          cursor: pointer;
+        }
+
+        .supplier-subcats {
+          margin: 2px 0 0;
+          color: #516257;
+          font-size: 12px;
+          line-height: 1.35;
+        }
+
+        .notice-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 80;
+          display: grid;
+          place-items: center;
+          padding: 20px;
+          background: rgba(7, 22, 14, 0.48);
+          backdrop-filter: blur(6px);
+        }
+
+        .notice-card {
+          position: relative;
+          width: min(440px, 100%);
+          border-radius: 22px;
+          background: #fff;
+          border: 1px solid #dfe9e2;
+          box-shadow: 0 24px 70px rgba(7, 22, 14, 0.24);
+          padding: 28px;
+          color: #10241b;
+        }
+
+        .notice-close {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          width: 32px;
+          height: 32px;
+          border: 1px solid #dfe9e2;
+          border-radius: 50%;
+          background: #fff;
+          color: #516257;
+          font-size: 20px;
+          line-height: 1;
+          cursor: pointer;
+        }
+
+        .notice-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 16px;
+          display: grid;
+          place-items: center;
+          color: #147a3d;
+          background: #ecfdf3;
+          margin-bottom: 18px;
+        }
+
+        .notice-card h2 {
+          margin: 0 0 10px;
+          font-size: 24px;
+          line-height: 1.15;
+          letter-spacing: 0;
+        }
+
+        .notice-card p {
+          margin: 0;
+          color: #5b6b61;
+          font-size: 14px;
+          line-height: 1.65;
+        }
+
+        .notice-actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 22px;
+        }
+
+        .notice-primary,
+        .notice-secondary {
+          min-height: 42px;
+          border-radius: 999px;
+          padding: 0 18px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 13px;
+          font-weight: 800;
+          text-decoration: none;
+        }
+
+        .notice-primary {
+          background: #147a3d;
+          color: #fff;
+        }
+
+        .notice-secondary {
+          border: 1px solid #dfe9e2;
+          background: #fff;
+          color: #10241b;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .market-header {
+          background: #fff;
+          border-bottom: 1px solid #e4ece6;
+          border-left: 0;
+          border-right: 0;
+          border-top: 0;
+          border-radius: 0;
+          box-shadow: 0 10px 24px rgba(17, 48, 33, 0.04);
+          padding: 14px 24px 0;
+          margin-bottom: 18px;
+          max-width: 100%;
+          overflow-x: hidden;
+        }
+
+        .utility-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 13px;
+          color: #466354;
+          margin-bottom: 12px;
+        }
+
+        .utility-links {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          margin-left: auto;
+        }
+
+        .utility-links a,
+        .utility-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          color: #466354;
+          background: transparent;
+          font-size: 13px;
+          padding: 6px 10px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition:
+            color 170ms ease,
+            background-color 170ms ease,
+            box-shadow 170ms ease,
+            transform 170ms ease;
+        }
+
+        .utility-links a:hover,
+        .utility-link:hover {
+          color: #fff;
+          background: #287e40;
+          box-shadow: 0 6px 14px rgba(31, 111, 53, 0.18);
+          transform: translateY(-2px);
+        }
+
+        .utility-links a:active,
+        .utility-link:active {
+          transform: translateY(0) scale(0.97);
+        }
+
+        .utility-links a:focus-visible,
+        .utility-link:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 2px;
+        }
+
+        .header-main {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 12px;
+          padding-bottom: 14px;
+          min-width: 0;
+          width: 100%;
+          max-width: 100%;
+        }
+
+        .brand-lockup {
+          display: inline-flex;
+          align-items: center;
+          flex: 1 1 auto;
+          min-width: 0;
+          max-width: calc(100% - 54px);
+        }
+
+        .brand-lockup img {
+          height: auto;
+          width: min(156px, 48vw);
+          max-width: 100%;
+        }
+
+        .search-bar {
+          display: grid;
+          order: 3;
+          flex: 1 0 100%;
+          width: 100%;
+          max-width: calc(100vw - 48px);
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          border: 1px solid #d8e4dc;
+          border-radius: 14px;
+          overflow: hidden;
+          min-height: 48px;
+          background: #fff;
+          min-width: 0;
+          max-width: 100%;
+        }
+
+        .search-bar svg {
+          margin-left: 16px;
+          color: #6e8578;
+        }
+
+        .search-bar input,
+        .search-bar select {
+          border: 0;
+          background: transparent;
+          outline: 0;
+          font: inherit;
+          color: #1a3427;
+          min-width: 0;
+        }
+
+        .search-bar input {
+          padding: 0 14px;
+        }
+
+        .search-bar select {
+          display: none;
+          border-left: 1px solid #e1e8e3;
+          padding: 0 16px;
+          min-height: 48px;
+          color: #2e4a3b;
+        }
+
+        .search-button {
+          min-width: 52px;
+          min-height: 48px;
+          background: linear-gradient(180deg, #2e8f45, #206f35);
+          color: #fff;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .search-button svg {
+          margin-left: 0;
+          color: currentColor;
+        }
+
+        .search-button:hover {
+          filter: brightness(0.9);
+          box-shadow: 0 6px 14px rgba(31, 111, 53, 0.24);
+        }
+
+        .account-actions {
+          display: none;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .sign-in-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 12px;
+          border-radius: 10px;
+          color: #183426;
+          font-weight: 500;
+        }
+
+        .join-button {
+          border: 1px solid #abc0b1;
+          padding: 11px 18px;
+          border-radius: 12px;
+          font-weight: 600;
+          color: #204230;
+          background: #fff;
+        }
+
+        .sign-in-link,
+        .join-button,
+        .primary-hero-button,
+        .secondary-hero-button,
+        .sidebar-cta-button,
+        .ad-button,
+        .search-button {
+          cursor: pointer;
+          transition:
+            color 170ms ease,
+            background-color 170ms ease,
+            border-color 170ms ease,
+            box-shadow 170ms ease,
+            transform 170ms ease,
+            filter 170ms ease;
+        }
+
+        .sign-in-link:hover {
+          color: #176d35;
+          background: #eef7f0;
+          transform: translateY(-1px);
+        }
+
+        .join-button:hover {
+          color: #fff;
+          background: #247d3c;
+          border-color: #247d3c;
+          box-shadow: 0 8px 18px rgba(31, 111, 53, 0.2);
+          transform: translateY(-2px);
+        }
+
+        .sign-in-link:focus-visible,
+        .join-button:focus-visible,
+        .primary-hero-button:focus-visible,
+        .secondary-hero-button:focus-visible,
+        .sidebar-cta-button:focus-visible,
+        .ad-button:focus-visible,
+        .search-button:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 3px;
+        }
+
+        .sign-in-link:active,
+        .join-button:active,
+        .primary-hero-button:active,
+        .secondary-hero-button:active,
+        .sidebar-cta-button:active,
+        .ad-button:active,
+        .search-button:active {
+          transform: translateY(0) scale(0.98);
+        }
+
+        .mobile-menu-toggle {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          background: #eef5f0;
+          color: #173326;
+        }
+
+        .mobile-menu-slot {
+          display: flex;
+          flex: 0 0 auto;
+          align-items: center;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .mobile-auth-link {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          min-height: 42px;
+          padding: 0 12px;
+          border: 1px solid #d9e5dd;
+          border-radius: 12px;
+          background: #fff;
+          color: #183426;
+          font-size: 13px;
+          font-weight: 700;
+          line-height: 1;
+          white-space: nowrap;
+        }
+
+        .mobile-auth-link-strong {
+          background: #206f35;
+          border-color: #206f35;
+          color: #fff;
+        }
+
+        .menu-row {
+          display: flex;
+          align-items: stretch;
+          gap: 0;
+          border-top: 1px solid #edf2ee;
+          border-bottom: 1px solid #e5ede7;
+          padding: 8px 0 0;
+        }
+
+        .menu-categories-button {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          height: 52px;
+          padding: 0 18px;
+          border-radius: 0;
+          background: #f0f6f1;
+          border: 1px solid #e0ebe3;
+          font-weight: 600;
+          color: #173326;
+          width: 250px;
+          min-width: 250px;
+          font-size: 14px;
+          line-height: 1;
+          justify-content: flex-start;
+        }
+
+        .menu-tabs {
+          display: flex;
+          align-items: center;
+          gap: 2px;
+          flex-wrap: wrap;
+          min-height: 52px;
+          padding-left: 14px;
+        }
+
+        .menu-tab {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          height: 52px;
+          padding: 0 14px;
+          font-size: 14px;
+          font-weight: 600;
+          line-height: 1;
+          letter-spacing: 0.01em;
+          color: #244536;
+          border-radius: 0;
+          transition: color 160ms ease, background-color 160ms ease;
+        }
+
+        .menu-tab:hover {
+          color: #176d35;
+          background: #f5f9f6;
+        }
+
+        .menu-tab::after {
+          content: "";
+          position: absolute;
+          right: 14px;
+          bottom: 0;
+          left: 14px;
+          height: 2px;
+          background: #2d8746;
+          transform: scaleX(0);
+          transform-origin: center;
+          transition: transform 160ms ease;
+        }
+
+        .menu-tab:hover::after,
+        .menu-tab:focus-visible::after {
+          transform: scaleX(1);
+        }
+
+        .mobile-menu-auth {
+          display: none;
+        }
+
+        .mobile-menu-auth-primary,
+        .mobile-menu-auth-secondary {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 44px;
+          padding: 0 14px;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 700;
+          text-align: center;
+        }
+
+        .mobile-menu-auth-primary {
+          background: #206f35;
+          color: #fff;
+          border: 1px solid #206f35;
+        }
+
+        .mobile-menu-auth-secondary {
+          background: #fff;
+          color: #183426;
+          border: 1px solid #d9e5dd;
+        }
+
+        @media (min-width: 981px) {
+          .header-main {
+            display: grid;
+            grid-template-columns: auto minmax(320px, 1fr) auto;
+            gap: 22px;
+            width: auto;
+          }
+
+          .brand-lockup {
+            max-width: none;
+          }
+
+          .brand-lockup img {
+            width: 230px;
+          }
+
+          .search-bar {
+            order: initial;
+            flex: initial;
+            width: auto;
+            max-width: 100%;
+            grid-template-columns: auto minmax(0, 1fr) auto auto;
+          }
+
+          .search-bar select {
+            display: block;
+          }
+
+          .account-actions {
+            display: flex;
+          }
+
+          .mobile-menu-slot {
+            display: none;
+          }
+
+          .mobile-menu-toggle {
+            display: none;
+          }
+        }
+
+        .hero-composition {
+          display: grid;
+          grid-template-columns: 250px minmax(0, 1fr) 190px;
+          grid-template-rows: auto 112px;
+          column-gap: 16px;
+          row-gap: 14px;
+          align-items: start;
+          padding: 0 24px;
+          margin-top: 0;
+          min-width: 0;
+          max-width: 100%;
+        }
+
+        .sidebar-card,
+        .ad-card,
+        .hero-banner,
+        .quick-action-card,
+        .category-pill-card,
+        .product-card,
+        .supplier-card,
+        .trust-band,
+        .split-panel {
+          background: #fff;
+          border: 1px solid #e5ede7;
+          box-shadow: 0 10px 24px rgba(18, 46, 32, 0.05);
+        }
+
+        .sidebar-card {
+          border-radius: 0;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          margin-top: 0;
+          box-shadow: none;
+          align-self: stretch;
+          grid-column: 1;
+          grid-row: 1 / 3;
+          height: auto;
+        }
+
+        .sidebar-list {
+          display: flex;
+          flex-direction: column;
+          flex: 1 1 auto;
+          justify-content: space-evenly;
+          gap: 2px;
+          min-height: 0;
+          padding: 8px 0;
+        }
+
+        .sidebar-link {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 4px 20px;
+          min-height: 0;
+          flex: 1 1 0;
+          font-size: 13px;
+          line-height: 1.35;
+          color: #274839;
+          border-bottom: 0;
+          cursor: pointer;
+          transition:
+            color 170ms ease,
+            background-color 170ms ease,
+            box-shadow 170ms ease,
+            transform 170ms ease;
+        }
+
+        .sidebar-link:hover {
+          color: #176d35;
+          background: #edf7ef;
+          box-shadow: inset 3px 0 0 #2b7a40;
+          transform: translateX(3px);
+        }
+
+        .sidebar-link:hover .sidebar-icon {
+          color: #1f7b3a;
+          transform: translateY(1px) scale(1.12);
+        }
+
+        .sidebar-link:active {
+          background: #e4f1e7;
+          transform: translateX(1px) scale(0.99);
+        }
+
+        .sidebar-link:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: -3px;
+        }
+
+        .all-link {
+          font-weight: 600;
+        }
+
+        .sidebar-arrow {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 auto;
+          margin-left: auto;
+        }
+
+        .sidebar-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 18px;
+          color: #537464;
+          width: 18px;
+          height: 18px;
+          transform: translateY(1px);
+          transition: color 170ms ease, transform 170ms ease;
+        }
+
+        .sidebar-icon svg {
+          display: block;
+          width: 14px;
+          height: 14px;
+          stroke-width: 1.6;
+        }
+
+        .category-sdg-icon {
+          display: block;
+          width: 100%;
+          height: 100%;
+          border-radius: inherit;
+          object-fit: cover;
+        }
+
+        .sidebar-label {
+          display: inline-flex;
+          align-items: center;
+          min-height: 18px;
+          line-height: 1.15;
+        }
+
+        .sidebar-cta {
+          background: linear-gradient(180deg, #eef6ef, #f7fbf8);
+          padding: 14px 18px;
+          border-top: 1px solid #e3ece5;
+          display: grid;
+          gap: 10px;
+          color: #355545;
+          font-size: 13px;
+          line-height: 1.45;
+          min-height: 136px;
+          flex: 0 0 136px;
+          align-content: start;
+        }
+
+        .sidebar-cta-label {
+          font-weight: 700;
+          color: #173326;
+          font-size: 13px;
+        }
+
+        .sidebar-cta .sidebar-cta-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 145px;
+          max-width: 100%;
+          min-height: 36px;
+          margin-top: 6px;
+          padding: 8px 18px;
+          border-radius: 6px;
+          background: linear-gradient(180deg, #2a8a43, #1f6f35);
+          color: #fff;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .sidebar-cta .sidebar-cta-button:hover {
+          filter: brightness(0.9);
+          box-shadow: 0 8px 16px rgba(31, 111, 53, 0.24);
+          transform: translateY(-2px);
+        }
+
+        .hero-stack {
+          display: block;
+          grid-column: 2;
+          grid-row: 1;
+          height: auto;
+          margin-top: 16px;
+          min-width: 0;
+        }
+
+        .hero-banner {
+          position: relative;
+          border-radius: 22px;
+          padding: 28px 30px 22px;
+          background: linear-gradient(135deg, #f5fbf6 0%, #edf7ef 45%, #f8fcf9 100%);
+          display: grid;
+          grid-template-columns: minmax(300px, 420px) minmax(260px, 1fr);
+          gap: 14px;
+          overflow: hidden;
+          height: 330px;
+          min-height: 330px;
+          min-width: 0;
+        }
+
+        .hero-banner.hero-banner-ad {
+          display: block;
+          padding: 0;
+          background: #e9f3ec;
+        }
+
+        .hero-ad-slide {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          padding: 34px;
+          background-position: center;
+          background-size: cover;
+          color: #fff;
+          isolation: isolate;
+        }
+
+        .hero-ad-main-link {
+          position: absolute;
+          z-index: 1;
+          inset: 0;
+        }
+
+        .hero-ad-slide::after {
+          content: "";
+          position: absolute;
+          z-index: -1;
+          inset: 0;
+          background: linear-gradient(180deg, transparent 35%, rgba(4, 22, 11, 0.74));
+        }
+
+        .hero-ad-label {
+          position: relative;
+          z-index: 2;
+          width: fit-content;
+          margin-bottom: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.55);
+          border-radius: 999px;
+          padding: 5px 10px;
+          background: rgba(0, 0, 0, 0.24);
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+        }
+
+        .hero-ad-title {
+          position: relative;
+          z-index: 2;
+          max-width: 70%;
+          font-size: clamp(22px, 3vw, 36px);
+          font-weight: 750;
+          line-height: 1.1;
+          text-shadow: 0 2px 18px rgba(0, 0, 0, 0.36);
+        }
+
+        .hero-ad-buttons {
+          position: relative;
+          z-index: 3;
+          margin-top: 18px;
+        }
+
+        .hero-ad-buttons .secondary-hero-button {
+          border-color: rgba(255, 255, 255, 0.72);
+          background: rgba(255, 255, 255, 0.94);
+        }
+
+        .hero-slide-controls {
+          position: absolute;
+          z-index: 5;
+          right: 22px;
+          bottom: 18px;
+          display: flex;
+          gap: 7px;
+          border-radius: 999px;
+          padding: 7px 9px;
+          background: rgba(10, 35, 18, 0.2);
+          backdrop-filter: blur(6px);
+        }
+
+        .hero-slide-controls button {
+          width: 8px;
+          height: 8px;
+          border: 0;
+          border-radius: 999px;
+          padding: 0;
+          background: rgba(255, 255, 255, 0.58);
+          cursor: pointer;
+          transition: width 180ms ease, background-color 180ms ease;
+        }
+
+        .hero-slide-controls button.active {
+          width: 24px;
+          background: #fff;
+        }
+
+        .hero-copy {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        .hero-kicker {
+          font-size: 15px;
+          font-weight: 700;
+          color: #2d7e43;
+          margin: 0;
+        }
+
+        .hero-copy h1 {
+          font-size: clamp(2.65rem, 3.7vw, 3.65rem);
+          line-height: 1.02;
+          letter-spacing: -0.04em;
+          margin: 0;
+          overflow-wrap: anywhere;
+        }
+
+        .hero-text {
+          max-width: 390px;
+          color: #456353;
+          font-size: 16px;
+          line-height: 1.45;
+          margin: 0;
+        }
+
+        .hero-buttons {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-top: 8px;
+        }
+
+        .primary-hero-button,
+        .secondary-hero-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 154px;
+          min-height: 46px;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 14px;
+        }
+
+        .primary-hero-button {
+          background: linear-gradient(180deg, #31984c, #206f35);
+          color: #fff;
+        }
+
+        .secondary-hero-button {
+          border: 1px solid #adc2b2;
+          color: #1f3b2d;
+          background: rgba(255, 255, 255, 0.75);
+        }
+
+        .primary-hero-button:hover {
+          filter: brightness(0.9);
+          box-shadow: 0 10px 20px rgba(31, 111, 53, 0.24);
+          transform: translateY(-2px);
+        }
+
+        .secondary-hero-button:hover {
+          color: #fff;
+          background: #247d3c;
+          border-color: #247d3c;
+          box-shadow: 0 10px 20px rgba(31, 111, 53, 0.18);
+          transform: translateY(-2px);
+        }
+
+        .hero-visual {
+          position: relative;
+          min-height: 220px;
+          min-width: 0;
+          max-width: 100%;
+          display: grid;
+          place-items: center;
+          overflow: hidden;
+        }
+
+        .hero-main-illustration {
+          display: block;
+          width: 100%;
+          height: 250px;
+          object-fit: contain;
+          object-position: center;
+        }
+
+        .hero-arc {
+          position: absolute;
+          inset: 8px 42px 42px 54px;
+          border: 10px solid #48b159;
+          border-right-color: transparent;
+          border-bottom-color: transparent;
+          border-radius: 999px;
+          transform: rotate(11deg);
+          opacity: 0.9;
+        }
+
+        .hero-leaf {
+          position: absolute;
+          width: 28px;
+          height: 18px;
+          border-radius: 50% 0 50% 50%;
+          background: linear-gradient(135deg, #66c25f, #2b9542);
+          transform: rotate(-24deg);
+        }
+
+        .hero-impact-image {
+          position: absolute;
+          z-index: 2;
+          top: 10px;
+          right: 38px;
+          width: 78px;
+          height: 78px;
+          border: 5px solid rgba(255, 255, 255, 0.92);
+          border-radius: 22px;
+          object-fit: cover;
+          box-shadow: 0 14px 28px rgba(24, 82, 45, 0.18);
+          transform: rotate(3deg);
+        }
+
+        .hero-leaf-side {
+          top: 102px;
+          left: 34px;
+        }
+
+        .hero-windmill {
+          position: absolute;
+          top: 12px;
+          left: 102px;
+          width: 2px;
+          height: 108px;
+          background: #b4beb7;
+        }
+
+        .hero-windmill::before,
+        .hero-windmill::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 12px;
+          width: 1px;
+          height: 50px;
+          background: #b4beb7;
+          transform-origin: bottom center;
+        }
+
+        .hero-windmill::before {
+          transform: translateX(-50%) rotate(54deg);
+        }
+
+        .hero-windmill::after {
+          transform: translateX(-50%) rotate(-54deg);
+        }
+
+        .hero-energy-unit {
+          position: absolute;
+          right: 34px;
+          bottom: 18px;
+          width: 190px;
+          height: 142px;
+          border-radius: 16px;
+          background: linear-gradient(145deg, #ffffff, #edf3ef);
+          border: 1px solid #d7e3da;
+          box-shadow: 0 18px 34px rgba(39, 69, 50, 0.12);
+        }
+
+        .hero-energy-unit::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 0 auto;
+          width: 8px;
+          border-radius: 0 16px 16px 0;
+          background: linear-gradient(180deg, #27863f, #19642c);
+        }
+
+        .hero-energy-label {
+          position: absolute;
+          top: 32px;
+          left: 28px;
+          max-width: 72px;
+          font-size: 14px;
+          line-height: 1.15;
+          letter-spacing: 0.08em;
+          color: #233c2f;
+        }
+
+        .hero-solar-row {
+          position: absolute;
+          left: 56px;
+          bottom: 12px;
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+        }
+
+        .hero-solar-panel {
+          width: 112px;
+          height: 84px;
+          border-radius: 10px;
+          background:
+            linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+            linear-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+            linear-gradient(180deg, #304f79, #15243d);
+          background-size: 18px 18px, 18px 18px, 100% 100%;
+          transform: skew(-14deg);
+          box-shadow: 0 16px 26px rgba(14, 34, 54, 0.22);
+        }
+
+        .panel-tilt {
+          width: 138px;
+          height: 92px;
+          transform: skew(-14deg) translateY(2px);
+        }
+
+        .ad-card {
+          position: relative;
+          grid-column: 3;
+          grid-row: 1;
+          border-radius: 22px;
+          padding: 18px 16px 46px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          justify-content: center;
+          align-items: center;
+          justify-items: center;
+          text-align: center;
+          background: linear-gradient(180deg, #f3faf5, #fdfefe);
+          height: 330px;
+          min-height: 330px;
+          max-height: 330px;
+          margin-top: 16px;
+        }
+
+        .ad-badge {
+          width: 58px;
+          height: 58px;
+          border-radius: 999px;
+          background: #f0f6f1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #2b7440;
+        }
+
+        .ad-card h3,
+        .quick-action-copy h3,
+        .product-info h3,
+        .supplier-card h3,
+        .section-head h2,
+        .trust-head h2 {
+          margin: 0;
+        }
+
+        .ad-card p,
+        .quick-action-copy p,
+        .product-vendor,
+        .supplier-country {
+          margin: 0;
+          color: #536e61;
+        }
+
+        .ad-card h3 {
+          font-size: 16px;
+          max-width: 170px;
+        }
+
+        .ad-card p {
+          font-size: 13px;
+          line-height: 1.45;
+          max-width: 170px;
+        }
+
+        .ad-visual {
+          width: 64px;
+          height: 64px;
+          border-radius: 16px;
+          object-fit: contain;
+          box-shadow: 0 10px 22px rgba(25, 72, 106, 0.16);
+        }
+
+        .ad-button {
+          border: 1px solid #b4c6ba;
+          border-radius: 10px;
+          padding: 10px 16px;
+          font-weight: 600;
+          color: #173326;
+          background: #fff;
+        }
+
+        .ad-button:hover {
+          color: #fff;
+          background: #247d3c;
+          border-color: #247d3c;
+          box-shadow: 0 8px 16px rgba(31, 111, 53, 0.18);
+          transform: translateY(-2px);
+        }
+
+        .ad-dots {
+          position: absolute;
+          left: 50%;
+          bottom: 20px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transform: translateX(-50%);
+        }
+
+        .ad-dot {
+          width: 6px;
+          height: 6px;
+          border: 0;
+          padding: 0;
+          border-radius: 999px;
+          background: #ccd9d0;
+          cursor: pointer;
+          transition: width 180ms ease, background-color 180ms ease;
+        }
+
+        .ad-dot-active {
+          width: 18px;
+          background: #2b7a40;
+        }
+
+        .ad-dot:focus-visible {
+          outline: 2px solid #2b7a40;
+          outline-offset: 3px;
+        }
+
+        .quick-action-grid {
+          display: grid;
+          grid-column: 2 / 4;
+          grid-row: 2;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .quick-action-card {
+          border-radius: 16px;
+          padding: 15px 18px;
+          display: grid;
+          grid-template-columns: 44px minmax(0, 1fr) 16px;
+          gap: 14px;
+          align-items: center;
+          min-height: 112px;
+          min-width: 0;
+          border: 1px solid #e5ede7;
+          box-shadow: 0 10px 24px rgba(18, 46, 32, 0.055);
+          transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .quick-action-card:hover {
+          transform: translateY(-3px);
+          border-color: #cddfd2;
+          box-shadow: 0 16px 30px rgba(18, 46, 32, 0.09);
+        }
+
+        .verification-card {
+          background: linear-gradient(180deg, #eef7ef, #fbfdfb);
+        }
+
+        .quick-action-tone-1 {
+          background: linear-gradient(145deg, #eaf5ff, #f7fbff);
+          border-color: #cfe5f7;
+        }
+
+        .quick-action-tone-2 {
+          background: linear-gradient(145deg, #fff8d9, #fffdf3);
+          border-color: #f0e2a9;
+        }
+
+        .quick-action-tone-3 {
+          background: linear-gradient(145deg, #edf9ef, #f9fdf9);
+          border-color: #cfe8d4;
+        }
+
+        .quick-action-tone-4 {
+          background: linear-gradient(145deg, #f5efff, #fcf9ff);
+          border-color: #dfd2f2;
+        }
+
+        .quick-action-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 999px;
+          background: #eff6f0;
+          color: #2c7340;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .quick-action-copy p {
+          font-size: 13px;
+          line-height: 1.4;
+          margin-top: 5px;
+          max-width: 220px;
+        }
+
+        .quick-action-copy h3 {
+          font-size: 15px;
+          line-height: 1.2;
+        }
+
+        .quick-action-card svg:last-child {
+          grid-column: auto;
+          justify-self: end;
+          color: #28483a;
+          margin-top: 0;
+        }
+
+        .section-block {
+          margin-top: 28px;
+          padding: 0 24px;
+          min-width: 0;
+        }
+
+        .section-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+
+        .section-head h2 {
+          font-size: 24px;
+          letter-spacing: -0.04em;
+        }
+
+        .section-head a {
+          color: #2b7a40;
+          font-weight: 600;
+          font-size: 14px;
+        }
+
+        .category-strip {
+          display: grid;
+          grid-template-columns: repeat(10, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .category-pill-card {
+          border-radius: 16px;
+          padding: 16px 10px 14px;
+          text-align: center;
+          display: grid;
+          gap: 8px;
+          justify-items: center;
+          min-height: 100px;
+          border: 1px solid #e5ede7;
+          box-shadow: 0 4px 12px rgba(18, 46, 32, 0.03);
+          cursor: pointer;
+          transition:
+            transform 180ms ease,
+            border-color 180ms ease,
+            background-color 180ms ease,
+            box-shadow 180ms ease,
+            color 180ms ease;
+        }
+
+        .category-pill-card:hover {
+          color: #176d35;
+          background: #f5faf6;
+          border-color: #b9d5c0;
+          box-shadow: 0 12px 24px rgba(31, 111, 53, 0.11);
+          transform: translateY(-4px);
+        }
+
+        .category-pill-card:active {
+          transform: translateY(-1px) scale(0.98);
+        }
+
+        .category-pill-card:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 3px;
+        }
+
+        .category-pill-icon {
+          width: 34px;
+          height: 34px;
+          border-radius: 12px;
+          background: #f1f6f2;
+          color: #2b7440;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
+        }
+
+        .category-pill-card:hover .category-pill-icon {
+          color: #fff;
+          background: #2b7a40;
+          transform: scale(1.08);
+        }
+
+        .category-pill-card span:last-child {
+          font-size: 13px;
+          font-weight: 500;
+          line-height: 1.25;
+        }
+
+        .city-sellers-section .section-head {
+          align-items: flex-end;
+        }
+
+        .city-sellers-subtitle {
+          margin: 4px 0 0;
+          color: #6b7d70;
+          font-size: 13px;
+        }
+
+        .city-strip-shell {
+          position: relative;
+        }
+
+        .city-card-strip {
+          display: grid;
+          grid-auto-flow: column;
+          grid-auto-columns: minmax(154px, 1fr);
+          gap: 12px;
+          overflow-x: auto;
+          padding: 2px 2px 10px;
+          scroll-snap-type: x mandatory;
+          scrollbar-width: thin;
+          scrollbar-color: #b9d5c0 transparent;
+        }
+
+        .city-scroll-button {
+          position: absolute;
+          z-index: 3;
+          top: calc(50% - 5px);
+          width: 42px;
+          height: 42px;
+          border: 1px solid rgba(25, 78, 42, 0.18);
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.96);
+          color: #176d35;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 8px 22px rgba(18, 46, 32, 0.2);
+          transform: translateY(-50%);
+          transition: transform 160ms ease, background-color 160ms ease, color 160ms ease;
+        }
+
+        .city-scroll-button:hover {
+          color: #fff;
+          background: #238141;
+          transform: translateY(-50%) scale(1.07);
+        }
+
+        .city-scroll-button:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.3);
+          outline-offset: 2px;
+        }
+
+        .city-scroll-left {
+          left: -14px;
+        }
+
+        .city-scroll-right {
+          right: -14px;
+        }
+
+        .city-card {
+          position: relative;
+          height: 154px;
+          overflow: hidden;
+          border-radius: 16px;
+          border: 1px solid #dfe9e2;
+          background-color: #eaf2ec;
+          background-repeat: no-repeat;
+          background-size: 500% 200%;
+          box-shadow: 0 6px 18px rgba(18, 46, 32, 0.08);
+          scroll-snap-align: start;
+          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+
+        .city-card::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, transparent 42%, rgba(4, 18, 10, 0.78) 100%);
+        }
+
+        .city-card span {
+          position: absolute;
+          z-index: 1;
+          left: 14px;
+          right: 14px;
+          bottom: 12px;
+          color: #fff;
+          font-size: 15px;
+          font-weight: 800;
+          letter-spacing: -0.01em;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+        }
+
+        .city-card:hover {
+          transform: translateY(-4px);
+          border-color: #9fc8aa;
+          box-shadow: 0 14px 28px rgba(18, 46, 32, 0.16);
+        }
+
+        .city-card:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.3);
+          outline-offset: 3px;
+        }
+
+        .split-section {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+          margin-top: 22px;
+          padding: 0 24px;
+          min-width: 0;
+        }
+
+        .split-panel {
+          border-radius: 14px;
+          padding: 14px;
+          position: relative;
+        }
+
+        .split-section .section-head h2 {
+          font-size: 18px;
+          letter-spacing: -0.02em;
+        }
+
+        .split-section .section-head a {
+          font-size: 12px;
+        }
+
+        .card-grid {
+          display: grid;
+          grid-auto-rows: 1fr;
+          gap: 10px;
+        }
+
+        .four-up {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .best-seller-grid {
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          align-items: stretch;
+        }
+
+        .six-up {
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+
+        .product-card,
+        .supplier-card {
+          border-radius: 8px;
+          overflow: hidden;
+        }
+
+        .split-section .supplier-card {
+          height: 260px;
+          min-height: 260px;
+        }
+
+        .split-section .product-card,
+        .split-section .supplier-card {
+          cursor: pointer;
+          transition:
+            transform 180ms ease,
+            border-color 180ms ease,
+            box-shadow 180ms ease;
+        }
+
+        .split-section .product-card:hover,
+        .split-section .supplier-card:hover {
+          border-color: #b9d5c0;
+          box-shadow: 0 16px 30px rgba(31, 111, 53, 0.11);
+          transform: translateY(-5px);
+        }
+
+        .split-section .product-card:active,
+        .split-section .supplier-card:active {
+          transform: translateY(-1px) scale(0.99);
+        }
+
+        .split-section .product-card:focus-visible,
+        .split-section .supplier-card:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 3px;
+        }
+
+        .product-card {
+          padding: 10px;
+          box-sizing: border-box;
+        }
+
+        .split-section .product-card {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          min-height: 320px;
+        }
+
+        .split-section .product-media {
+          aspect-ratio: 4 / 3;
+          min-height: 0;
+          flex: 0 0 auto;
+          margin-bottom: 12px;
+          border-radius: 10px;
+        }
+
+        .split-section .product-media .home-product-image {
+          width: 100%;
+          height: 100%;
+          max-height: none;
+          object-fit: cover;
+        }
+
+        .split-section .product-placeholder {
+          width: 62px;
+          height: 78px;
+          border-radius: 10px;
+        }
+
+        .product-media {
+          position: relative;
+          border-radius: 16px;
+          min-height: 160px;
+          display: grid;
+          place-items: center;
+          margin-bottom: 14px;
+          overflow: hidden;
+          transition: background-color 180ms ease, transform 180ms ease;
+        }
+
+        .home-eco-badge {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 2;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          border: 1px solid rgba(4,120,87,.18);
+          border-radius: 999px;
+          padding: 3px 7px;
+          background: rgba(236,253,245,.96);
+          color: #047857;
+          font-size: 9px;
+          font-weight: 800;
+          line-height: 1;
+          box-shadow: 0 2px 8px rgba(4,120,87,.12);
+        }
+
+        .home-eco-badge img {
+          width: 12px;
+          height: 15px;
+          border-radius: 2px;
+          object-fit: cover;
+        }
+
+        .split-section .product-card:hover .product-media {
+          transform: scale(1.02);
+        }
+
+        .media-0 {
+          background: linear-gradient(180deg, #f6f7f6, #eef2ef);
+        }
+
+        .media-1 {
+          background: linear-gradient(180deg, #f8faf8, #ecefea);
+        }
+
+        .media-2 {
+          background: linear-gradient(180deg, #f5f7f8, #edf2f2);
+        }
+
+        .media-3 {
+          background: linear-gradient(180deg, #f8faf5, #edf4ed);
+        }
+
+        .product-media img {
+          width: auto;
+          height: auto;
+          max-width: 100%;
+          max-height: 146px;
+          object-fit: contain;
+        }
+
+        .product-media .home-product-image {
+          width: 100%;
+          height: 146px;
+          object-fit: contain;
+        }
+
+        .product-media .home-eco-badge img {
+          width: 12px;
+          height: 15px;
+          max-width: 12px;
+          max-height: 15px;
+        }
+
+        .product-placeholder {
+          width: 100%;
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(145deg, #f3f7f4, #e5eee8);
+          box-shadow: inset 0 0 0 1px rgba(31, 111, 53, 0.06);
+          display: grid;
+          place-items: center;
+        }
+
+        .product-placeholder::after {
+          content: "Image unavailable";
+          color: #789083;
+          font-size: 11px;
+          font-weight: 600;
+        }
+
+        .product-info h3 {
+          font-size: 16px;
+          line-height: 1.32;
+          margin-bottom: 8px;
+        }
+
+        .split-section .product-info h3 {
+          display: -webkit-box;
+          min-height: 2.7em;
+          margin-bottom: 10px;
+          overflow: hidden;
+          font-size: 14px;
+          font-weight: 700;
+          line-height: 1.35;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+
+        .product-price-row {
+          display: flex;
+          min-width: 0;
+          align-items: baseline;
+          gap: 5px;
+          margin-bottom: 8px;
+        }
+
+        .split-section .product-price {
+          margin: 0;
+          font-size: 14px;
+          line-height: 1.3;
+        }
+
+        .product-unit,
+        .split-section .product-vendor,
+        .split-section .verified-label {
+          font-size: 12px;
+        }
+
+        .product-unit {
+          flex: 0 0 auto;
+          color: #60796b;
+          font-weight: 500;
+        }
+
+        .split-section .product-info {
+          display: flex;
+          flex: 1 1 auto;
+          flex-direction: column;
+          min-height: 0;
+        }
+
+        .split-section .product-vendor {
+          display: -webkit-box;
+          min-height: 2.8em;
+          overflow: hidden;
+          line-height: 1.4;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+
+        .product-price {
+          font-size: 18px;
+          font-weight: 700;
+          color: #173326;
+          margin: 0 0 4px;
+        }
+
+        .product-price span,
+        .verified-label {
+          color: #60796b;
+          font-size: 13px;
+          font-weight: 500;
+        }
+
+        .verified-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 8px;
+        }
+
+        .split-section .product-info .verified-label {
+          margin-top: auto;
+          padding-top: 10px;
+        }
+
+        .verified-label::before {
+          content: "";
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: #22833e;
+        }
+
+        .supplier-card {
+          position: relative;
+          padding: 12px;
+          display: grid;
+          grid-template-rows: 56px minmax(34px, auto) 18px 1fr auto;
+          align-items: start;
+          justify-items: center;
+          text-align: center;
+          gap: 8px;
+        }
+
+        .supplier-verified-img {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 34px;
+          height: 42px;
+          object-fit: cover;
+          border-radius: 6px;
+          border: 2px solid #fff;
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+          z-index: 2;
+        }
+
+        .supplier-mark {
+          width: 56px;
+          height: 56px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          font-size: 18px;
+          font-weight: 700;
+          letter-spacing: -0.05em;
+          transition: transform 180ms ease, box-shadow 180ms ease;
+        }
+
+        .split-section .supplier-card:hover .supplier-mark {
+          transform: scale(1.08);
+          box-shadow: 0 10px 20px rgba(31, 111, 53, 0.12);
+        }
+
+        .mark-0 {
+          background: #edf6ef;
+          color: #2f8746;
+        }
+
+        .mark-1 {
+          background: #eef5f1;
+          color: #2f7f4f;
+        }
+
+        .mark-2 {
+          background: #edf4fb;
+          color: #2c74b3;
+        }
+
+        .mark-3 {
+          background: #faf1e8;
+          color: #c07935;
+        }
+
+        .supplier-country {
+          font-size: 12px;
+        }
+
+        .split-section .supplier-card h3 {
+          font-size: 13px;
+          line-height: 1.2;
+        }
+
+        .split-section .supplier-card .verified-label {
+          font-size: 12px;
+        }
+
+        .supplier-rating {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: 700;
+          color: #173326;
+          margin-top: 4px;
+          align-self: end;
+          font-size: 12px;
+        }
+
+        .stars {
+          font-size: 12px;
+          color: #2e7f43;
+          letter-spacing: 0.08em;
+        }
+
+        .carousel-arrow {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 38px;
+          height: 38px;
+          border-radius: 999px;
+          background: #fff;
+          border: 1px solid #dfebe3;
+          box-shadow: 0 8px 18px rgba(17, 46, 31, 0.12);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #28483a;
+        }
+
+        .carousel-arrow-left {
+          left: -12px;
+        }
+
+        .carousel-arrow-right {
+          right: -12px;
+        }
+
+        .compact-gap {
+          margin-top: 16px;
+        }
+
+        .left-heavy {
+          justify-content: flex-start;
+        }
+
+        .tag-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        .tag-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          border: 1px solid #deebe2;
+          border-radius: 999px;
+          background: #fff;
+          color: #264738;
+          font-size: 13px;
+          cursor: pointer;
+          transition:
+            color 170ms ease,
+            background-color 170ms ease,
+            border-color 170ms ease,
+            box-shadow 170ms ease,
+            transform 170ms ease;
+        }
+
+        .tag-chip:hover {
+          color: #fff;
+          background: #287e40;
+          border-color: #287e40;
+          box-shadow: 0 8px 18px rgba(31, 111, 53, 0.18);
+          transform: translateY(-3px);
+        }
+
+        .tag-chip:active {
+          transform: translateY(0) scale(0.98);
+        }
+
+        .tag-chip:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 3px;
+        }
+
+        .trust-band {
+          margin-top: 24px;
+          margin-left: 24px;
+          margin-right: 24px;
+          border-radius: 24px;
+          padding: 24px 28px;
+          display: grid;
+          grid-template-columns: auto 1fr auto;
+          gap: 28px;
+          align-items: center;
+          background: linear-gradient(90deg, #eef8ef 0%, #f9fcf9 50%, #eff7f2 100%);
+          transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+        }
+
+        .trust-band:hover {
+          border-color: #c5dccb;
+          box-shadow: 0 14px 28px rgba(31, 111, 53, 0.09);
+          transform: translateY(-2px);
+        }
+
+        .trust-points {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 18px;
+          justify-content: center;
+        }
+
+        .trust-point {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: #2a493b;
+          font-size: 14px;
+          font-weight: 500;
+          transition: color 170ms ease, transform 170ms ease;
+        }
+
+        .trust-point:hover {
+          color: #1f7b3a;
+          transform: translateY(-2px);
+        }
+
+        .trust-point svg {
+          transition: transform 170ms ease;
+        }
+
+        .trust-point:hover svg {
+          transform: scale(1.14);
+        }
+
+        .trust-certifications p {
+          margin: 0 0 10px;
+          font-size: 13px;
+          color: #5c7568;
+          text-align: right;
+        }
+
+        .certification-list {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .certification-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 80px;
+          padding: 10px 12px;
+          border-radius: 999px;
+          background: #fff;
+          border: 1px solid #d8e5dc;
+          font-size: 13px;
+          font-weight: 700;
+          color: #1d3a2c;
+          transition:
+            color 170ms ease,
+            background-color 170ms ease,
+            border-color 170ms ease,
+            box-shadow 170ms ease,
+            transform 170ms ease;
+        }
+
+        .certification-badge:hover {
+          color: #176d35;
+          background: #f1f8f3;
+          border-color: #b9d5c0;
+          box-shadow: 0 7px 15px rgba(31, 111, 53, 0.1);
+          transform: translateY(-2px);
+        }
+
+        .featured-products-section {
+          margin-top: 28px;
+          margin-bottom: 24px;
+        }
+
+        .featured-products-section .section-head a {
+          transition: color 170ms ease, transform 170ms ease;
+        }
+
+        .featured-products-section .section-head a:hover {
+          color: #176d35;
+          text-decoration: underline;
+          text-underline-offset: 4px;
+          transform: translateX(-3px);
+        }
+
+        .featured-products-section .product-card {
+          display: flex;
+          height: 100%;
+          flex-direction: column;
+          cursor: pointer;
+          transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .featured-products-section .product-info {
+          display: flex;
+          flex: 1 1 auto;
+          flex-direction: column;
+        }
+
+        .featured-products-section .product-vendor {
+          display: -webkit-box;
+          min-height: 2.8em;
+          overflow: hidden;
+          line-height: 1.4;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+
+        .featured-products-section .verified-label {
+          margin-top: auto;
+          padding-top: 10px;
+        }
+
+        .featured-products-section .product-card:hover {
+          border-color: #b9d5c0;
+          box-shadow: 0 16px 30px rgba(31, 111, 53, 0.11);
+          transform: translateY(-5px);
+        }
+
+        .featured-products-section .product-card:active {
+          transform: translateY(-1px) scale(0.99);
+        }
+
+        .featured-products-section .product-card:focus-visible {
+          outline: 3px solid rgba(45, 135, 70, 0.28);
+          outline-offset: 3px;
+        }
+
+        .featured-products-section .product-card:hover .product-media {
+          transform: scale(1.02);
+        }
+
+        .compact-product-card .product-media {
+          min-height: 134px;
+        }
+
+        .compact-product-card .product-info h3 {
+          display: -webkit-box;
+          min-height: 2.7em;
+          overflow: hidden;
+          font-size: 15px;
+          line-height: 1.35;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+
+        @media (max-width: 1220px) {
+          .menu-categories-button {
+            width: 220px;
+            min-width: 220px;
+          }
+
+          .hero-composition {
+            grid-template-columns: 220px minmax(0, 1fr);
+            grid-template-rows: auto;
+          }
+
+          .ad-card {
+            grid-column: 2;
+            grid-row: 3;
+            height: 330px;
+            min-height: 330px;
+            max-height: 330px;
+            margin-top: 4px;
+          }
+
+          .quick-action-grid {
+            grid-column: 2;
+            grid-row: 2;
+          }
+
+          .category-strip {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+          }
+
+          .four-up {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .six-up {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+
+          .trust-band {
+            grid-template-columns: 1fr;
+            justify-items: start;
+          }
+
+          .trust-points,
+          .certification-list {
+            justify-content: flex-start;
+          }
+
+          .trust-certifications p {
+            text-align: left;
+          }
+        }
+
+        @media (max-width: 980px) {
+          .market-shell {
+            padding: 0 0 40px;
+          }
+
+          .market-header {
+            width: 100%;
+            max-width: 100vw;
+            box-sizing: border-box;
+          }
+
+          .header-main {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 100%;
+          }
+
+          .brand-lockup {
+            order: 1;
+            flex: 1 1 auto;
+            max-width: calc(100% - 154px);
+          }
+
+          .brand-lockup img {
+            width: min(156px, 48vw);
+          }
+
+          .search-bar {
+            order: 3;
+            flex: 1 0 100%;
+            width: 100%;
+            max-width: calc(100vw - 48px);
+            min-width: 0;
+            box-sizing: border-box;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            min-height: 44px;
+          }
+
+          .search-bar select {
+            display: none;
+          }
+
+          .account-actions {
+            order: 2;
+            flex: 0 0 auto;
+            justify-content: flex-end;
+            gap: 0;
+          }
+
+          .mobile-menu-slot {
+            order: 2;
+            display: flex;
+            flex: 0 0 auto;
+            justify-content: flex-end;
+          }
+
+          .mobile-auth-link {
+            display: inline-flex;
+          }
+
+          .join-button,
+          .sign-in-link {
+            display: none;
+          }
+
+          .mobile-menu-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .menu-row {
+            display: none;
+          }
+
+          .menu-row-open {
+            display: grid;
+            justify-items: stretch;
+            gap: 8px;
+            padding: 10px 0 12px;
+          }
+
+          .menu-categories-button {
+            width: 100%;
+            min-width: 0;
+          }
+
+          .menu-tabs {
+            display: grid;
+            gap: 4px;
+            min-height: 0;
+            padding-left: 0;
+            width: 100%;
+          }
+
+          .menu-tab {
+            width: 100%;
+            border-radius: 10px;
+          }
+
+          .menu-tab::after {
+            display: none;
+          }
+
+          .mobile-menu-auth {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 4px 0 0;
+          }
+
+          .mobile-menu-auth-primary:last-child,
+          .mobile-menu-auth-secondary:last-child {
+            grid-column: 1 / -1;
+          }
+
+          .hero-composition {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto;
+            padding: 0 14px;
+            margin-top: 14px;
+          }
+
+          .sidebar-card,
+          .ad-card {
+            grid-column: auto;
+            grid-row: auto;
+            order: 2;
+          }
+
+          .sidebar-card {
+            height: auto;
+            margin-top: 0;
+          }
+
+          .hero-stack {
+            order: 1;
+            grid-column: auto;
+            grid-row: auto;
+            height: auto;
+          }
+
+          .quick-action-grid {
+            grid-column: auto;
+            grid-row: auto;
+            order: 1;
+          }
+
+          .hero-banner {
+            grid-template-columns: 1fr;
+            padding: 24px 20px 18px;
+            height: 500px;
+            min-height: 500px;
+          }
+
+          .hero-visual {
+            min-height: 210px;
+          }
+
+          .quick-action-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .split-section {
+            grid-template-columns: 1fr;
+            padding: 0 14px;
+          }
+
+          .section-block {
+            padding: 0 14px;
+          }
+
+          .trust-band {
+            margin-left: 14px;
+            margin-right: 14px;
+          }
+        }
+
+        @media (max-width: 720px) {
+          .market-header {
+            padding: 14px 14px 0;
+            width: 100%;
+            max-width: 100vw;
+            box-sizing: border-box;
+          }
+
+          .utility-bar {
+            display: none;
+          }
+
+          .brand-lockup img {
+            width: min(156px, 48vw);
+          }
+
+          .header-main {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 100%;
+            padding-bottom: 12px;
+          }
+
+          .brand-lockup {
+            order: 1;
+            flex: 1 1 auto;
+            max-width: calc(100% - 54px);
+          }
+
+          .search-bar {
+            order: 3;
+            flex: 1 0 100%;
+            width: 100%;
+            max-width: calc(100vw - 28px);
+            min-width: 0;
+            box-sizing: border-box;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            min-height: 44px;
+            border-radius: 14px;
+          }
+
+          .search-bar svg {
+            margin-left: 12px;
+          }
+
+          .search-bar input {
+            padding: 0 10px;
+            font-size: 14px;
+          }
+
+          .search-button {
+            min-width: 46px;
+            min-height: 44px;
+          }
+
+          .search-button svg {
+            margin-left: 0;
+          }
+
+          .hero-banner {
+            padding: 22px 16px 18px;
+            border-radius: 18px;
+            height: 440px;
+            min-height: 440px;
+          }
+
+          .hero-ad-slide {
+            padding: 24px 20px 30px;
+          }
+
+          .hero-ad-title {
+            max-width: 90%;
+          }
+
+          .hero-copy h1 {
+            font-size: clamp(30px, 8.5vw, 34px);
+            line-height: 1.03;
+            letter-spacing: -0.02em;
+          }
+
+          .hero-text {
+            max-width: 100%;
+            font-size: 14px;
+          }
+
+          .hero-visual {
+            min-height: 180px;
+            transform: scale(0.92);
+            transform-origin: center top;
+          }
+
+          .search-bar select {
+            display: none;
+          }
+
+          .account-actions {
+            order: 2;
+            flex: 0 0 auto;
+            gap: 0;
+          }
+
+          .join-button,
+          .sign-in-link {
+            display: none;
+          }
+
+          .mobile-menu-toggle {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+          }
+
+          .menu-row {
+            border-top: 1px solid #edf2ee;
+            margin-top: 2px;
+          }
+
+          .menu-categories-button {
+            width: 100%;
+            min-width: 0;
+            height: 44px;
+            border-radius: 0;
+            padding: 0 14px;
+            font-size: 14px;
+          }
+
+          .menu-tab {
+            width: 100%;
+            height: 42px;
+            padding: 0 14px;
+            font-size: 14px;
+            border-radius: 10px;
+          }
+
+          .menu-tab::after {
+            display: none;
+          }
+
+          .hero-buttons {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .quick-action-grid,
+          .category-strip,
+          .four-up,
+          .six-up {
+            grid-template-columns: 1fr;
+          }
+
+          .sidebar-link {
+            padding: 0 16px;
+            min-height: 34px;
+            font-size: 11px;
+          }
+
+          .sidebar-cta {
+            padding: 20px 16px;
+            font-size: 14px;
+            min-height: auto;
+          }
+
+          .quick-action-card {
+            min-height: auto;
+          }
+
+          .section-head {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .section-head h2 {
+            font-size: 24px;
+          }
+
+          .carousel-arrow {
+            display: none;
+          }
+        }
+      `}</style>
+    </main>
+  );
+}

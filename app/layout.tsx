@@ -4,6 +4,7 @@ import "./globals.css";
 import SessionTimeoutNotice from "./components/SessionTimeoutNotice";
 import SupabaseAuthCallback from "./components/SupabaseAuthCallback";
 import RfqPrompt from "./components/RfqPrompt";
+import WhatsAppFloatButton from "./components/WhatsAppFloatButton";
 import { Poppins, Plus_Jakarta_Sans } from "next/font/google";
 import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 
@@ -163,6 +164,7 @@ export default function RootLayout({
         <SupabaseAuthCallback />
         <SessionTimeoutNotice />
         <RfqPrompt />
+        <WhatsAppFloatButton />
         {children}
       </body>
     </html>
