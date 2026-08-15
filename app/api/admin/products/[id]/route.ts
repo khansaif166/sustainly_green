@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { apiError, apiOk } from "@/lib/apiResponse";
 import {
   requireRole,
@@ -17,6 +18,12 @@ import {
   replaceTags,
 } from "@/lib/adminProductsServer";
 
+
+function revalidateProductSurfaces(id: string) {
+  revalidatePath(`/products/${id}`);
+  revalidatePath("/browse");
+  revalidatePath("/");
+}
 
 export async function GET(
   request: Request,
@@ -82,6 +89,7 @@ export async function PATCH(
     );
 
     const product = await refreshAdminProduct(id);
+    revalidateProductSurfaces(id);
     return apiOk({ ok: true, product });
   } catch (error) {
     const authError = toAuthError(error);
@@ -135,6 +143,7 @@ export async function PUT(
     ]);
 
     const product = await refreshAdminProduct(id);
+    revalidateProductSurfaces(id);
     return apiOk({ ok: true, product });
   } catch (error) {
     const authError = toAuthError(error);
@@ -165,6 +174,7 @@ export async function DELETE(
       },
     );
 
+    revalidateProductSurfaces(id);
     return apiOk({ ok: true });
   } catch (error) {
     const authError = toAuthError(error);

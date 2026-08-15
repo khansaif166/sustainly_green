@@ -39,6 +39,7 @@ type SupabaseProductRow = {
   price: number | string | null;
   currency: string | null;
   moq: number | string | null;
+  discount: string | null;
   ship_regions: string[] | null;
   sustainability_claim: string | null;
   approved: boolean | null;
@@ -116,6 +117,7 @@ export type PublicProduct = {
   price?: number;
   currency: string;
   moq?: number;
+  discount?: string;
   sustainabilityTags: string[];
   tagNames: string[];
   approved: boolean;
@@ -193,6 +195,7 @@ const PRODUCT_SELECT = [
   "price",
   "currency",
   "moq",
+  "discount",
   "ship_regions",
   "sustainability_claim",
   "approved",
@@ -358,6 +361,7 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
     price: numberValue(row.price),
     currency: stringValue(row.currency) || "INR",
     moq: numberValue(row.moq),
+    discount: stringValue(row.discount) || undefined,
     sustainabilityTags: sustainabilityClaim ? [sustainabilityClaim] : [],
     tagNames: sustainabilityClaim ? [sustainabilityClaim] : [],
     approved: Boolean(row.approved),
