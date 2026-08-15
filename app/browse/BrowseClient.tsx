@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { productHref } from "@/lib/slug";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import {
@@ -290,7 +291,7 @@ export default function BrowsePage({
 
   /* ---- Product Card ---- */
   const ProductCard = ({ p }: { p: Product }) => viewMode === "grid" ? (
-    <Link href={`/products/${p.id}`} className="bs-card">
+    <Link href={productHref(p.id, p.title)} className="bs-card">
       <div className="bs-card-img">
         {p.images?.[0]
           ? <img src={p.images[0]} alt={p.title || ""} className="bs-card-img-el" />
@@ -320,7 +321,7 @@ export default function BrowsePage({
       </div>
     </Link>
   ) : (
-    <Link href={`/products/${p.id}`} className="bs-row">
+    <Link href={productHref(p.id, p.title)} className="bs-row">
       <div className="bs-row-thumb">
         {p.images?.[0] ? <img src={p.images[0]} alt={p.title} className="bs-row-img" /> : <div className="bs-row-ph"><FiPackage size={18} /></div>}
       </div>

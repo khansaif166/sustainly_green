@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { productHref } from "@/lib/slug";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
 import {
@@ -720,7 +721,7 @@ export default function VendorProfileClient({
                 ) : (
                   <div className="vp-products-grid">
                     {products.map(p => (
-                      <Link key={p.id} href={`/products/${p.id}`} className="vp-prod-card">
+                      <Link key={p.id} href={productHref(p.id, p.title)} className="vp-prod-card">
                         <div className="vp-prod-img">
                           {p.images?.[0]
                             ? <img src={p.images[0]} alt={p.title} />

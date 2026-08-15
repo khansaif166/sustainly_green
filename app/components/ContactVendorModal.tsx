@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { CheckCircle2, LockKeyhole, PackageCheck, UserPlus, X } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
+import { productHref } from "@/lib/slug";
 
 
 export default function BuyerRFQModal({
@@ -158,7 +159,7 @@ export default function BuyerRFQModal({
   if (!open) return null;
   const session = getStoredSession();
   const returnPath = productId
-    ? `/products/${productId}?contact=1`
+    ? `${productHref(productId, productTitle)}?contact=1`
     : "/";
   const loginHref = `/login?next=${encodeURIComponent(returnPath)}`;
   const registerHref = `/register?role=BUYER&next=${encodeURIComponent(returnPath)}`;

@@ -3,12 +3,16 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchApprovedProductById } from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
-import ProductDetailClient from "./ProductDetailClient";
+import { productHref } from "@/lib/slug";
+import ProductDetailClient from "../ProductDetailClient";
 
 export const revalidate = 900;
 
 type ProductPageProps = {
-  params: Promise<{ productId: string }>;
+  // productSlug is decorative only — productId is the real lookup key, so a
+  // stale/incorrect slug in the URL still resolves the product correctly.
+  // The canonical tag always points at the current, correct slug.
+  params: Promise<{ productId: string; productSlug: string }>;
 };
 
 function compact(value: string, maxLength: number) {
@@ -29,15 +33,19 @@ export async function generateMetadata({
 }: ProductPageProps): Promise<Metadata> {
   const { productId } = await params;
   const product = await getProduct(productId);
-  const canonical = `${getSiteUrl()}/products/${encodeURIComponent(productId)}`;
 
   if (!product) {
     return {
       title: "Product not found",
       robots: { index: false, follow: false },
-      alternates: { canonical },
+      alternates: { canonical: `${getSiteUrl()}/products/${encodeURIComponent(productId)}` },
     };
   }
+
+  // Canonical always points at the current, correct slug — regardless of
+  // what slug was actually requested in the URL (e.g. an outdated one from
+  // a renamed product) — so SEO signals consolidate correctly either way.
+  const canonical = `${getSiteUrl()}${productHref(productId, product.title)}`;
 
   const keySpec =
     product.tagNames[0] ||
@@ -118,7 +126,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   if (!product) notFound();
 
-  const canonical = `${getSiteUrl()}/products/${encodeURIComponent(productId)}`;
+  const canonical = `${getSiteUrl()}${productHref(productId, product.title)}`;
   const structuredData = productStructuredData(product, canonical);
 
   return (

@@ -1,8 +1,13 @@
 import { getSiteUrl } from "@/lib/site";
+import { productHref } from "@/lib/slug";
 
 type DatedRow = {
   id: string;
   updated_at: string;
+};
+
+type ProductSeoRow = DatedRow & {
+  title: string | null;
 };
 
 type VendorSeoRow = DatedRow & {
@@ -105,14 +110,14 @@ export function sitemapIndex(paths: string[]) {
 
 export async function productSitemapEntries() {
   const query = new URLSearchParams({
-    select: "id,updated_at",
+    select: "id,updated_at,title",
     approved: "eq.true",
     order: "id.asc",
   });
-  const rows = await fetchRows<DatedRow>("products", query);
+  const rows = await fetchRows<ProductSeoRow>("products", query);
   const siteUrl = getSiteUrl();
   return rows.map((row) => ({
-    url: `${siteUrl}/products/${encodeURIComponent(row.id)}`,
+    url: `${siteUrl}${productHref(row.id, row.title)}`,
     lastModified: row.updated_at,
   }));
 }

@@ -9,6 +9,7 @@ import {
   fetchApprovedProducts,
   fetchApprovedVendors,
 } from "@/lib/supabasePublic";
+import { productHref } from "@/lib/slug";
 import {
   AUTH_SESSION_CLEARED_EVENT,
   AUTH_SESSION_SAVED_EVENT,
@@ -329,9 +330,6 @@ function iconForCategory(icon: string) {
   }
 }
 
-function productHref(id: string) {
-  return `/products/${id}`;
-}
 
 type HomeClientProps = {
   initialCategories: CategoryItem[];
@@ -854,7 +852,7 @@ export default function HomeClient({
             </div>
             <div className="card-grid best-seller-grid">
               {bestSellers.map((product, index) => (
-                <Link key={product.id} href={productHref(product.id)} className="product-card">
+                <Link key={product.id} href={productHref(product.id, product.title)} className="product-card">
                   <div className={`product-media media-${index % 4}`}>
                     {product.ecoVerified && (
                       <span className="home-eco-badge">
@@ -966,7 +964,7 @@ export default function HomeClient({
           </div>
           <div className="card-grid six-up">
             {featuredProducts.map((product, index) => (
-              <Link key={product.id} href={productHref(product.id)} className="product-card compact-product-card">
+              <Link key={product.id} href={productHref(product.id, product.title)} className="product-card compact-product-card">
                 <div className={`product-media media-${index % 4}`}>
                   {product.ecoVerified && (
                     <span className="home-eco-badge">
