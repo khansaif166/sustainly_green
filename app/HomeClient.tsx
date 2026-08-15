@@ -366,7 +366,38 @@ export default function HomeClient({
   const [featuredSuppliers, setFeaturedSuppliers] = useState<SupplierCard[]>(initialFeaturedSuppliers);
   const [homepageAds, setHomepageAds] = useState<HomepageAdSlide[]>(defaultHomepageAds);
   const [heroSlide, setHeroSlide] = useState(0);
+  const [heroVisible, setHeroVisible] = useState(true);
+  const heroFadeTimer = useRef<number | null>(null);
   const [sideAdSlide, setSideAdSlide] = useState(0);
+  const [sideAdVisible, setSideAdVisible] = useState(true);
+  const sideAdFadeTimer = useRef<number | null>(null);
+
+  // Crossfades instead of hard-cutting straight to the new slide — swap the
+  // content only once it's faded out, then fade the new one back in.
+  function changeHeroSlide(next: number | ((current: number) => number)) {
+    setHeroVisible(false);
+    if (heroFadeTimer.current) window.clearTimeout(heroFadeTimer.current);
+    heroFadeTimer.current = window.setTimeout(() => {
+      setHeroSlide(next);
+      setHeroVisible(true);
+    }, 260);
+  }
+
+  function changeSideAdSlide(next: number | ((current: number) => number)) {
+    setSideAdVisible(false);
+    if (sideAdFadeTimer.current) window.clearTimeout(sideAdFadeTimer.current);
+    sideAdFadeTimer.current = window.setTimeout(() => {
+      setSideAdSlide(next);
+      setSideAdVisible(true);
+    }, 260);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (heroFadeTimer.current) window.clearTimeout(heroFadeTimer.current);
+      if (sideAdFadeTimer.current) window.clearTimeout(sideAdFadeTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     async function loadAuth() {
@@ -421,14 +452,14 @@ export default function HomeClient({
       return;
     }
     const timer = window.setInterval(() => {
-      setHeroSlide((current) => (current + 1) % (homepageAds.length + 1));
+      changeHeroSlide((current) => (current + 1) % (homepageAds.length + 1));
     }, 5_000);
     return () => window.clearInterval(timer);
   }, [homepageAds.length]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setSideAdSlide((current) => (current + 1) % sideAdSlides.length);
+      changeSideAdSlide((current) => (current + 1) % sideAdSlides.length);
     }, 4_500);
     return () => window.clearInterval(timer);
   }, []);
@@ -642,7 +673,10 @@ export default function HomeClient({
               {heroSlide > 0 && homepageAds[heroSlide - 1] ? (
                 <div
                   className="hero-ad-slide"
-                  style={{ backgroundImage: `url(${homepageAds[heroSlide - 1].imageUrl})` }}
+                  style={{
+                    backgroundImage: `url(${homepageAds[heroSlide - 1].imageUrl})`,
+                    opacity: heroVisible ? 1 : 0,
+                  }}
                 >
                   <Link
                     href={homepageAds[heroSlide - 1].linkUrl}
@@ -664,7 +698,7 @@ export default function HomeClient({
                 </div>
               ) : (
                 <>
-              <div className="hero-copy">
+              <div className="hero-copy" style={{ opacity: heroVisible ? 1 : 0 }}>
                 <p className="hero-kicker">Powering a</p>
                 <h1>Sustainable Future</h1>
                 <p className="hero-text">
@@ -680,7 +714,7 @@ export default function HomeClient({
                 </div>
               </div>
 
-              <div className="hero-visual" aria-hidden="true">
+              <div className="hero-visual" aria-hidden="true" style={{ opacity: heroVisible ? 1 : 0 }}>
                 <Image
                   src="/homepage-hero-visual.svg"
                   alt=""
@@ -700,7 +734,7 @@ export default function HomeClient({
                       aria-label={`Show banner ${index + 1}`}
                       aria-current={heroSlide === index ? "true" : undefined}
                       className={heroSlide === index ? "active" : ""}
-                      onClick={() => setHeroSlide(index)}
+                      onClick={() => changeHeroSlide(index)}
                     />
                   ))}
                 </div>
@@ -710,18 +744,20 @@ export default function HomeClient({
           </div>
 
           <aside className="ad-card">
-            <h3>{sideAdSlides[sideAdSlide].title}</h3>
-            <p>{sideAdSlides[sideAdSlide].text}</p>
-            <Image
-              src={sideAdSlides[sideAdSlide].image}
-              alt={sideAdSlides[sideAdSlide].imageAlt}
-              width={116}
-              height={116}
-              className="ad-visual"
-            />
-            <Link href={sideAdSlides[sideAdSlide].href} className="ad-button">
-              Learn More
-            </Link>
+            <div className="ad-card-fade" style={{ opacity: sideAdVisible ? 1 : 0 }}>
+              <h3>{sideAdSlides[sideAdSlide].title}</h3>
+              <p>{sideAdSlides[sideAdSlide].text}</p>
+              <Image
+                src={sideAdSlides[sideAdSlide].image}
+                alt={sideAdSlides[sideAdSlide].imageAlt}
+                width={116}
+                height={116}
+                className="ad-visual"
+              />
+              <Link href={sideAdSlides[sideAdSlide].href} className="ad-button">
+                Learn More
+              </Link>
+            </div>
             <div className="ad-dots" aria-label="Advertising slides">
               {sideAdSlides.map((slide, index) => (
                 <button
@@ -730,7 +766,7 @@ export default function HomeClient({
                   aria-label={`Show advertisement ${index + 1}`}
                   aria-current={sideAdSlide === index ? "true" : undefined}
                   className={`ad-dot${sideAdSlide === index ? " ad-dot-active" : ""}`}
-                  onClick={() => setSideAdSlide(index)}
+                  onClick={() => changeSideAdSlide(index)}
                 />
               ))}
             </div>
@@ -1768,6 +1804,7 @@ export default function HomeClient({
           background-size: cover;
           color: #fff;
           isolation: isolate;
+          transition: opacity 260ms ease;
         }
 
         .hero-ad-main-link {
@@ -1857,6 +1894,7 @@ export default function HomeClient({
           justify-content: center;
           gap: 10px;
           min-width: 0;
+          transition: opacity 260ms ease;
         }
 
         .hero-kicker {
@@ -1934,6 +1972,7 @@ export default function HomeClient({
           display: grid;
           place-items: center;
           overflow: hidden;
+          transition: opacity 260ms ease;
         }
 
         .hero-main-illustration {
@@ -2090,6 +2129,14 @@ export default function HomeClient({
           min-height: 330px;
           max-height: 330px;
           margin-top: 16px;
+        }
+
+        .ad-card-fade {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          transition: opacity 260ms ease;
         }
 
         .ad-badge {
