@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { productHref } from "@/lib/slug";
 import {
   Bell,
   ShoppingCart,
@@ -271,7 +272,7 @@ export default function Header() {
                     onMouseDown={() => {
                       setShowDropdown(false);
                       if (s.type === "product")
-                        router.push(`/products/${s.id}`);
+                        router.push(productHref(s.id, s.title));
                       if (s.type === "vendor") router.push(`/find-vendors/${s.id}`);
                       if (s.type === "category")
                         router.push(`/browse?category=${s.id}`);

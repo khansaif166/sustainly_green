@@ -1,5 +1,6 @@
 import { apiOk } from "@/lib/apiResponse";
 import { supabaseServiceFetch } from "@/lib/supabaseServer";
+import { productHref } from "@/lib/slug";
 
 type BannerSetting = {
   value?: { imageUrl?: string; linkUrl?: string; active?: boolean };
@@ -41,7 +42,7 @@ export async function GET() {
           id: product.id,
           title: product.title,
           imageUrl,
-          linkUrl: `/products/${product.id}`,
+          linkUrl: productHref(product.id, product.title),
         });
       }
     }
