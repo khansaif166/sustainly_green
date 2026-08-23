@@ -161,21 +161,21 @@ export const Step3Sustainability = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="md:col-span-2">
-          <Select 
-            name="primarySustainabilityCert" 
-            label="Primary Sustainability Certification *" 
+          <Select
+            name="primarySustainabilityCert"
+            label="Primary Sustainability Certification"
             options={certs}
             disabled={loading}
             icon={ShieldCheck}
           />
         </div>
-        <Select 
-          name="issuingBody" 
-          label="Issuing / Certifying Body *" 
+        <Select
+          name="issuingBody"
+          label="Issuing / Certifying Body"
           options={bodies}
           disabled={loading}
         />
-        <FileUpload name="certificateFile" label="Upload Primary Certificate *" />
+        <FileUpload name="certificateFile" label="Upload Primary Certificate" />
 
         <div className="md:col-span-2">
           <TextArea 
