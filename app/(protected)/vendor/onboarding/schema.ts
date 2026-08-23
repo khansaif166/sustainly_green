@@ -33,8 +33,11 @@ export const onboardingSchema = z.object({
   exportMarkets: z.string().optional(),
 
   // STEP 3: SUSTAINABILITY
-  primarySustainabilityCert: z.string().min(1, "Certification is required"),
-  issuingBody: z.string().min(1, "Certifying Body is required"),
+  // Certification is optional for now — vendors without one yet shouldn't be
+  // blocked from completing onboarding. Revisit once Green Lens verification
+  // can handle "no certification yet" as its own review state.
+  primarySustainabilityCert: z.string().optional(),
+  issuingBody: z.string().optional(),
   certificateFile: z.any().optional(), // Handled separately for upload
   additionalCerts: z.array(z.object({
     name: z.string(),
