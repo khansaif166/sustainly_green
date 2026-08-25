@@ -1,9 +1,17 @@
 "use client";
 
-import { ChangeEvent, useEffect, useState } from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { ChangeEvent, type MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from "react";
+import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Plus, Trash2, FileText, Pencil, X } from "lucide-react";
+import TiptapImage from "@tiptap/extension-image";
+import TiptapLink from "@tiptap/extension-link";
+import { TableKit } from "@tiptap/extension-table";
+import {
+  Plus, Trash2, FileText, Pencil, X,
+  Bold as BoldIcon, Italic as ItalicIcon, Heading2, Heading3,
+  List, ListOrdered, Quote, Link2, ImagePlus, Table2,
+  Columns, Rows, Ban, Undo2, Redo2,
+} from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
 
@@ -18,6 +26,53 @@ type Blog = {
 
 const pageSize = 6;
 
+// Toolbar for the rich-text editor below. Tiptap's StarterKit alone has no
+// UI to trigger tables/images/links even once the extensions are
+// registered — this is what lets an author actually insert them, not just
+// have them survive a paste.
+function EditorToolbar({ editor, onInsertImage }: { editor: Editor | null; onInsertImage: () => void }) {
+  if (!editor) return null;
+
+  const btn = (active: boolean) =>
+    `abl-tb-btn${active ? " abl-tb-btn-active" : ""}`;
+
+  // A plain <button> steals DOM focus from the editor on mousedown, before
+  // our onClick's .focus() chain ever runs — Tiptap loses the cursor
+  // position and any typing afterward goes nowhere. Preventing default on
+  // mousedown keeps focus (and the selection) on the editor throughout.
+  const noBlur = (e: ReactMouseEvent) => e.preventDefault();
+
+  function addLink() {
+    const previousUrl = editor!.getAttributes("link").href as string | undefined;
+    const url = window.prompt("Link URL", previousUrl || "https://");
+    if (url === null) return;
+    if (!url.trim()) { editor!.chain().focus().unsetLink().run(); return; }
+    editor!.chain().focus().extendMarkRange("link").setLink({ href: url.trim() }).run();
+  }
+
+  return (
+    <div className="abl-toolbar">
+      <button type="button" onMouseDown={noBlur} className={btn(editor.isActive("bold"))} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold"><BoldIcon size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className={btn(editor.isActive("italic"))} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic"><ItalicIcon size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className={btn(editor.isActive("heading", { level: 2 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2"><Heading2 size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className={btn(editor.isActive("heading", { level: 3 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3"><Heading3 size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className={btn(editor.isActive("bulletList"))} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet list"><List size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className={btn(editor.isActive("orderedList"))} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numbered list"><ListOrdered size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className={btn(editor.isActive("blockquote"))} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Quote"><Quote size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className={btn(editor.isActive("link"))} onClick={addLink} title="Link"><Link2 size={14} /></button>
+      <span className="abl-tb-sep" />
+      <button type="button" onMouseDown={noBlur} className="abl-tb-btn" onClick={onInsertImage} title="Insert image"><ImagePlus size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className="abl-tb-btn" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert table"><Table2 size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className="abl-tb-btn" onClick={() => editor.chain().focus().addColumnAfter().run()} title="Add column"><Columns size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className="abl-tb-btn" onClick={() => editor.chain().focus().addRowAfter().run()} title="Add row"><Rows size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className="abl-tb-btn" onClick={() => editor.chain().focus().deleteTable().run()} title="Delete table"><Ban size={14} /></button>
+      <span className="abl-tb-sep" />
+      <button type="button" onMouseDown={noBlur} className="abl-tb-btn" onClick={() => editor.chain().focus().undo().run()} title="Undo"><Undo2 size={14} /></button>
+      <button type="button" onMouseDown={noBlur} className="abl-tb-btn" onClick={() => editor.chain().focus().redo().run()} title="Redo"><Redo2 size={14} /></button>
+    </div>
+  );
+}
+
 export default function BlogAdminPage() {
   const [open,       setOpen]       = useState(false);
   const [title,      setTitle]      = useState("");
@@ -31,8 +86,21 @@ export default function BlogAdminPage() {
   const [error,      setError]      = useState("");
   const [offset,     setOffset]     = useState(0);
   const [hasMore,    setHasMore]    = useState(false);
+  const inlineImageInput = useRef<HTMLInputElement>(null);
 
-  const editor = useEditor({ extensions: [StarterKit], content: "", immediatelyRender: false });
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      TiptapLink.configure({ openOnClick: false, autolink: true }),
+      TiptapImage.configure({ inline: false, allowBase64: false }),
+      TableKit.configure({ table: { resizable: false } }),
+    ],
+    content: "",
+    immediatelyRender: false,
+    editorProps: {
+      attributes: { class: "prose prose-sm max-w-none focus:outline-none" },
+    },
+  });
 
   function getAuthHeaders() {
     const session = getStoredSession();
@@ -45,6 +113,23 @@ export default function BlogAdminPage() {
     if (!file) return;
     setImageFile(file);
     setPreview(URL.createObjectURL(file));
+  }
+
+  async function handleInlineImage(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !editor) return;
+    try {
+      const authHeaders = getAuthHeaders();
+      const uploaded = await uploadFileToSupabaseStorage(file, {
+        bucket: "marketplace",
+        folder: "blogs/content",
+        accessToken: authHeaders.Authorization.replace(/^Bearer\s+/i, ""),
+      });
+      editor.chain().focus().setImage({ src: uploaded.url, alt: file.name }).run();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to upload image.");
+    }
   }
 
   async function loadBlogs(next = false) {
@@ -154,8 +239,17 @@ export default function BlogAdminPage() {
         .abl-modal-input:focus{border-color:#16a34a}
         .abl-upload-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed rgba(0,0,0,.12);border-radius:14px;padding:24px;cursor:pointer;transition:all .15s;text-align:center;font-size:13px;color:#9ca3af}
         .abl-upload-zone:hover{border-color:#16a34a;background:#f0fdf4;color:#16a34a}
-        .abl-editor-wrap{border:1.5px solid rgba(0,0,0,.1);border-radius:14px;background:#f9fafb;padding:14px;min-height:220px}
+        .abl-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:8px;border:1.5px solid rgba(0,0,0,.1);border-bottom:none;border-radius:14px 14px 0 0;background:#f3f4f6}
+        .abl-tb-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:#4b5563;cursor:pointer;transition:all .15s}
+        .abl-tb-btn:hover{background:#e5e7eb;color:#111}
+        .abl-tb-btn-active{background:#dcfce7;color:#16a34a}
+        .abl-tb-sep{width:1px;height:20px;background:rgba(0,0,0,.1);margin:0 2px}
+        .abl-editor-wrap{border:1.5px solid rgba(0,0,0,.1);border-top:none;border-radius:0 0 14px 14px;background:#f9fafb;padding:14px;min-height:220px}
         .abl-editor-wrap:focus-within{border-color:#16a34a;background:#fff}
+        .abl-editor-wrap table{width:100%;border-collapse:collapse;margin:8px 0}
+        .abl-editor-wrap th,.abl-editor-wrap td{border:1px solid rgba(0,0,0,.12);padding:6px 10px;text-align:left;font-size:13px}
+        .abl-editor-wrap th{background:#f0fdf4;font-weight:700}
+        .abl-editor-wrap img{max-width:100%;border-radius:10px}
         .abl-publish-btn{width:100%;padding:12px;border-radius:50px;font-size:14px;font-weight:700;background:#16a34a;color:#fff;border:none;cursor:pointer;font-family:inherit;box-shadow:0 3px 10px rgba(22,163,74,.3);transition:all .15s}
         .abl-publish-btn:disabled{opacity:.6;cursor:not-allowed}
         .abl-gap{display:flex;flex-direction:column;gap:16px}
@@ -249,6 +343,8 @@ export default function BlogAdminPage() {
                 )}
                 <div>
                   <p className="abl-modal-label">Blog Content</p>
+                  <input ref={inlineImageInput} type="file" accept="image/*" onChange={handleInlineImage} style={{ display: "none" }} />
+                  <EditorToolbar editor={editor} onInsertImage={() => inlineImageInput.current?.click()} />
                   <div className="abl-editor-wrap">
                     <EditorContent editor={editor} style={{ minHeight: 200 }} />
                   </div>

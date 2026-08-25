@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 /* ================= ROOT COLORS (ALWAYS AVAILABLE) ================= */
 :root {
   --background: #ffffff;
