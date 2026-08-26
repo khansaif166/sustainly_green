@@ -225,7 +225,7 @@ export default function Header() {
             />
           </Link>
 
-          <div className="nav-search relative hidden lg:flex">
+          <div className="nav-search relative hidden xl:flex">
             <select
               className="hs-cat bg-transparent border-none outline-none cursor-pointer"
               value={selectedCategory}

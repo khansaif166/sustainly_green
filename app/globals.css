@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 /* ================= ROOT COLORS (ALWAYS AVAILABLE) ================= */
 :root {
   --background: #ffffff;
@@ -192,14 +193,14 @@ html, body {
 }
 .nav-inner {
   width: 100%;
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 40px;
+  padding: 0 24px;
   height: 64px;
-  gap: 24px;
+  gap: 16px;
   min-width: 0;
   box-sizing: border-box;
 }
@@ -214,7 +215,7 @@ html, body {
 .nav-logo-name { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.4px; }
 .nav-logo-name span { color: var(--g2); }
 .nav-search {
-  flex: 1; max-width: 520px;
+  flex: 1; min-width: 220px; max-width: 460px;
   display: flex; align-items: center;
   background: var(--gray1);
   border: 1.5px solid var(--gray2);
@@ -231,6 +232,11 @@ html, body {
   font-family: 'Plus Jakarta Sans', sans-serif;
   border-right: 1px solid var(--gray2);
   height: 100%; cursor: pointer;
+  flex-shrink: 0;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .nav-search input {
   flex: 1; background: transparent; border: none; outline: none;
@@ -245,16 +251,16 @@ html, body {
 }
 .nav-search-btn:hover { background: var(--g2); }
 .nav-search-btn svg { width: 16px; height: 16px; }
-.nav-links { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.nav-links { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .nav-link {
   font-size: 13.5px; font-weight: 500; color: var(--text2);
-  padding: 7px 12px; border-radius: 8px; transition: all 0.18s; white-space: nowrap;
+  padding: 7px 10px; border-radius: 8px; transition: all 0.18s; white-space: nowrap;
 }
 .nav-link:hover { background: var(--gray1); color: var(--text); }
 .nav-link.active { color: var(--g2); font-weight: 600; }
-.nav-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.nav-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .nbtn {
-  font-size: 13.5px; font-weight: 600; padding: 8px 18px;
+  font-size: 13.5px; font-weight: 600; padding: 8px 14px;
   border-radius: 9px; transition: all 0.18s; white-space: nowrap;
 }
 .nbtn-ghost { color: var(--text2); background: transparent; border: 1px solid var(--gray2); }
