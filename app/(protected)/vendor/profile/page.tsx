@@ -7,7 +7,7 @@ import {
   ChevronUp, ChevronDown, User, AlertTriangle, Upload, Image as ImageIcon,
   ArrowLeft, BarChart3, Leaf, ShoppingBag, Clock, CheckCircle2, Save, Edit3, X, Building2
 } from "lucide-react";
-import { getStoredSession } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -254,7 +254,7 @@ export default function VendorProfilePage() {
 
   useEffect(() => {
     async function loadVendor() {
-      const session = getStoredSession();
+      const session = await getValidSession();
       if (!session) { router.push("/login"); return; }
 
       try {
@@ -301,7 +301,7 @@ export default function VendorProfilePage() {
     (editing ? draft : data)?.[key] ?? "";
 
   const handleSave = async () => {
-    const session = getStoredSession();
+    const session = await getValidSession();
     if (!session) {
       router.push("/login");
       return;

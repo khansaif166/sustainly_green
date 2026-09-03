@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getStoredSession } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
 import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck, ImagePlus,
@@ -49,7 +49,7 @@ export default function EditProductPage() {
 
   useEffect(() => {
     async function load() {
-      const session = getStoredSession();
+      const session = await getValidSession();
       if (!session) { router.push("/login"); return; }
       try {
         const authHeader = { Authorization: `Bearer ${session.accessToken}` };
@@ -100,7 +100,7 @@ export default function EditProductPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const session = getStoredSession();
+    const session = await getValidSession();
     if (!session) { router.push("/login"); return; }
     setSaving(true); setError("");
     try {

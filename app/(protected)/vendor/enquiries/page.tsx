@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReplyQuoteModal from "./ReplyQuoteModal";
-import { getStoredSession } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 import {
   Send, CheckCircle2, XCircle, MessageSquare, Inbox,
   MapPin, Package, AlarmClock, Search, Filter,
@@ -53,7 +53,7 @@ export default function VendorEnquiriesPage() {
 
   useEffect(() => {
     async function load() {
-      const session = getStoredSession();
+      const session = await getValidSession();
       if (!session) { router.push("/login"); return; }
       try {
         const res = await fetch("/api/vendor/rfqs", { headers: { Authorization: `Bearer ${session.accessToken}` } });
