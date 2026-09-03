@@ -5,7 +5,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import type { Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { getStoredSession } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
 import { onboardingSchema, OnboardingFormData } from "./schema";
 import { Stepper } from "./_components/Stepper";
@@ -46,7 +46,7 @@ export const OnboardingForm = () => {
   // Auth & Prefill
   useEffect(() => {
     async function loadVendor() {
-      const session = getStoredSession();
+      const session = await getValidSession();
       if (!session) {
         router.push("/login");
         return;
@@ -120,7 +120,7 @@ export const OnboardingForm = () => {
   };
 
   const onSubmit = async (data: OnboardingFormData) => {
-    const session = getStoredSession();
+    const session = await getValidSession();
     if (!session) {
       router.push("/login");
       return;

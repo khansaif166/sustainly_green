@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getStoredSession } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell,
@@ -26,7 +26,7 @@ export default function VendorReportsPage() {
 
   useEffect(() => {
     async function load() {
-      const session = getStoredSession();
+      const session = await getValidSession();
       if (!session) { router.push("/login"); return; }
       try {
         const headers = { Authorization: `Bearer ${session.accessToken}` };

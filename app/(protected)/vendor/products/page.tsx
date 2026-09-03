@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getStoredSession } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 import { PlusCircle, Clock, CheckCircle2, Package, ArrowRight, ImageOff } from "lucide-react";
 
 type Product = {
@@ -22,7 +22,7 @@ export default function VendorProductsPage() {
 
   useEffect(() => {
     async function load() {
-      const session = getStoredSession();
+      const session = await getValidSession();
       if (!session) { router.push("/login"); return; }
       try {
         const res = await fetch("/api/vendor/products", { headers: { Authorization: `Bearer ${session.accessToken}` } });

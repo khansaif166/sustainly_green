@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getStoredSession } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 import { Award, CheckCircle2, Clock, XCircle, ShieldCheck, PlusCircle } from "lucide-react";
 
 type Certification = {
@@ -27,7 +27,7 @@ export default function VendorCertifications() {
 
   useEffect(() => {
     async function load() {
-      const session = getStoredSession();
+      const session = await getValidSession();
       if (!session) { router.push("/login"); return; }
       try {
         const res = await fetch("/api/vendor/certifications", { headers: { Authorization: `Bearer ${session.accessToken}` } });

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X, Send, IndianRupee, Clock, MessageSquare, AlertCircle } from "lucide-react";
-import { getStoredSession } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 
 export default function ReplyQuoteModal({ rfq, onClose, onSent }: {
   rfq: any; onClose: () => void; onSent: () => void;
@@ -16,7 +16,7 @@ export default function ReplyQuoteModal({ rfq, onClose, onSent }: {
     if (!form.price || !form.deliveryTimeline) { setError("Price and delivery timeline are required."); return; }
     setLoading(true);
     try {
-      const session = getStoredSession();
+      const session = await getValidSession();
       if (!session) { setError("Session expired. Please login again."); return; }
       const res = await fetch(`/api/vendor/rfqs/${rfq.id}`, {
         method: "PATCH",

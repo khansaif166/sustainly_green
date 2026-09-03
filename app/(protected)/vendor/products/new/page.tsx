@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getStoredSession } from "@/lib/supabaseAuth";
+import { getValidSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
 import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck, ImagePlus,
@@ -44,13 +44,15 @@ export default function AddProductPage() {
   const [success,            setSuccess]            = useState(false);
 
   useEffect(() => {
-    const session = getStoredSession();
-    if (!session) { router.push("/login"); return; }
+    (async () => {
+      const session = await getValidSession();
+      if (!session) { router.push("/login"); return; }
+    })();
   }, [router]);
 
   useEffect(() => {
     async function load() {
-      const session = getStoredSession();
+      const session = await getValidSession();
       if (!session) return;
       const res = await fetch("/api/vendor/catalog", { headers: { Authorization: `Bearer ${session.accessToken}` } });
       if (!res.ok) return;
@@ -72,7 +74,7 @@ export default function AddProductPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const session = getStoredSession();
+    const session = await getValidSession();
     if (!session) { router.push("/login"); return; }
     setLoading(true); setError("");
     try {
