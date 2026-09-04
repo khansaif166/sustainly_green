@@ -6,6 +6,9 @@ import Link from "next/link";
 import { getValidSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
 import {
+  ACCEPTED_IMAGE_TYPES, IMAGE_HINT, MAX_PRODUCT_IMAGES, screenProductImages,
+} from "@/lib/productImages";
+import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck, ImagePlus,
   X, CheckCircle2, Star,
 } from "lucide-react";
@@ -28,6 +31,8 @@ export default function AddProductPage() {
   const [subCategoryId,      setSubCategoryId]      = useState("");
   const [description,        setDescription]        = useState("");
   const [images,             setImages]             = useState<File[]>([]);
+  const [imageErrors,        setImageErrors]        = useState<string[]>([]);
+  const [imageWarnings,      setImageWarnings]      = useState<string[]>([]);
   const [coverIndex,         setCoverIndex]         = useState(0);
   const [availableFor,       setAvailableFor]       = useState<string[]>([]);
   const [priceType,          setPriceType]          = useState("");
@@ -171,6 +176,8 @@ export default function AddProductPage() {
         .ap-submit:disabled{opacity:.55;cursor:not-allowed}
         .ap-spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
+        .ap-img-err{font-size:11.5px;color:#b91c1c;margin:4px 0 0;line-height:1.5}
+        .ap-img-warn{font-size:11.5px;color:#b45309;margin:4px 0 0;line-height:1.5}
         .ap-err{background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:12px 16px;font-size:13px;color:#991b1b;font-weight:500}
       `}</style>
 
@@ -238,19 +245,27 @@ export default function AddProductPage() {
               <div className="ap-field">
                 <span className="ap-label">Images <span style={{ color: "#9ca3af", fontWeight: 500 }}>(up to 5)</span></span>
                 <label className="ap-upload">
-                  <input type="file" multiple accept="image/*" style={{ display: "none" }} onChange={e => {
+                  <input type="file" multiple accept={ACCEPTED_IMAGE_TYPES.join(",")} style={{ display: "none" }} onChange={async e => {
                     if (!e.target.files) return;
                     // Copy the FileList out synchronously. Clearing e.target.value
                     // below empties it, and a state updater runs after this handler
                     // returns — reading e.target.files in there yields nothing.
                     const picked = Array.from(e.target.files);
                     e.target.value = "";
-                    setImages(prev => [...prev, ...picked].slice(0, 5));
+                    const { accepted, errors, warnings } = await screenProductImages(
+                      picked,
+                      MAX_PRODUCT_IMAGES - images.length,
+                    );
+                    setImageErrors(errors);
+                    setImageWarnings(warnings);
+                    if (accepted.length) setImages(prev => [...prev, ...accepted].slice(0, MAX_PRODUCT_IMAGES));
                   }} />
                   <ImagePlus size={24} color="#9ca3af" />
                   <span className="ap-upload-label">Click to upload images</span>
-                  <span className="ap-upload-sub">PNG, JPG, WEBP up to 5MB each</span>
+                  <span className="ap-upload-sub">{IMAGE_HINT}</span>
                 </label>
+                {imageErrors.map(msg => <span key={msg} className="ap-img-err">{msg}</span>)}
+                {imageWarnings.map(msg => <span key={msg} className="ap-img-warn">{msg}</span>)}
               </div>
 
               {images.length > 0 && (
