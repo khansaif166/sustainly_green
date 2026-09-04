@@ -6,6 +6,9 @@ import Link from "next/link";
 import { getValidSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
 import {
+  IMAGE_HINT, MAX_PRODUCT_IMAGES, processProductImages,
+} from "@/lib/productImages";
+import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck, ImagePlus,
   X, CheckCircle2, Loader2,
 } from "lucide-react";
@@ -35,6 +38,9 @@ export default function EditProductPage() {
   const [description,        setDescription]        = useState("");
   const [existingImages,     setExistingImages]     = useState<string[]>([]);
   const [newImages,          setNewImages]          = useState<File[]>([]);
+  const [imageErrors,        setImageErrors]        = useState<string[]>([]);
+  const [imageNotes,         setImageNotes]         = useState<string[]>([]);
+  const [preparing,          setPreparing]          = useState(false);
   const [coverIndex,         setCoverIndex]         = useState(0);
   const [availableFor,       setAvailableFor]       = useState<string[]>([]);
   const [priceType,          setPriceType]          = useState("");
@@ -205,6 +211,8 @@ export default function EditProductPage() {
         .ep-submit:disabled{opacity:.55;cursor:not-allowed}
         .ep-spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
+        .ep-img-err{font-size:11.5px;color:#b91c1c;margin:4px 0 0;line-height:1.5}
+        .ep-img-note{font-size:11.5px;color:#b45309;margin:4px 0 0;line-height:1.5}
         .ep-err{background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:12px 16px;font-size:13px;color:#991b1b;font-weight:500}
         .ep-new-badge{position:absolute;top:4px;right:4px;background:#3b82f6;color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:50px}
       `}</style>
@@ -273,19 +281,32 @@ export default function EditProductPage() {
               <div className="ep-field">
                 <span className="ep-label">Add More Images <span style={{ color: "#9ca3af", fontWeight: 500 }}>(max 5 total)</span></span>
                 <label className="ep-upload">
-                  <input type="file" multiple accept="image/*" style={{ display: "none" }} onChange={e => {
+                  <input type="file" multiple accept="image/*" disabled={preparing} style={{ display: "none" }} onChange={async e => {
                     if (!e.target.files) return;
                     // Copy the FileList out synchronously. Clearing e.target.value
                     // below empties it, and a state updater runs after this handler
                     // returns — reading e.target.files in there yields nothing.
                     const picked = Array.from(e.target.files);
                     e.target.value = "";
-                    setNewImages(prev => [...prev, ...picked].slice(0, 5 - existingImages.length));
+                    const remaining = MAX_PRODUCT_IMAGES - existingImages.length - newImages.length;
+                    setPreparing(true);
+                    try {
+                      const { accepted, errors, notes } = await processProductImages(picked, remaining);
+                      setImageErrors(errors);
+                      setImageNotes(notes);
+                      if (accepted.length) {
+                        setNewImages(prev => [...prev, ...accepted.map(a => a.file)].slice(0, MAX_PRODUCT_IMAGES - existingImages.length));
+                      }
+                    } finally {
+                      setPreparing(false);
+                    }
                   }} />
                   <ImagePlus size={24} color="#9ca3af" />
-                  <span className="ep-upload-label">Click to upload new images</span>
-                  <span className="ep-upload-sub">Existing images are shown below</span>
+                  <span className="ep-upload-label">{preparing ? "Optimising images…" : "Click to upload new images"}</span>
+                  <span className="ep-upload-sub">{IMAGE_HINT}</span>
                 </label>
+                {imageErrors.map(msg => <span key={msg} className="ep-img-err">{msg}</span>)}
+                {imageNotes.map(msg => <span key={msg} className="ep-img-note">{msg}</span>)}
               </div>
 
               {allImages.length > 0 && (
