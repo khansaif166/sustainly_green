@@ -240,8 +240,12 @@ export default function AddProductPage() {
                 <label className="ap-upload">
                   <input type="file" multiple accept="image/*" style={{ display: "none" }} onChange={e => {
                     if (!e.target.files) return;
-                    setImages(prev => [...prev, ...Array.from(e.target.files!)].slice(0, 5));
+                    // Copy the FileList out synchronously. Clearing e.target.value
+                    // below empties it, and a state updater runs after this handler
+                    // returns — reading e.target.files in there yields nothing.
+                    const picked = Array.from(e.target.files);
                     e.target.value = "";
+                    setImages(prev => [...prev, ...picked].slice(0, 5));
                   }} />
                   <ImagePlus size={24} color="#9ca3af" />
                   <span className="ap-upload-label">Click to upload images</span>
