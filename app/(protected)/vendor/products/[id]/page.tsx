@@ -275,8 +275,12 @@ export default function EditProductPage() {
                 <label className="ep-upload">
                   <input type="file" multiple accept="image/*" style={{ display: "none" }} onChange={e => {
                     if (!e.target.files) return;
-                    setNewImages(prev => [...prev, ...Array.from(e.target.files!)].slice(0, 5 - existingImages.length));
+                    // Copy the FileList out synchronously. Clearing e.target.value
+                    // below empties it, and a state updater runs after this handler
+                    // returns — reading e.target.files in there yields nothing.
+                    const picked = Array.from(e.target.files);
                     e.target.value = "";
+                    setNewImages(prev => [...prev, ...picked].slice(0, 5 - existingImages.length));
                   }} />
                   <ImagePlus size={24} color="#9ca3af" />
                   <span className="ep-upload-label">Click to upload new images</span>
