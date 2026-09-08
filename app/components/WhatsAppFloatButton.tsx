@@ -1,8 +1,20 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import { FaWhatsapp } from "react-icons/fa";
 
 const WHATSAPP_NUMBER = "919003991874";
 
+// Signed-in workspaces have their own support routes, and on a phone this
+// button lands on top of the sticky action bars in those forms.
+const HIDDEN_PREFIXES = ["/vendor", "/buyer", "/admin"];
+
 export default function WhatsAppFloatButton() {
+  const pathname = usePathname();
+  if (HIDDEN_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+    return null;
+  }
+
   return (
     <>
       <a
@@ -41,7 +53,7 @@ export default function WhatsAppFloatButton() {
         @media (max-width: 640px) {
           .whatsapp-float-button {
             right: 16px;
-            bottom: 16px;
+            bottom: calc(16px + env(safe-area-inset-bottom));
             width: 50px;
             height: 50px;
           }

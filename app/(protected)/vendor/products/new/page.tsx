@@ -179,6 +179,63 @@ export default function AddProductPage() {
         @keyframes spin{to{transform:rotate(360deg)}}
         .ap-img-err{font-size:11.5px;color:#b91c1c;margin:4px 0 0;line-height:1.5}
         .ap-img-note{font-size:11.5px;color:#b45309;margin:4px 0 0;line-height:1.5}
+
+        /* ---- Mobile (phones) ----
+           Form controls sit at 16px because iOS Safari zooms the whole page
+           when a focused field is smaller than that, and every tappable
+           control clears the 44px minimum touch target. */
+        @media(max-width:640px){
+          .ap-page{gap:14px;padding-bottom:92px}
+          .ap-hero{border-radius:18px;padding:20px 18px}
+          .ap-hero-title{font-size:20px}
+          .ap-hero-sub{font-size:12.5px}
+          .ap-back{font-size:13.5px;min-height:44px;margin-bottom:6px}
+
+          .ap-card{border-radius:16px}
+          .ap-card-head{padding:16px 16px 12px}
+          .ap-card-body{padding:16px;gap:18px}
+          .ap-card-title{font-size:14.5px}
+
+          .ap-label{font-size:13.5px}
+          .ap-help,.ap-upload-sub,.ap-img-err,.ap-img-note{font-size:12.5px}
+          .ap-input,.ap-textarea,.ap-select{font-size:16px;padding:13px 14px;border-radius:13px}
+          .ap-select{min-height:50px;background-position:right 14px center}
+          .ap-input{min-height:50px}
+
+          .ap-chips{gap:9px}
+          .ap-chip{min-height:44px;padding:11px 18px;font-size:14px;flex:1 1 auto}
+
+          .ap-upload{padding:30px 16px;border-radius:16px}
+          .ap-upload-label{font-size:14.5px}
+
+          /* Two larger thumbnails beat five thumbnail-sized ones on a phone,
+             and the per-image controls stay permanently visible since there
+             is no hover to reveal them. */
+          .ap-img-grid{grid-template-columns:repeat(2,1fr);gap:12px}
+          .ap-img-thumb{height:130px}
+          .ap-img-actions{padding:8px 10px;background:rgba(0,0,0,.66)}
+          .ap-img-btn{font-size:13px;min-height:32px;padding:0 6px}
+
+          .ap-checkbox{width:24px;height:24px;border-radius:8px}
+          .ap-checkbox:checked::after{left:7px;top:3px;width:6px;height:11px}
+          .ap-checkbox-row{min-height:44px;font-size:14px}
+
+          /* The form is ~2000px tall on a phone, so the actions ride along the
+             bottom instead of stranding Save below four screens of scrolling. */
+          .ap-footer{position:fixed;left:0;right:0;bottom:0;z-index:45;
+            flex-wrap:nowrap;gap:10px;margin:0;
+            padding:11px 16px calc(11px + env(safe-area-inset-bottom));
+            background:rgba(255,255,255,.94);backdrop-filter:blur(10px);
+            border-top:1px solid rgba(0,0,0,.07);box-shadow:0 -4px 18px rgba(0,0,0,.05)}
+          .ap-cancel{flex:0 0 auto;min-height:50px;padding:0 20px;font-size:14px;justify-content:center}
+          .ap-submit{flex:1 1 auto;min-height:50px;padding:0 20px;font-size:15px;justify-content:center}
+        }
+
+        @media(max-width:380px){
+          .ap-chip{font-size:13.5px;padding:11px 14px}
+          .ap-img-thumb{height:112px}
+        }
+
         .ap-err{background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:12px 16px;font-size:13px;color:#991b1b;font-weight:500}
       `}</style>
 
