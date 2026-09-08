@@ -12,6 +12,7 @@ type ProductSeoRow = DatedRow & {
 
 type VendorSeoRow = DatedRow & {
   short_description: string | null;
+  registered_address: string | null;
   primary_sustainability_cert: string | null;
 };
 
@@ -123,10 +124,16 @@ export async function productSitemapEntries() {
 }
 
 export async function vendorSitemapEntries() {
+  // Must mirror isCompleteVendor() in app/find-vendors/[vendorId]/page.tsx,
+  // which decides whether the page is indexable. If the two disagree we either
+  // advertise noindex URLs in the sitemap or hide indexable ones from it.
+  // Note the description check is an OR: mapVendor() falls back to
+  // registered_address when short_description is empty (lib/supabasePublic.ts).
   const vendorQuery = new URLSearchParams({
-    select: "id,updated_at,short_description,primary_sustainability_cert",
+    select:
+      "id,updated_at,short_description,registered_address,primary_sustainability_cert",
     approved: "eq.true",
-    short_description: "not.is.null",
+    or: "(short_description.not.is.null,registered_address.not.is.null)",
     primary_sustainability_cert: "not.is.null",
     order: "id.asc",
   });
