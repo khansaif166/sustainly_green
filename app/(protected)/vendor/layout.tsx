@@ -104,8 +104,13 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         <Link href="/" aria-label="Go to Sustainly Green homepage" style={{ display: "inline-flex", alignItems: "center" }}>
           <Image src="/log.webp" alt="Sustainly Green" width={112} height={30} priority className="vl-mobile-logo" />
         </Link>
-        <button onClick={() => setOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex" }}>
-          <Menu size={20} color="#374151" />
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Open navigation menu"
+          style={{ background: "none", border: "none", cursor: "pointer", display: "flex",
+                   alignItems: "center", justifyContent: "center", width: 44, height: 44, margin: "0 -10px 0 0" }}
+        >
+          <Menu size={22} color="#374151" />
         </button>
       </div>
 

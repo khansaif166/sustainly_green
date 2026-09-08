@@ -3339,8 +3339,7 @@ export default function HomeClient({
           }
 
           .sidebar-card {
-            height: auto;
-            margin-top: 0;
+            display: none;
           }
 
           .hero-stack {

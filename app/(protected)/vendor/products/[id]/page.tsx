@@ -213,6 +213,63 @@ export default function EditProductPage() {
         @keyframes spin{to{transform:rotate(360deg)}}
         .ep-img-err{font-size:11.5px;color:#b91c1c;margin:4px 0 0;line-height:1.5}
         .ep-img-note{font-size:11.5px;color:#b45309;margin:4px 0 0;line-height:1.5}
+
+        /* ---- Mobile (phones) ----
+           Form controls sit at 16px because iOS Safari zooms the whole page
+           when a focused field is smaller than that, and every tappable
+           control clears the 44px minimum touch target. */
+        @media(max-width:640px){
+          .ep-page{gap:14px;padding-bottom:92px}
+          .ep-hero{border-radius:18px;padding:20px 18px}
+          .ep-hero-title{font-size:20px}
+          .ep-hero-sub{font-size:12.5px}
+          .ep-back{font-size:13.5px;min-height:44px;margin-bottom:6px}
+
+          .ep-card{border-radius:16px}
+          .ep-card-head{padding:16px 16px 12px}
+          .ep-card-body{padding:16px;gap:18px}
+          .ep-card-title{font-size:14.5px}
+
+          .ep-label{font-size:13.5px}
+          .ep-help,.ep-upload-sub,.ep-img-err,.ep-img-note{font-size:12.5px}
+          .ep-input,.ep-textarea,.ep-select{font-size:16px;padding:13px 14px;border-radius:13px}
+          .ep-select{min-height:50px;background-position:right 14px center}
+          .ep-input{min-height:50px}
+
+          .ep-chips{gap:9px}
+          .ep-chip{min-height:44px;padding:11px 18px;font-size:14px;flex:1 1 auto}
+
+          .ep-upload{padding:30px 16px;border-radius:16px}
+          .ep-upload-label{font-size:14.5px}
+
+          /* Two larger thumbnails beat five thumbnail-sized ones on a phone,
+             and the per-image controls stay permanently visible since there
+             is no hover to reveal them. */
+          .ep-img-grid{grid-template-columns:repeat(2,1fr);gap:12px}
+          .ep-img-thumb{height:130px}
+          .ep-img-actions{padding:8px 10px;background:rgba(0,0,0,.66)}
+          .ep-img-btn{font-size:13px;min-height:32px;padding:0 6px}
+
+          .ep-checkbox{width:24px;height:24px;border-radius:8px}
+          .ep-checkbox:checked::after{left:7px;top:3px;width:6px;height:11px}
+          .ep-checkbox-row{min-height:44px;font-size:14px}
+
+          /* The form is ~2000px tall on a phone, so the actions ride along the
+             bottom instead of stranding Save below four screens of scrolling. */
+          .ep-footer{position:fixed;left:0;right:0;bottom:0;z-index:45;
+            flex-wrap:nowrap;gap:10px;margin:0;
+            padding:11px 16px calc(11px + env(safe-area-inset-bottom));
+            background:rgba(255,255,255,.94);backdrop-filter:blur(10px);
+            border-top:1px solid rgba(0,0,0,.07);box-shadow:0 -4px 18px rgba(0,0,0,.05)}
+          .ep-cancel{flex:0 0 auto;min-height:50px;padding:0 20px;font-size:14px;justify-content:center}
+          .ep-submit{flex:1 1 auto;min-height:50px;padding:0 20px;font-size:15px;justify-content:center}
+        }
+
+        @media(max-width:380px){
+          .ep-chip{font-size:13.5px;padding:11px 14px}
+          .ep-img-thumb{height:112px}
+        }
+
         .ep-err{background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:12px 16px;font-size:13px;color:#991b1b;font-weight:500}
         .ep-new-badge{position:absolute;top:4px;right:4px;background:#3b82f6;color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:50px}
       `}</style>
