@@ -206,12 +206,6 @@ export default function Header() {
 
   return (
     <>
-      <div className="ann">
-        🌿 <b>Green Lens Verification is live.</b> India's first
-        anti-greenwashing standard for B2B procurement.
-        <Link href="/certification">See how it works →</Link>
-      </div>
-
       <nav className={`nav ${scrolled ? "nav-scrolled" : ""} ${!show && "-translate-y-full"} transition-all duration-300`}>
         <div className="nav-inner">
           <Link href="/" className="nav-logo">
