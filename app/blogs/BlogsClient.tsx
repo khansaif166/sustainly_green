@@ -5,6 +5,7 @@ import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import { fetchPublishedBlogs } from "@/lib/supabasePublic";
+import { blogHref } from "@/lib/slug";
 
 export default function BlogsClient({ initialBlogs }: { initialBlogs: any[] }) {
   const [blogs, setBlogs] = useState<any[]>(initialBlogs);
@@ -47,7 +48,7 @@ export default function BlogsClient({ initialBlogs }: { initialBlogs: any[] }) {
         {blogs.map((blog) => (
           <Link
             key={blog.id}
-            href={`/blogs/${blog.id}`}
+            href={blogHref(blog.id, blog.slug)}
             className="border border-gray-400 rounded-2xl overflow-hidden hover:shadow-lg transition"
           >
 

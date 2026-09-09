@@ -5,6 +5,7 @@ import Footer from "@/app/components/layouts/Footer";
 import Header from "@/app/components/Header";
 import Link from "next/link";
 import { fetchPublishedBlogById } from "@/lib/supabasePublic";
+import { blogHref } from "@/lib/slug";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
 
 export const revalidate = 3600;
@@ -31,7 +32,11 @@ export async function generateMetadata({
 }: BlogPageProps): Promise<Metadata> {
   const { id } = await params;
   const blog = await getBlog(id);
-  const canonical = `${getSiteUrl()}/blogs/${encodeURIComponent(id)}`;
+  // Canonical always points at the slug form when the post has one, so the
+  // UUID and slug URLs never compete with each other in search.
+  const canonical = `${getSiteUrl()}${
+    blog ? blogHref(blog.id, blog.slug) : `/blogs/${encodeURIComponent(id)}`
+  }`;
 
   if (!blog) {
     return {

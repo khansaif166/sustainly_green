@@ -50,6 +50,7 @@ type SupabaseProductRow = {
 
 type SupabaseBlogRow = {
   id: string;
+  slug: string | null;
   title: string | null;
   excerpt: string | null;
   content: string | null;
@@ -127,6 +128,7 @@ export type PublicProduct = {
 
 export type PublicBlog = {
   id: string;
+  slug?: string;
   title: string;
   excerpt?: string;
   content: string;
@@ -373,6 +375,7 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
 function mapBlog(row: SupabaseBlogRow): PublicBlog {
   return {
     id: row.id,
+    slug: stringValue(row.slug) || undefined,
     title: stringValue(row.title) || "Untitled Blog",
     excerpt: stringValue(row.excerpt) || undefined,
     content: stringValue(row.content) || "",
@@ -500,7 +503,7 @@ export async function fetchPublishedBlogs(options: {
   offset?: number;
 } = {}): Promise<PublicBlog[]> {
   const params = new URLSearchParams({
-    select: "id,title,excerpt,content,image_url,created_at,published",
+    select: BLOG_SELECT,
     published: "eq.true",
     order: "created_at.desc",
     limit: String(options.limit || 10),
@@ -511,13 +514,26 @@ export async function fetchPublishedBlogs(options: {
   return rows.map(mapBlog);
 }
 
-export async function fetchPublishedBlogById(id: string): Promise<PublicBlog | null> {
+const BLOG_SELECT = "id,slug,title,excerpt,content,image_url,created_at,published";
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolves a blog from the /blogs/[id] segment, which may be either the row
+ * UUID (the original URL form, still live and still linked) or the slug (the
+ * form used for posts published from 2026-09 onward). UUID-shaped segments are
+ * looked up by id; everything else by slug. Both return 200 — there is no
+ * redirect between the two forms, so existing UUID links never break.
+ */
+export async function fetchPublishedBlogById(
+  idOrSlug: string,
+): Promise<PublicBlog | null> {
   const params = new URLSearchParams({
-    select: "id,title,excerpt,content,image_url,created_at,published",
-    id: `eq.${id}`,
+    select: BLOG_SELECT,
     published: "eq.true",
     limit: "1",
   });
+  params.set(UUID_RE.test(idOrSlug) ? "id" : "slug", `eq.${idOrSlug}`);
 
   const rows = await supabaseGet<SupabaseBlogRow[]>(`blogs?${params}`);
   return rows[0] ? mapBlog(rows[0]) : null;
