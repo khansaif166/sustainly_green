@@ -76,6 +76,63 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * Pulls Q&A pairs out of the rendered post body so a FAQPage can be emitted
+ * without duplicating the copy in code. Expects the shape the editor produces
+ * for an FAQ section: an <h2 id="faq"> followed by alternating paragraphs,
+ * the question bolded and the answer plain, ending at the next <h2>.
+ *
+ * Returns null when fewer than two pairs are found — a FAQPage with one entry
+ * (or with headings mistaken for questions) is worse than none, since invalid
+ * structured data can suppress the whole result.
+ */
+function extractFaq(content: string) {
+  const section = content.split(/<h2[^>]*id="faq"[^>]*>/i)[1];
+  if (!section) return null;
+
+  const body = section.split(/<h2[\s>]/i)[0];
+  const paragraphs = [...body.matchAll(/<p>([\s\S]*?)<\/p>/gi)].map((m) => m[1]);
+  const strip = (v: string) =>
+    v.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+  const faqs: Array<{ q: string; a: string }> = [];
+  for (let i = 0; i < paragraphs.length - 1; i += 1) {
+    const isQuestion = /^\s*<strong>[\s\S]*<\/strong>\s*$/i.test(paragraphs[i]);
+    if (!isQuestion) continue;
+    const answer = strip(paragraphs[i + 1]);
+    if (!answer) continue;
+    faqs.push({ q: strip(paragraphs[i]), a: answer });
+    i += 1;
+  }
+
+  return faqs.length >= 2 ? faqs : null;
+}
+
+function breadcrumbStructuredData(blog: { title: string }, canonical: string) {
+  const siteUrl = getSiteUrl();
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Blogs", item: `${siteUrl}/blogs` },
+      { "@type": "ListItem", position: 3, name: blog.title, item: canonical },
+    ],
+  };
+}
+
+function faqStructuredData(content: string) {
+  const faqs = extractFaq(content);
+  if (!faqs) return null;
+  return {
+    "@type": "FAQPage",
+    mainEntity: faqs.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: a },
+    })),
+  };
+}
+
 function blogStructuredData(
   blog: NonNullable<Awaited<ReturnType<typeof getBlog>>>,
   canonical: string,
@@ -86,7 +143,6 @@ function blogStructuredData(
     blog.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
   return {
-    "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: blog.title,
     description: description || undefined,
@@ -109,8 +165,17 @@ export default async function BlogDetail({ params }: BlogPageProps) {
 
   if (!blog) notFound();
 
-  const canonical = `${getSiteUrl()}/blogs/${encodeURIComponent(id)}`;
-  const structuredData = blogStructuredData(blog, canonical);
+  // Must match the canonical generateMetadata emits, or the JSON-LD would
+  // claim a different URL than the <link rel="canonical"> on the same page.
+  const canonical = `${getSiteUrl()}${blogHref(blog.id, blog.slug)}`;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      blogStructuredData(blog, canonical),
+      breadcrumbStructuredData(blog, canonical),
+      faqStructuredData(blog.content),
+    ].filter(Boolean),
+  };
 
   return (
     <>
