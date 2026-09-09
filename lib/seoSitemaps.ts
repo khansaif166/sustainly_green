@@ -1,5 +1,5 @@
 import { getSiteUrl } from "@/lib/site";
-import { productHref } from "@/lib/slug";
+import { blogHref, productHref } from "@/lib/slug";
 
 type DatedRow = {
   id: string;
@@ -20,7 +20,9 @@ type CategorySeoRow = DatedRow & {
   slug: string;
 };
 
-type BlogSeoRow = DatedRow;
+type BlogSeoRow = DatedRow & {
+  slug: string | null;
+};
 
 const PAGE_SIZE = 1000;
 const MAX_URLS = 50_000;
@@ -189,14 +191,17 @@ export async function categorySitemapEntries() {
 
 export async function blogSitemapEntries() {
   const query = new URLSearchParams({
-    select: "id,updated_at",
+    select: "id,slug,updated_at",
     published: "eq.true",
     order: "id.asc",
   });
   const rows = await fetchRows<BlogSeoRow>("blogs", query);
   const siteUrl = getSiteUrl();
+  // Must match the canonical emitted by app/blogs/[id]/page.tsx, which prefers
+  // the slug form. Advertising the UUID here while the page canonicalises to
+  // the slug would put the sitemap at odds with the page.
   return rows.map((row) => ({
-    url: `${siteUrl}/blogs/${encodeURIComponent(row.id)}`,
+    url: `${siteUrl}${blogHref(row.id, row.slug)}`,
     lastModified: row.updated_at,
   }));
 }
