@@ -83,7 +83,9 @@ body {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  /* No overflow-x here: it makes <body> a scroll container, which silently
+     breaks position:sticky for every descendant. The rule on <html> above
+     already clips horizontal overflow. */
 }
 
 a { text-decoration: none; color: inherit; }
