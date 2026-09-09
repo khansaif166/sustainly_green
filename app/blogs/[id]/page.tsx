@@ -6,6 +6,10 @@ import Header from "@/app/components/Header";
 import Link from "next/link";
 import { fetchPublishedBlogById } from "@/lib/supabasePublic";
 import { blogHref } from "@/lib/slug";
+import { fetchPublishedBlogs } from "@/lib/supabasePublic";
+import BlogToc, { type Heading } from "./_components/BlogToc";
+import ReadingProgress from "./_components/ReadingProgress";
+import ShareButtons from "./_components/ShareButtons";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
 
 export const revalidate = 3600;
@@ -159,6 +163,33 @@ function blogStructuredData(
   };
 }
 
+/** Section headings, for the contents rail. Ids are authored in the stored HTML. */
+function extractHeadings(content: string): Heading[] {
+  return [...content.matchAll(/<h2[^>]*\sid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/gi)].map(
+    (m) => ({
+      id: m[1],
+      text: m[2].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
+    }),
+  );
+}
+
+/** Rounded up, 200 wpm — the usual reading speed for prose of this kind. */
+function readingMinutes(content: string) {
+  const words = content.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
+function formatDate(value?: string) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export default async function BlogDetail({ params }: BlogPageProps) {
   const { id } = await params;
   const blog = await getBlog(id);
@@ -177,6 +208,15 @@ export default async function BlogDetail({ params }: BlogPageProps) {
     ].filter(Boolean),
   };
 
+  const headings = extractHeadings(blog.content);
+  const minutes = readingMinutes(blog.content);
+  const published = formatDate(blog.createdAt);
+
+  // Newest few, minus this one. Failure here must not take the article down.
+  const related = (await fetchPublishedBlogs({ limit: 4 }).catch(() => []))
+    .filter((b) => b.id !== blog.id)
+    .slice(0, 3);
+
   return (
     <>
       <script
@@ -185,48 +225,146 @@ export default async function BlogDetail({ params }: BlogPageProps) {
           __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
         }}
       />
+      <ReadingProgress />
       <Header />
-      <div className="w-full mx-auto px-6 pt-10">
-        <nav className="text-sm text-gray-500 flex items-center gap-2">
-          <Link href="/" className="hover:text-black">
-            Home
-          </Link>
 
-          <span>/</span>
+      <article>
+        {/* Hero */}
+        <header className="border-b border-gray-100 bg-gradient-to-b from-green-50/60 to-white">
+          <div className="mx-auto w-full max-w-6xl px-6 pt-8 pb-12">
+            <nav
+              aria-label="Breadcrumb"
+              className="flex items-center gap-2 text-sm text-gray-500"
+            >
+              <Link href="/" className="hover:text-gray-900">
+                Home
+              </Link>
+              <span aria-hidden="true">/</span>
+              <Link href="/blogs" className="hover:text-gray-900">
+                Blogs
+              </Link>
+              <span aria-hidden="true">/</span>
+              <span className="max-w-[46ch] truncate font-medium text-gray-800">
+                {blog.title}
+              </span>
+            </nav>
 
-          <Link href="/blogs" className="hover:text-black">
-            Blogs
-          </Link>
+            <h1 className="mt-6 max-w-4xl text-3xl leading-tight font-bold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">
+              {blog.title}
+            </h1>
 
-          <span>/</span>
+            {blog.excerpt && (
+              <p className="mt-4 max-w-3xl text-lg leading-relaxed text-gray-600">
+                {blog.excerpt}
+              </p>
+            )}
 
-          <span className="text-gray-800 font-medium">{blog.title}</span>
-        </nav>
-      </div>
-      <div className="w-auto mx-auto py-16 px-6 flex flex-col md:flex-col items-start gap-10">
-        {/* Blog Image */}
-        <div className="w-full">
-          {blog.image && (
-            <img
-              src={blog.image}
-              alt={blog.title}
-              className="w-[350px] rounded-2xl shadow-md object-cover"
-            />
-          )}
+            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-gray-500">
+              {published && (
+                <time dateTime={blog.createdAt}>{published}</time>
+              )}
+              {published && <span aria-hidden="true">·</span>}
+              <span>{minutes} min read</span>
+            </div>
+
+            {blog.image && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={blog.image}
+                alt=""
+                className="mt-8 aspect-[2/1] w-full rounded-2xl object-cover shadow-sm"
+              />
+            )}
+          </div>
+        </header>
+
+        {/* Body + contents rail */}
+        <div className="mx-auto w-full max-w-6xl px-6 py-12">
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_240px] lg:gap-12">
+            <div className="min-w-0">
+              {headings.length > 1 && (
+                <details className="mb-8 rounded-xl border border-gray-200 p-4 lg:hidden">
+                  <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+                    On this page
+                  </summary>
+                  <ul className="mt-3 space-y-2 text-sm">
+                    {headings.map((h) => (
+                      <li key={h.id}>
+                        <a
+                          href={`#${h.id}`}
+                          className="text-gray-600 hover:text-green-700"
+                        >
+                          {h.text}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+
+              <div
+                className="prose prose-lg max-w-[68ch] text-gray-700
+                  prose-headings:scroll-mt-28 prose-headings:font-bold prose-headings:text-gray-900
+                  prose-a:font-medium prose-a:text-green-700 prose-a:underline-offset-2
+                  hover:prose-a:text-green-800
+                  prose-img:rounded-xl
+                  prose-table:text-base
+                  prose-figcaption:text-sm prose-figcaption:text-gray-500"
+                dangerouslySetInnerHTML={{ __html: blog.content }}
+              />
+
+              <div className="mt-12 border-t border-gray-100 pt-6">
+                <ShareButtons url={canonical} title={blog.title} />
+              </div>
+            </div>
+
+            <aside className="hidden lg:block">
+              <div className="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto">
+                <BlogToc headings={headings} />
+              </div>
+            </aside>
+          </div>
         </div>
 
-        {/* Blog Content */}
-        <div className=" w-full">
-          <h1 className="text-4xl font-bold mb-6 leading-tight">
-            {blog.title}
-          </h1>
+        {/* Related */}
+        {related.length > 0 && (
+          <section className="border-t border-gray-100 bg-gray-50/60">
+            <div className="mx-auto w-full max-w-6xl px-6 py-14">
+              <h2 className="text-xl font-bold text-gray-900">Keep reading</h2>
+              <ul className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {related.map((r) => (
+                  <li key={r.id}>
+                    <Link
+                      href={blogHref(r.id, r.slug)}
+                      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition-shadow hover:shadow-md"
+                    >
+                      {r.image && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={r.image}
+                          alt=""
+                          className="aspect-[16/9] w-full object-cover"
+                        />
+                      )}
+                      <span className="flex flex-1 flex-col p-4">
+                        <span className="font-semibold text-gray-900 group-hover:text-green-700">
+                          {r.title}
+                        </span>
+                        {r.excerpt && (
+                          <span className="mt-2 line-clamp-3 text-sm text-gray-600">
+                            {r.excerpt}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+      </article>
 
-          <div
-            className="prose max-w-none text-gray-700 text-lg leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: blog.content }}
-          />
-        </div>
-      </div>
       <Footer />
     </>
   );

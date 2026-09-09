@@ -83,7 +83,9 @@ body {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  /* No overflow-x here: it makes <body> a scroll container, which silently
+     breaks position:sticky for every descendant. The rule on <html> above
+     already clips horizontal overflow. */
 }
 
 a { text-decoration: none; color: inherit; }
@@ -155,25 +157,6 @@ html, body {
 
 .ProseMirror { width: 100%; min-height: 200px; outline: none; }
 .ProseMirror p { margin: 0; }
-
-/* ═══════════════════════════════════════
-   ANNOUNCEMENT BAR
-═══════════════════════════════════════ */
-.ann {
-  background: var(--g3);
-  text-align: center;
-  padding: 10px 20px;
-  font-size: 12.5px;
-  color: rgba(255,255,255,0.7);
-  letter-spacing: 0.15px;
-  max-width: 100%;
-  width: 100%;
-  overflow-wrap: anywhere;
-  line-height: 1.45;
-  white-space: normal;
-}
-.ann b { color: #fff; }
-.ann a { color: #5EE89A; margin-left: 6px; font-weight: 600; white-space: nowrap; }
 
 /* ═══════════════════════════════════════
    NAVBAR — frosted glass Apple-style
@@ -1136,15 +1119,6 @@ footer { background: #050A06; padding: 60px 0 0; }
   .cat-icon { height: 160px; }
 }
 @media (max-width: 640px) {
-  .ann {
-    padding: 8px 12px;
-    font-size: 11.5px;
-  }
-  .ann a {
-    display: inline-flex;
-    margin-left: 4px;
-    white-space: normal;
-  }
   .nav-inner {
     padding-left: 14px;
     padding-right: 14px;
