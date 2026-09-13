@@ -58,10 +58,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               <div className="aspect-[3/2] overflow-hidden rounded-[1.75rem] border border-gray-200 bg-white shadow-sm">
                 {activeImage ? (
                   <img
-                    src={activeImage}
-                    alt={product.title}
-                    className="h-full w-full object-cover"
-                  />
+  src={activeImage}
+  alt={product.title}
+  className="h-full w-full object-contain object-center p-2" 
+/>
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-gray-500">
                     No image
@@ -85,10 +85,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       }`}
                     >
                       <img
-                        src={image}
-                        alt=""
-                        className="h-16 w-20 rounded-lg object-cover sm:h-20 sm:w-24"
-                      />
+  src={image}
+  alt=""
+  className="h-16 w-20 rounded-lg object-contain object-center sm:h-20 sm:w-24"
+/>
                     </button>
                   ))}
                 </div>
@@ -175,14 +175,6 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       Minimum order:{" "}
                       <span className="font-semibold text-gray-800">
                         {product.moq}
-                      </span>
-                    </p>
-                  )}
-                  {product.discount && (
-                    <p className="mt-1 text-sm text-emerald-700">
-                      Offer:{" "}
-                      <span className="font-semibold">
-                        {product.discount}
                       </span>
                     </p>
                   )}
