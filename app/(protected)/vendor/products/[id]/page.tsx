@@ -3,11 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getValidSession } from "@/lib/supabaseAuth";
+import { getStoredSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
-import {
-  IMAGE_HINT, MAX_PRODUCT_IMAGES, processProductImages,
-} from "@/lib/productImages";
 import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck, ImagePlus,
   X, CheckCircle2, Loader2,
@@ -38,9 +35,6 @@ export default function EditProductPage() {
   const [description,        setDescription]        = useState("");
   const [existingImages,     setExistingImages]     = useState<string[]>([]);
   const [newImages,          setNewImages]          = useState<File[]>([]);
-  const [imageErrors,        setImageErrors]        = useState<string[]>([]);
-  const [imageNotes,         setImageNotes]         = useState<string[]>([]);
-  const [preparing,          setPreparing]          = useState(false);
   const [coverIndex,         setCoverIndex]         = useState(0);
   const [availableFor,       setAvailableFor]       = useState<string[]>([]);
   const [priceType,          setPriceType]          = useState("");
@@ -55,7 +49,7 @@ export default function EditProductPage() {
 
   useEffect(() => {
     async function load() {
-      const session = await getValidSession();
+      const session = getStoredSession();
       if (!session) { router.push("/login"); return; }
       try {
         const authHeader = { Authorization: `Bearer ${session.accessToken}` };
@@ -106,7 +100,7 @@ export default function EditProductPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const session = await getValidSession();
+    const session = getStoredSession();
     if (!session) { router.push("/login"); return; }
     setSaving(true); setError("");
     try {
@@ -211,65 +205,6 @@ export default function EditProductPage() {
         .ep-submit:disabled{opacity:.55;cursor:not-allowed}
         .ep-spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
-        .ep-img-err{font-size:11.5px;color:#b91c1c;margin:4px 0 0;line-height:1.5}
-        .ep-img-note{font-size:11.5px;color:#b45309;margin:4px 0 0;line-height:1.5}
-
-        /* ---- Mobile (phones) ----
-           Form controls sit at 16px because iOS Safari zooms the whole page
-           when a focused field is smaller than that, and every tappable
-           control clears the 44px minimum touch target. */
-        @media(max-width:640px){
-          .ep-page{gap:14px;padding-bottom:92px}
-          .ep-hero{border-radius:18px;padding:20px 18px}
-          .ep-hero-title{font-size:20px}
-          .ep-hero-sub{font-size:12.5px}
-          .ep-back{font-size:13.5px;min-height:44px;margin-bottom:6px}
-
-          .ep-card{border-radius:16px}
-          .ep-card-head{padding:16px 16px 12px}
-          .ep-card-body{padding:16px;gap:18px}
-          .ep-card-title{font-size:14.5px}
-
-          .ep-label{font-size:13.5px}
-          .ep-help,.ep-upload-sub,.ep-img-err,.ep-img-note{font-size:12.5px}
-          .ep-input,.ep-textarea,.ep-select{font-size:16px;padding:13px 14px;border-radius:13px}
-          .ep-select{min-height:50px;background-position:right 14px center}
-          .ep-input{min-height:50px}
-
-          .ep-chips{gap:9px}
-          .ep-chip{min-height:44px;padding:11px 18px;font-size:14px;flex:1 1 auto}
-
-          .ep-upload{padding:30px 16px;border-radius:16px}
-          .ep-upload-label{font-size:14.5px}
-
-          /* Two larger thumbnails beat five thumbnail-sized ones on a phone,
-             and the per-image controls stay permanently visible since there
-             is no hover to reveal them. */
-          .ep-img-grid{grid-template-columns:repeat(2,1fr);gap:12px}
-          .ep-img-thumb{height:130px}
-          .ep-img-actions{padding:8px 10px;background:rgba(0,0,0,.66)}
-          .ep-img-btn{font-size:13px;min-height:32px;padding:0 6px}
-
-          .ep-checkbox{width:24px;height:24px;border-radius:8px}
-          .ep-checkbox:checked::after{left:7px;top:3px;width:6px;height:11px}
-          .ep-checkbox-row{min-height:44px;font-size:14px}
-
-          /* The form is ~2000px tall on a phone, so the actions ride along the
-             bottom instead of stranding Save below four screens of scrolling. */
-          .ep-footer{position:fixed;left:0;right:0;bottom:0;z-index:45;
-            flex-wrap:nowrap;gap:10px;margin:0;
-            padding:11px 16px calc(11px + env(safe-area-inset-bottom));
-            background:rgba(255,255,255,.94);backdrop-filter:blur(10px);
-            border-top:1px solid rgba(0,0,0,.07);box-shadow:0 -4px 18px rgba(0,0,0,.05)}
-          .ep-cancel{flex:0 0 auto;min-height:50px;padding:0 20px;font-size:14px;justify-content:center}
-          .ep-submit{flex:1 1 auto;min-height:50px;padding:0 20px;font-size:15px;justify-content:center}
-        }
-
-        @media(max-width:380px){
-          .ep-chip{font-size:13.5px;padding:11px 14px}
-          .ep-img-thumb{height:112px}
-        }
-
         .ep-err{background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:12px 16px;font-size:13px;color:#991b1b;font-weight:500}
         .ep-new-badge{position:absolute;top:4px;right:4px;background:#3b82f6;color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:50px}
       `}</style>
@@ -338,32 +273,116 @@ export default function EditProductPage() {
               <div className="ep-field">
                 <span className="ep-label">Add More Images <span style={{ color: "#9ca3af", fontWeight: 500 }}>(max 5 total)</span></span>
                 <label className="ep-upload">
-                  <input type="file" multiple accept="image/*" disabled={preparing} style={{ display: "none" }} onChange={async e => {
-                    if (!e.target.files) return;
-                    // Copy the FileList out synchronously. Clearing e.target.value
-                    // below empties it, and a state updater runs after this handler
-                    // returns — reading e.target.files in there yields nothing.
-                    const picked = Array.from(e.target.files);
-                    e.target.value = "";
-                    const remaining = MAX_PRODUCT_IMAGES - existingImages.length - newImages.length;
-                    setPreparing(true);
-                    try {
-                      const { accepted, errors, notes } = await processProductImages(picked, remaining);
-                      setImageErrors(errors);
-                      setImageNotes(notes);
-                      if (accepted.length) {
-                        setNewImages(prev => [...prev, ...accepted.map(a => a.file)].slice(0, MAX_PRODUCT_IMAGES - existingImages.length));
-                      }
-                    } finally {
-                      setPreparing(false);
-                    }
-                  }} />
+                  <input 
+  type="file" 
+  multiple 
+  accept="image/*" 
+  style={{ display: "none" }} 
+  onChange={async e => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const selectedFiles = Array.from(e.target.files);
+    const validProcessedFiles: File[] = [];
+    let newErrors = [];
+    
+    const remainingSlots = 5 - existingImages.length;
+
+    if (remainingSlots <= 0) {
+      setError("You already have 5 images. Please remove some before adding new ones.");
+      e.target.value = "";
+      return;
+    }
+
+    // Auto-formatting utility
+    const processAndFormatImage = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    // 1. Define your marketplace standard dimension (e.g., a perfect 800x800 square)
+    const TARGET_SIZE = 800; 
+
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      
+      const canvas = document.createElement("canvas");
+      canvas.width = TARGET_SIZE;
+      canvas.height = TARGET_SIZE;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas not supported"));
+
+      // 2. Lay down a crisp white background so transparent PNGs or odd aspect ratios look clean
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, TARGET_SIZE, TARGET_SIZE);
+
+      // 3. The Magic Math: Calculate scale to fit entirely inside without distorting
+      const scale = Math.min(TARGET_SIZE / img.width, TARGET_SIZE / img.height);
+      const drawWidth = img.width * scale;
+      const drawHeight = img.height * scale;
+
+      // 4. Calculate coordinates to perfectly center the image
+      const dx = (TARGET_SIZE - drawWidth) / 2;
+      const dy = (TARGET_SIZE - drawHeight) / 2;
+
+      // 5. Paint the resized image onto the center of the white canvas
+      ctx.drawImage(img, dx, dy, drawWidth, drawHeight);
+
+      // 6. Export as an optimized, next-gen WebP format (saving massive storage space)
+      canvas.toBlob((blob) => {
+        if (!blob) return reject(new Error("Blob conversion failed"));
+        
+        const fileName = file.name.replace(/\.[^/.]+$/, "") + "_formatted.webp";
+        const newFile = new File([blob], fileName, { type: "image/webp" });
+        
+        // Attach the preview URL directly to the file object to prevent memory leaks
+        Object.assign(newFile, { previewUrl: URL.createObjectURL(newFile) });
+        resolve(newFile);
+        
+      }, "image/webp", 0.85); // 85% quality is visually lossless but heavily compressed
+    };
+    
+    img.onerror = () => reject(new Error(`Failed to load "${file.name}"`));
+    img.src = objectUrl;
+  });
+};
+
+    // Process all selected files sequentially
+    for (const file of selectedFiles) {
+      if (!file.type.startsWith("image/")) {
+        newErrors.push(`"${file.name}" is not a valid image file.`);
+        continue;
+      }
+      
+      try {
+        const processedFile = await processAndFormatImage(file);
+        validProcessedFiles.push(processedFile);
+      } catch (err) {
+        newErrors.push(`Could not process "${file.name}".`);
+      }
+    }
+
+    setNewImages(prev => {
+      const combined = [...prev, ...validProcessedFiles];
+      if (combined.length > remainingSlots) {
+        newErrors.push(`Maximum 5 images total. Extra uploads were discarded.`);
+        return combined.slice(0, remainingSlots);
+      }
+      return combined;
+    });
+
+    if (newErrors.length > 0) {
+      setError(newErrors.join(" "));
+    } else {
+      setError("");
+    }
+
+    e.target.value = ""; 
+  }} 
+/>
                   <ImagePlus size={24} color="#9ca3af" />
-                  <span className="ep-upload-label">{preparing ? "Optimising images…" : "Click to upload new images"}</span>
-                  <span className="ep-upload-sub">{IMAGE_HINT}</span>
+                  <span className="ep-upload-label">Click to upload new images</span>
+                  <span className="ep-upload-sub">Existing images are shown below</span>
                 </label>
-                {imageErrors.map(msg => <span key={msg} className="ep-img-err">{msg}</span>)}
-                {imageNotes.map(msg => <span key={msg} className="ep-img-note">{msg}</span>)}
               </div>
 
               {allImages.length > 0 && (
