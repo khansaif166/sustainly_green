@@ -488,6 +488,7 @@ export default function HomeClient({
   function hrefForTopTab(tab: string) {
     if (tab === "Suppliers") return "/browse?type=vendor";
     if (tab === "Services") return "/browse?type=service";
+    if (tab === "ESG") return "/esg";
     if (tab === "Certifications") {
       return "/certification";
     }
@@ -504,7 +505,7 @@ export default function HomeClient({
               <Link href="/buyer/dashboard">Buyer</Link>
               <Link href="/vendor/dashboard">Supplier</Link>
               <Link href="/resources">Resources</Link>
-              <Link href="/sdg-commitment">Our SDG Commitment</Link>
+              <Link href="/esg">ESG</Link>
             </div>
           </div>
 
