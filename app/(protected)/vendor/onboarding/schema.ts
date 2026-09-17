@@ -1,26 +1,36 @@
 import { z } from "zod";
 
+/**
+ * Fields marked optional below are not necessarily optional by intent — many are
+ * hidden by SHOW_FULL_ONBOARDING in onboardingConfig.ts. A hidden field with a
+ * .min(1) validator would block submission with an error the vendor cannot see
+ * or fix, so the validator is relaxed rather than the field removed.
+ *
+ * Still mandatory: the fields the marketplace actually renders, plus the
+ * declaration. companyName, city and state feed the vendor page title;
+ * shortDescription gates indexability via isCompleteVendor().
+ */
 export const onboardingSchema = z.object({
   // STEP 1: IDENTITY & CONTACT
   companyName: z.string().min(1, "Company Name is required"),
   logoFile: z.any().optional(),
-  registrationType: z.string().min(1, "Registration Type is required"),
-  cinRegistration: z.string().min(1, "CIN is required"),
-  gstNumber: z.string().min(1, "GST is required"),
-  yearOfIncorporation: z.string().min(1, "Year is required"),
-  registeredAddress: z.string().min(1, "Address is required"),
+  registrationType: z.string().optional(),
+  cinRegistration: z.string().optional(),
+  gstNumber: z.string().optional(),
+  yearOfIncorporation: z.string().optional(),
+  registeredAddress: z.string().optional(),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
-  pinCode: z.string().min(1, "PIN is required"),
-  country: z.string().min(1, "Country is required"),
-  primaryContactName: z.string().min(1, "Contact Name is required"),
-  designation: z.string().min(1, "Designation is required"),
+  pinCode: z.string().optional(),
+  country: z.string().optional(),
+  primaryContactName: z.string().optional(),
+  designation: z.string().optional(),
   businessEmail: z.string().email("Invalid email"),
   whatsapp: z.string().min(1, "Mobile is required"),
   alternatePhone: z.string().optional(),
 
   // STEP 2: BUSINESS OVERVIEW
-  businessType: z.string().min(1, "Business Type is required"),
+  businessType: z.string().optional(),
   primaryCategory: z.string().min(1, "Category is required"),
   subCategories: z.array(z.string()).max(3, "Max 3 subcategories"),
   shortDescription: z.string().min(1, "Description is required"),
@@ -44,7 +54,7 @@ export const onboardingSchema = z.object({
     id: z.string(),
     expiry: z.string()
   })).optional(),
-  sustainabilityPractice: z.string().min(1, "Sustainability Description is required"),
+  sustainabilityPractice: z.string().optional(),
   recycledContent: z.string().optional(),
   carbonFootprint: z.string().optional(),
   eprRegistration: z.string().optional(),
@@ -52,7 +62,7 @@ export const onboardingSchema = z.object({
   netZeroCommitment: z.string().optional(),
 
   // STEP 4: MARKETPLACE + DECLARATION
-  listingTier: z.string().min(1, "Listing Tier is required"),
+  listingTier: z.string().optional(),
   caseStudies: z.string().optional(),
   awards: z.string().optional(),
   awardsFile: z.any().optional(),

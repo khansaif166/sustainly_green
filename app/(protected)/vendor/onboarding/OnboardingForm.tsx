@@ -9,6 +9,7 @@ import { getValidSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
 import { onboardingSchema, OnboardingFormData } from "./schema";
 import { Stepper } from "./_components/Stepper";
+import { SHOW_FULL_ONBOARDING } from "./onboardingConfig";
 import { Step1Identity } from "./_components/Step1Identity";
 import { Step2Business } from "./_components/Step2Business";
 import { Step3Sustainability } from "./_components/Step3Sustainability";
@@ -21,6 +22,8 @@ type CatalogSubcategory = { id: string; name: string; categoryId: string };
 export const OnboardingForm = () => {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  // Trimmed flow folds the old steps 2-4 onto a single second page.
+  const totalSteps = SHOW_FULL_ONBOARDING ? 4 : 2;
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -98,21 +101,18 @@ export const OnboardingForm = () => {
     setSubmitError("");
     let fieldsToValidate: (keyof OnboardingFormData)[] = [];
     if (step === 1) {
-      fieldsToValidate = [
-        "companyName", "registrationType", "cinRegistration", "gstNumber", 
-        "yearOfIncorporation", "registeredAddress", "city", "state", 
-        "pinCode", "country", "primaryContactName", "designation", 
-        "businessEmail", "whatsapp"
-      ];
-    } else if (step === 2) {
-      fieldsToValidate = [
-        "businessType", "primaryCategory", "shortDescription", 
-        "keyProducts"
-      ];
-    } else if (step === 3) {
-      fieldsToValidate = [
-        "primarySustainabilityCert", "issuingBody", "sustainabilityPractice"
-      ];
+      fieldsToValidate = SHOW_FULL_ONBOARDING
+        ? [
+            "companyName", "registrationType", "cinRegistration", "gstNumber",
+            "yearOfIncorporation", "registeredAddress", "city", "state",
+            "pinCode", "country", "primaryContactName", "designation",
+            "businessEmail", "whatsapp",
+          ]
+        : ["companyName", "city", "state", "businessEmail", "whatsapp"];
+    } else if (step === 2 && SHOW_FULL_ONBOARDING) {
+      fieldsToValidate = ["businessType", "primaryCategory", "shortDescription", "keyProducts"];
+    } else if (step === 3 && SHOW_FULL_ONBOARDING) {
+      fieldsToValidate = ["primarySustainabilityCert", "issuingBody", "sustainabilityPractice"];
     }
 
     const isStepValid = await trigger(fieldsToValidate);
@@ -160,6 +160,11 @@ export const OnboardingForm = () => {
         (cleanData as Record<string, unknown>).awardsImageUrl = result.url;
       }
 
+      // Tier picker is hidden in the trimmed flow; everyone starts on Starter.
+      if (!SHOW_FULL_ONBOARDING) {
+        (cleanData as Record<string, unknown>).listingTier = "starter";
+      }
+
       const response = await fetch("/api/vendor/profile", {
         method: "PUT",
         headers: {
@@ -193,16 +198,28 @@ export const OnboardingForm = () => {
 
   return (
     <div className="w-full mx-auto">
-      <Stepper currentStep={step} totalSteps={4} />
+      <Stepper currentStep={step} totalSteps={totalSteps} />
 
       <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
         <div className="p-8 md:p-12">
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)}>
               {step === 1 && <Step1Identity />}
-              {step === 2 && <Step2Business categories={categories} subcategories={subcategories} />}
-              {step === 3 && <Step3Sustainability />}
-              {step === 4 && <Step4Marketplace />}
+              {SHOW_FULL_ONBOARDING ? (
+                <>
+                  {step === 2 && <Step2Business categories={categories} subcategories={subcategories} />}
+                  {step === 3 && <Step3Sustainability />}
+                  {step === 4 && <Step4Marketplace />}
+                </>
+              ) : (
+                step === 2 && (
+                  <div className="space-y-10">
+                    <Step2Business categories={categories} subcategories={subcategories} />
+                    <Step3Sustainability />
+                    <Step4Marketplace />
+                  </div>
+                )
+              )}
 
               {submitError && (
                 <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -223,7 +240,7 @@ export const OnboardingForm = () => {
                   Back
                 </button>
 
-                {step < 4 ? (
+                {step < totalSteps ? (
                   <button
                     type="button"
                     onClick={handleNext}
@@ -259,7 +276,7 @@ export const OnboardingForm = () => {
 
       <div className="mt-8 text-center">
         <p className="text-sm text-gray-400">
-          Step {step} of 4 • Sustainly Ecohub India Pvt Ltd
+          Step {step} of {totalSteps} • Sustainly Ecohub India Pvt Ltd
         </p>
       </div>
     </div>
