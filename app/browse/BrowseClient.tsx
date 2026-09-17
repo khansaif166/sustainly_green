@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { productHref } from "@/lib/slug";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import {
@@ -17,6 +16,7 @@ import {
   FiSearch, FiX, FiArrowLeft, FiGrid, FiList, FiPackage,
   FiTool, FiUsers, FiMapPin, FiFilter, FiChevronDown,
   FiChevronUp, FiRefreshCw, FiExternalLink, FiSliders,
+  FiHeart, FiCheckCircle
 } from "react-icons/fi";
 import { HiOutlineSparkles, HiOutlineShieldCheck } from "react-icons/hi2";
 
@@ -138,7 +138,9 @@ export default function BrowsePage({
           if (filters.badge === "eco_verified") list = list.filter(p => p.ecoVerified);
           if (filters.sortBy === "eco_score") list = list.sort((a, b) => (b.ecoScore || 0) - (a.ecoScore || 0));
           if (filters.sortBy === "name_az") list = list.sort((a, b) => vt(a.title).localeCompare(vt(b.title)));
-          setProducts(list); setVendors([]); setTotalCount(list.length);
+         setProducts(list);
+setTotalCount(list.length);
+// vendors already loaded from server via initialVendors — do NOT clear them
         } else {
           let list: Vendor[] = await fetchApprovedVendors();
           if (search) { const s = search.toLowerCase(); list = list.filter(v => vendorSearchText(v).includes(s)); }
@@ -289,65 +291,210 @@ export default function BrowsePage({
     </aside>
   );
 
-  /* ---- Product Card ---- */
-  const ProductCard = ({ p }: { p: Product }) => viewMode === "grid" ? (
-    <Link href={productHref(p.id, p.title)} className="bs-card">
-      <div className="bs-card-img">
-        {p.images?.[0]
-          ? <img src={p.images[0]} alt={p.title || ""} className="bs-card-img-el" />
-          : <div className="bs-card-img-ph"><FiPackage size={28} /></div>}
-        {p.listingType && <span className="bs-card-badge">{p.listingType}</span>}
-        {p.ecoVerified && (
-          <span className="bs-card-eco" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <img src="/eco-verified-badge.png" alt="" style={{ width: 13, height: 16, borderRadius: 2, objectFit: "cover" }} />
-            Eco Verified
-          </span>
-        )}
-        {p.ecoScore && <span className="bs-card-eco"><HiOutlineSparkles size={11} />{p.ecoScore}</span>}
-      </div>
-      <div className="bs-card-body">
-        <p className="bs-card-vendor">{p.vendorName || "Sustainly Vendor"}</p>
-        <h3 className="bs-card-title">{p.title}</h3>
-        {p.description && <p className="bs-card-desc">{p.description.replace(/<[^>]+>/g, "").slice(0, 75)}…</p>}
-        {(p.certifications || []).length > 0 && (
-          <div className="bs-card-tags">
-            {p.certifications!.slice(0, 2).map(c => <span key={c} className="bs-tag">{c}</span>)}
+/* ---- Product Card ---- */
+  const ProductCard = ({ p }: { p: Product }) => {
+    // 1. Resolve Category Name — look up local categories by categoryId
+    const localCat = categories.find((c) => c.id === p.categoryId);
+    const categoryName = localCat?.name || "Uncategorized";
+
+    // 2. Resolve Vendor — look up local vendors by vendorId to get name + state
+   // 2. Resolve Vendor — look up local vendors by vendorId to get name + state
+const localVendor = vendors.find((v) => v.id === p.vendorId);
+const vendorName = localVendor?.companyName || p.vendorName || "Sustainly Vendor";
+const vendorState = localVendor?.state || "";
+    return viewMode === "grid" ? (
+      <div className="bs-card" style={{ display: "flex", flexDirection: "column", height: "100%", borderRadius: "10px", overflow: "hidden", border: "1px solid #e5e7eb", background: "#fff", textDecoration: "none", position: "relative" }}>
+        
+        {/* 1. Image & Top Overlays */}
+        <Link 
+          href={`/products/${p.id}`} 
+          className="bs-card-img" 
+          style={{ 
+            position: "relative", 
+            height: "180px", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            background: "#ffffff", 
+            flexShrink: 0,
+            padding: "10px" 
+          }}
+        >
+          {p.images?.[0] ? (
+            <img 
+              src={p.images[0]} 
+              alt={p.title || ""} 
+              style={{ 
+                width: "100%", 
+                height: "100%", 
+                objectFit: "contain", 
+                objectPosition: "center" 
+              }} 
+            />
+          ) : (
+            <div style={{ background: "#f3f4f6", height: "100%", width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <FiPackage size={24} color="#9ca3af" />
+            </div>
+          )}
+          
+          {p.listingType && (
+            <span style={{ position: "absolute", top: 8, left: 8, background: "#064e3b", color: "#fff", fontSize: "9px", fontWeight: 700, padding: "3px 6px", borderRadius: "4px", textTransform: "uppercase" }}>
+              {Array.isArray(p.listingType) ? p.listingType[0] : p.listingType}
+            </span>
+          )}
+          
+          <button style={{ position: "absolute", top: 8, right: 8, background: "#fff", border: "none", borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }} onClick={(e) => { e.preventDefault(); }}>
+            <FiHeart size={12} color="#374151" />
+          </button>
+
+          {(p.images?.length || 0) > 1 && (
+            <span style={{ position: "absolute", bottom: 6, right: 6, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: "10px", padding: "2px 6px", borderRadius: "4px" }}>
+              {p.images!.length} Photos
+            </span>
+          )}
+        </Link>
+
+        {/* 2. Core Details & Impact */}
+        <div style={{ padding: "12px", flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+          <p style={{ fontSize: "9px", fontWeight: 700, color: "#6b7280", margin: 0, textTransform: "uppercase" }}>
+            {Array.isArray(p.listingType) ? p.listingType.join(", ") : p.listingType || "PRODUCT"}
+          </p>
+          <Link href={`/products/${p.id}`} style={{ textDecoration: "none" }}>
+            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#111", margin: 0, lineHeight: 1.2 }}>{p.title}</h3>
+          </Link>
+          
+          <p style={{ fontSize: "11px", color: "#6b7280", margin: 0 }}>
+            <FiGrid size={10} style={{ marginRight: 4, display: "inline-block", verticalAlign: "middle" }}/> 
+            <span style={{ verticalAlign: "middle" }}>{categoryName}</span>
+          </p>
+          
+          <p style={{ fontSize: "11px", color: "#6b7280", margin: 0 }}>
+            <FiUsers size={10} style={{ marginRight: 4, display: "inline-block", verticalAlign: "middle" }}/> 
+            <span style={{ verticalAlign: "middle" }}>{vendorName}</span>
+          </p>
+          
+          {/* {p.description && (
+            <p style={{ fontSize: "11px", color: "#15803d", background: "transparent", margin: "2px 0 0", padding: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.4 }}>
+              {p.description.replace(/<[^>]+>/g, "")}
+            </p>
+          )} */}
+
+          {/* Sustainability & Trust Markers */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
+            {(p.tags?.[0] || (p as any).tagNames?.[0] || p.ecoVerified) && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "transparent", color: "#15803d", padding: "0", fontSize: "11px", fontWeight: 600, width: "fit-content" }}>
+                <HiOutlineSparkles size={11} /> {p.tags?.[0] || (p as any).tagNames?.[0] || "Reclaimed-material options"}
+              </span>
+            )}
+            {(p.approved || p.ecoVerified) && (
+              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 600, color: "#111" }}>
+                <FiCheckCircle color="#15803d" size={12} /> Verified supplier
+              </span>
+            )}
+            
+            {vendorState && (
+  <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b7280" }}>
+    <FiMapPin size={11} /> {vendorState}
+  </span>
+)}
           </div>
-        )}
-      </div>
-      <div className="bs-card-foot">
-        <span className="bs-card-price">{p.priceType || "Price on request"}</span>
-        <span className="bs-view-cta">View <FiExternalLink size={10} /></span>
-      </div>
-    </Link>
-  ) : (
-    <Link href={productHref(p.id, p.title)} className="bs-row">
-      <div className="bs-row-thumb">
-        {p.images?.[0] ? <img src={p.images[0]} alt={p.title} className="bs-row-img" /> : <div className="bs-row-ph"><FiPackage size={18} /></div>}
-      </div>
-      <div className="bs-row-body">
-        <p className="bs-card-vendor" style={{ marginBottom: 2 }}>{p.vendorName || "Sustainly Vendor"}</p>
-        <h3 className="bs-row-title">{p.title}</h3>
-        {p.description && <p className="bs-card-desc">{p.description.replace(/<[^>]+>/g, "").slice(0, 110)}…</p>}
-        {(p.certifications || []).length > 0 && (
-          <div className="bs-card-tags" style={{ marginTop: 6 }}>
-            {p.certifications!.slice(0, 3).map(c => <span key={c} className="bs-tag">{c}</span>)}
+
+          {/* Certifications */}
+          {(p.certifications || []).length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #f3f4f6" }}>
+              <div style={{ display: "flex", gap: "4px" }}>
+                {p.certifications!.slice(0, 2).map((c, idx) => (
+                  <span key={c} style={{ background: idx === 0 ? "#94a3b8" : "#475569", color: "#fff", fontSize: "9px", fontWeight: 700, padding: "2px 6px", borderRadius: "3px" }}>{c}</span>
+                ))}
+              </div>
+              <span style={{ fontSize: "10px", color: "#9ca3af" }}>Documents available</span>
+            </div>
+          )}
+        </div>
+
+        {/* 3. Pricing & Actions */}
+        <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ fontSize: "15px", fontWeight: 800, color: "#111" }}>
+            {typeof p.price === "number" && p.price > 0 ? `${p.currency || '₹'} ${p.price}` : p.priceType || "Price on request"}
           </div>
-        )}
+          
+          <button style={{ width: "100%", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"} onClick={(e) => { e.preventDefault(); }}>
+            Request Quote
+          </button>
+          
+          <Link href={`/products/${p.id}`} style={{ display: "block", textAlign: "center", width: "100%", boxSizing: "border-box", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", textDecoration: "none", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"}>
+            View Details
+          </Link>
+        </div>
       </div>
-      <div className="bs-row-right">
-        {p.ecoVerified && (
-          <span className="bs-card-eco" style={{ position: "static", display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <img src="/eco-verified-badge.png" alt="" style={{ width: 13, height: 16, borderRadius: 2, objectFit: "cover" }} />
-            Eco Verified
+    ) : (
+      /* ---- List Mode ---- */
+      <Link href={`/products/${p.id}`} className="bs-row" style={{ display: "flex", gap: "14px", textDecoration: "none", background: "#fff", padding: "14px", borderRadius: "16px", border: "1px solid rgba(0,0,0,0.07)", position: "relative" }}>
+        <div className="bs-row-thumb" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "#fff", padding: "4px", width: "110px", height: "110px", flexShrink: 0, border: "1px solid #f3f4f6", borderRadius: "12px" }}>
+          {p.images?.[0] ? (
+            <img 
+              src={p.images[0]} 
+              alt={p.title} 
+              className="bs-row-img" 
+              style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }} 
+            />
+          ) : (
+            <div className="bs-row-ph"><FiPackage size={18} color="#9ca3af" /></div>
+          )}
+        </div>
+        <div className="bs-row-body" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <h3 className="bs-row-title" style={{ fontSize: "15px", fontWeight: 700, color: "#111", margin: "0 0 4px" }}>{p.title}</h3>
+          
+          <p style={{ fontSize: "11px", color: "#6b7280", margin: "0 0 2px" }}>
+            <FiGrid size={10} style={{ marginRight: 4, display: "inline-block", verticalAlign: "middle" }}/> 
+            <span style={{ verticalAlign: "middle" }}>{categoryName}</span>
+          </p>
+
+          <p style={{ fontSize: "11px", color: "#6b7280", margin: "0 0 2px" }}>
+            <FiUsers size={10} style={{ marginRight: 4, display: "inline-block", verticalAlign: "middle" }}/> 
+            <span style={{ verticalAlign: "middle" }}>{vendorName}</span>
+          </p>
+
+          {vendorState && (
+  <p style={{ fontSize: "11px", color: "#6b7280", margin: "0 0 6px" }}>
+    <FiMapPin size={10} style={{ marginRight: 4, display: "inline-block", verticalAlign: "middle" }}/> 
+    <span style={{ verticalAlign: "middle" }}>{vendorState}</span>
+  </p>
+)}
+
+          {p.description && (
+            <p className="bs-card-desc" style={{ fontSize: "12px", color: "#15803d", margin: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", background: "transparent" }}>
+              {p.description.replace(/<[^>]+>/g, "")}
+            </p>
+          )}
+          
+          {(p.certifications || []).length > 0 && (
+            <div className="bs-card-tags" style={{ marginTop: 8, display: "flex", gap: "4px" }}>
+              {p.certifications!.slice(0, 3).map(c => <span key={c} style={{ background: "#475569", color: "#fff", fontSize: "9px", fontWeight: 700, padding: "2px 6px", borderRadius: "3px" }}>{c}</span>)}
+            </div>
+          )}
+        </div>
+        <div className="bs-row-right" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px", flexShrink: 0, width: "140px" }}>
+          {p.ecoVerified && (
+            <span className="bs-card-eco" style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "transparent", color: "#15803d", padding: 0, fontSize: "11px", fontWeight: 600 }}>
+              <HiOutlineSparkles size={11} /> Eco Verified
+            </span>
+          )}
+          <span className="bs-card-price" style={{ fontSize: "14px", fontWeight: 800, color: "#111", margin: "4px 0" }}>
+            {typeof p.price === "number" && p.price > 0 ? `${p.currency || '₹'} ${p.price}` : p.priceType || "On request"}
           </span>
-        )}
-        {p.ecoScore && <span className="bs-card-eco"><HiOutlineSparkles size={11} />{p.ecoScore}</span>}
-        <span className="bs-card-price">{p.priceType || "On request"}</span>
-        <span className="bs-view-cta">View <FiExternalLink size={10} /></span>
-      </div>
-    </Link>
-  );
+
+          <button style={{ width: "100%", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"} onClick={(e) => { e.preventDefault(); }}>
+            Request Quote
+          </button>
+          
+          <div style={{ width: "100%", display: "block", textAlign: "center", boxSizing: "border-box", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", textDecoration: "none", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"}>
+            View Detailss
+          </div>
+        </div>
+      </Link>
+    );
+  };
 
   /* ---- Vendor Card ---- */
   const logoInitials = (v: Vendor) => (typeof v.logoText === "string" && v.logoText.trim() ? v.logoText : (vt(v.companyName, "V").slice(0, 2) || "V")).toUpperCase();
@@ -647,7 +794,7 @@ export default function BrowsePage({
         .bs-chip:hover { background: rgba(22,163,74,0.18); }
 
         /* ── GRIDS ── */
-        .bs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+        .bs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
         .bs-vendor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 16px; }
         .bs-list-mode { display: flex; flex-direction: column; gap: 10px; }
 

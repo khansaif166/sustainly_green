@@ -35,8 +35,11 @@ const getBrowseData = cache(
     const categoryId = selectedCategory?.id || categoryValue || undefined;
     const query = searchValue.trim().toLowerCase();
 
+    // Always fetch vendors — product/service cards need them to resolve state.
+    const allVendors = await fetchApprovedVendors().catch(() => []);
+
     if (type === "Vendor") {
-      let vendors = await fetchApprovedVendors().catch(() => []);
+      let vendors = allVendors;
       if (query) {
         vendors = vendors.filter((vendor) =>
           [
@@ -61,6 +64,7 @@ const getBrowseData = cache(
       categoryId,
       limit: 100,
     }).catch(() => []);
+
     if (query) {
       products = products.filter((product) =>
         [product.title, product.description, ...product.tagNames]
@@ -71,7 +75,14 @@ const getBrowseData = cache(
       );
     }
 
-    return { type, categories, selectedCategory, products, vendors: [] };
+    // Return vendors so the client can resolve vendor → state for product cards.
+    return {
+      type,
+      categories,
+      selectedCategory,
+      products,
+      vendors: allVendors,
+    };
   },
 );
 

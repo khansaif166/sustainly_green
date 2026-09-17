@@ -61,7 +61,7 @@ export default function Footer() {
           <h5>Platform</h5>
           <Link href="/about">About Us</Link>
           <Link href="/pricing">Pricing</Link>
-          <Link href="/sdg-commitment">Our SDG Commitment</Link>
+          <Link href="/esg">ESG</Link>
           <Link href="/resources">Resources</Link>
           <Link href="/blogs">Blogs</Link>
           <Link href="/careers">Careers</Link>

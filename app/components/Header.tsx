@@ -290,8 +290,8 @@ export default function Header() {
             <Link href="/categories" className="nav-link">
               Categories
             </Link>
-            <Link href="/sdg-commitment" className="nav-link">
-              Our SDG Commitment
+            <Link href="/esg" className="nav-link">
+              ESG
             </Link>
           </div>
 
@@ -378,8 +378,8 @@ export default function Header() {
                 </div>
               )}
 
-              <Link href="/sdg-commitment" onClick={() => setOpenMobile(false)} className="font-medium text-gray-700">
-                Our SDG Commitment
+              <Link href="esg" onClick={() => setOpenMobile(false)} className="font-medium text-gray-700">
+                ESG
               </Link>
 
               {!loadingUser && authUser && (
