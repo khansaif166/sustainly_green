@@ -4,6 +4,7 @@ import React from "react";
 import { Input, Select, Toggle, FileUpload, MultiSelect } from "./FormFields";
 import { useFormContext } from "react-hook-form";
 import { ChevronDown, ChevronUp, ScrollText } from "lucide-react";
+import { SHOW_FULL_ONBOARDING } from "../onboardingConfig";
 
 export const Step4Marketplace = () => {
   const { register, formState: { errors } } = useFormContext();
@@ -14,63 +15,67 @@ export const Step4Marketplace = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Marketplace Preferences (Collapsible) */}
-      <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <button 
-          type="button"
-          onClick={() => setShowMarketplace(!showMarketplace)}
-          className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-        >
-          <div>
-            <h3 className="font-bold text-gray-900">Marketplace Preferences</h3>
-            <p className="text-xs text-gray-500">Optional configuration for your store</p>
-          </div>
-          {showMarketplace ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </button>
-        {showMarketplace && (
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-white animate-in slide-in-from-top-2 duration-300">
-            <Select 
-              name="listingTier" 
-              label="Listing Tier Subscription *" 
-              options={[
-                { label: "Starter", value: "starter" },
-                { label: "Grow", value: "grow" },
-                { label: "Pro", value: "pro" },
-              ]} 
-            />
-            <Input name="lookingForBuyersIn" label="Looking for Buyers In" placeholder="e.g. B2B Corporate" />
-            <Input name="paymentTerms" label="Payment Terms" placeholder="e.g. Advance, 30 days" />
-            <Input name="language" label="Language of Communication" placeholder="English, Hindi, etc." />
-            <Toggle name="willingnessToOfferSamples" label="Willing to offer samples?" />
-            <FileUpload name="awardsFile" label="Upload Awards / Recognitions" />
-          </div>
-        )}
-      </div>
+      {SHOW_FULL_ONBOARDING && (
+        <>
+        {/* Marketplace Preferences (Collapsible) */}
+        <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+          <button 
+            type="button"
+            onClick={() => setShowMarketplace(!showMarketplace)}
+            className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+          >
+            <div>
+              <h3 className="font-bold text-gray-900">Marketplace Preferences</h3>
+              <p className="text-xs text-gray-500">Optional configuration for your store</p>
+            </div>
+            {showMarketplace ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          {showMarketplace && (
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-white animate-in slide-in-from-top-2 duration-300">
+              <Select 
+                name="listingTier" 
+                label="Listing Tier Subscription *" 
+                options={[
+                  { label: "Starter", value: "starter" },
+                  { label: "Grow", value: "grow" },
+                  { label: "Pro", value: "pro" },
+                ]} 
+              />
+              <Input name="lookingForBuyersIn" label="Looking for Buyers In" placeholder="e.g. B2B Corporate" />
+              <Input name="paymentTerms" label="Payment Terms" placeholder="e.g. Advance, 30 days" />
+              <Input name="language" label="Language of Communication" placeholder="English, Hindi, etc." />
+              <Toggle name="willingnessToOfferSamples" label="Willing to offer samples?" />
+              <FileUpload name="awardsFile" label="Upload Awards / Recognitions" />
+            </div>
+          )}
+        </div>
 
-      {/* Eco Score Self-Declaration (Optional/Collapsible) */}
-      <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <button 
-          type="button"
-          onClick={() => setShowEcoScore(!showEcoScore)}
-          className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-        >
-          <div>
-            <h3 className="font-bold text-gray-900">Eco Score Self-Declaration</h3>
-            <p className="text-xs text-gray-500">Optional details to boost your score</p>
-          </div>
-          {showEcoScore ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </button>
-        {showEcoScore && (
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-white animate-in slide-in-from-top-2 duration-300">
-            <Input name="lifecycleStage" label="Product Lifecycle Stage" placeholder="e.g. Raw Material" />
-            <Input name="packaging" label="Packaging - Recyclable?" placeholder="Yes/Partial/No" />
-            <Input name="energySource" label="Energy Source" placeholder="Solar, Wind, Grid" />
-            <Input name="waterRecycling" label="Water Recycling" placeholder="Yes/No" />
-            <MultiSelect name="sdgAlignment" label="SDG Alignment" options={["SDG 7", "SDG 12", "SDG 13"]} />
-            <Input name="auditFrequency" label="Audit Frequency" placeholder="Annual, Biennial" />
-          </div>
-        )}
-      </div>
+        {/* Eco Score Self-Declaration (Optional/Collapsible) */}
+        <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+          <button 
+            type="button"
+            onClick={() => setShowEcoScore(!showEcoScore)}
+            className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+          >
+            <div>
+              <h3 className="font-bold text-gray-900">Eco Score Self-Declaration</h3>
+              <p className="text-xs text-gray-500">Optional details to boost your score</p>
+            </div>
+            {showEcoScore ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          {showEcoScore && (
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-white animate-in slide-in-from-top-2 duration-300">
+              <Input name="lifecycleStage" label="Product Lifecycle Stage" placeholder="e.g. Raw Material" />
+              <Input name="packaging" label="Packaging - Recyclable?" placeholder="Yes/Partial/No" />
+              <Input name="energySource" label="Energy Source" placeholder="Solar, Wind, Grid" />
+              <Input name="waterRecycling" label="Water Recycling" placeholder="Yes/No" />
+              <MultiSelect name="sdgAlignment" label="SDG Alignment" options={["SDG 7", "SDG 12", "SDG 13"]} />
+              <Input name="auditFrequency" label="Audit Frequency" placeholder="Annual, Biennial" />
+            </div>
+          )}
+        </div>
+        </>
+      )}
 
       {/* Declaration */}
       <div className="p-6 bg-green-50/50 border border-green-100 rounded-2xl space-y-6">

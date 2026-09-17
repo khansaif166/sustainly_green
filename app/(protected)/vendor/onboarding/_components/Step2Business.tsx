@@ -3,6 +3,7 @@
 import React from "react";
 import { Input, Select, MultiSelect, TextArea, Toggle } from "./FormFields";
 import { useFormContext } from "react-hook-form";
+import { SHOW_FULL_ONBOARDING } from "../onboardingConfig";
 
 type CategoryOption = { id: string; name: string };
 type SubcategoryOption = { id: string; name: string; categoryId: string };
@@ -37,22 +38,32 @@ export const Step2Business = ({ categories = [], subcategories = [] }: Step2Busi
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Business Overview</h2>
-        <p className="text-gray-500 mt-1">Tell us more about what your business does and its scale.</p>
+        <h2 className="text-2xl font-bold text-gray-900">
+          {SHOW_FULL_ONBOARDING ? "Business Overview" : "What you supply"}
+        </h2>
+        <p className="text-gray-500 mt-1">
+          {SHOW_FULL_ONBOARDING
+            ? "Tell us more about what your business does and its scale."
+            : "This is what buyers see on your profile and in search results."}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Select 
-          name="businessType" 
-          label="Business Type *" 
-          options={[
-            { label: "Manufacturer", value: "manufacturer" },
-            { label: "Trader", value: "trader" },
-            { label: "Exporter", value: "exporter" },
-            { label: "Service Provider", value: "service-provider" },
-            { label: "Distributor", value: "distributor" },
-          ]} 
-        />
+        {SHOW_FULL_ONBOARDING && (
+          <>
+          <Select 
+            name="businessType" 
+            label="Business Type *" 
+            options={[
+              { label: "Manufacturer", value: "manufacturer" },
+              { label: "Trader", value: "trader" },
+              { label: "Exporter", value: "exporter" },
+              { label: "Service Provider", value: "service-provider" },
+              { label: "Distributor", value: "distributor" },
+            ]} 
+          />
+          </>
+        )}
         {categories.length > 0 ? (
           <Select
             name="primaryCategory"
@@ -83,29 +94,33 @@ export const Step2Business = ({ categories = [], subcategories = [] }: Step2Busi
           />
         </div>
 
-        <MultiSelect 
-          name="keyProducts" 
-          label="Key Products / Services *" 
-          max={5}
-        />
+        {SHOW_FULL_ONBOARDING && (
+          <>
+          <MultiSelect 
+            name="keyProducts" 
+            label="Key Products / Services" 
+            max={5}
+          />
 
-        <Input 
-          name="targetIndustries" 
-          label="Target Industries" 
-          placeholder="e.g. FMCG, IT, Hospitality" 
-        />
+          <Input 
+            name="targetIndustries" 
+            label="Target Industries" 
+            placeholder="e.g. FMCG, IT, Hospitality" 
+          />
 
-        <Input name="supplyCapacity" label="Supply Capacity" placeholder="e.g. 5,000 units/month" />
-        <Input name="moq" label="Minimum Order Quantity (MOQ)" placeholder="e.g. 100 units" />
+          <Input name="supplyCapacity" label="Supply Capacity" placeholder="e.g. 5,000 units/month" />
+          <Input name="moq" label="Minimum Order Quantity (MOQ)" placeholder="e.g. 100 units" />
 
-        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          <Toggle name="exportCapability" label="Do you have export capability?" />
-          {exportEnabled && (
-            <div className="animate-in fade-in zoom-in-95 duration-300">
-              <Input name="exportMarkets" label="Target Export Markets" placeholder="e.g. UAE, UK, USA" />
-            </div>
-          )}
-        </div>
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <Toggle name="exportCapability" label="Do you have export capability?" />
+            {exportEnabled && (
+              <div className="animate-in fade-in zoom-in-95 duration-300">
+                <Input name="exportMarkets" label="Target Export Markets" placeholder="e.g. UAE, UK, USA" />
+              </div>
+            )}
+          </div>
+          </>
+        )}
       </div>
     </div>
   );

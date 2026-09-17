@@ -3,6 +3,7 @@
 import React from "react";
 import { Input, Select, FileUpload } from "./FormFields";
 import { useFormContext } from "react-hook-form";
+import { SHOW_FULL_ONBOARDING } from "../onboardingConfig";
 import { Building, Hash, Calendar, MapPin, Mail, Phone, User as UserIcon, Briefcase, Image } from "lucide-react";
 
 export const Step1Identity = () => {
@@ -33,47 +34,59 @@ export const Step1Identity = () => {
           placeholder="e.g. Ecobuild Solutions Pvt Ltd" 
           icon={Building} 
         />
-        <Select 
-          name="registrationType" 
-          label="Registration Type *" 
-          options={[
-            { label: "Pvt Ltd", value: "pvt-ltd" },
-            { label: "LLP", value: "llp" },
-            { label: "Proprietorship", value: "proprietorship" },
-            { label: "Partnership", value: "partnership" },
-          ]} 
-        />
+        {SHOW_FULL_ONBOARDING && (
+          <>
+          <Select 
+            name="registrationType" 
+            label="Registration Type *" 
+            options={[
+              { label: "Pvt Ltd", value: "pvt-ltd" },
+              { label: "LLP", value: "llp" },
+              { label: "Proprietorship", value: "proprietorship" },
+              { label: "Partnership", value: "partnership" },
+            ]} 
+          />
+          </>
+        )}
         <Input 
           name="cinRegistration" 
-          label="CIN / Registration Number *" 
+          label="CIN / Registration Number" 
           placeholder="e.g. U74999MH2020PTC123456" 
           icon={Hash} 
         />
         <Input 
           name="gstNumber" 
-          label="GST Number *" 
+          label="GST Number" 
           placeholder="e.g. 27AABCU9603R1ZX" 
           icon={Hash} 
         />
-        <Input 
-          name="yearOfIncorporation" 
-          label="Year of Incorporation *" 
-          placeholder="e.g. 2018" 
-          type="number"
-          icon={Calendar} 
-        />
+        {SHOW_FULL_ONBOARDING && (
+          <>
+          <Input 
+            name="yearOfIncorporation" 
+            label="Year of Incorporation *" 
+            placeholder="e.g. 2018" 
+            type="number"
+            icon={Calendar} 
+          />
+          </>
+        )}
         <div className="md:col-span-2">
           <Input 
             name="registeredAddress" 
-            label="Registered Address *" 
+            label="Registered Address" 
             placeholder="Street / Building Name" 
             icon={MapPin} 
           />
         </div>
         <Input name="city" label="City *" placeholder="e.g. Mumbai" />
         <Input name="state" label="State *" placeholder="e.g. Maharashtra" />
-        <Input name="pinCode" label="PIN Code *" placeholder="e.g. 400001" />
-        <Input name="country" label="Country *" placeholder="e.g. India" />
+        {SHOW_FULL_ONBOARDING && (
+          <>
+          <Input name="pinCode" label="PIN Code *" placeholder="e.g. 400001" />
+          </>
+        )}
+        <Input name="country" label="Country" placeholder="e.g. India" />
       </div>
 
       <div className="pt-4 border-t border-gray-100">
@@ -81,16 +94,20 @@ export const Step1Identity = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Input 
             name="primaryContactName" 
-            label="Contact Person Name *" 
+            label="Contact Person Name" 
             placeholder="Authorized representative" 
             icon={UserIcon} 
           />
-          <Input 
-            name="designation" 
-            label="Designation *" 
-            placeholder="e.g. Managing Director" 
-            icon={Briefcase} 
-          />
+          {SHOW_FULL_ONBOARDING && (
+            <>
+            <Input 
+              name="designation" 
+              label="Designation *" 
+              placeholder="e.g. Managing Director" 
+              icon={Briefcase} 
+            />
+            </>
+          )}
           <Input 
             name="businessEmail" 
             label="Business Email *" 
@@ -104,12 +121,16 @@ export const Step1Identity = () => {
             placeholder="+91 98765 43210" 
             icon={Phone} 
           />
-          <Input 
-            name="alternatePhone" 
-            label="Alternate Phone" 
-            placeholder="Secondary number" 
-            icon={Phone} 
-          />
+          {SHOW_FULL_ONBOARDING && (
+            <>
+            <Input 
+              name="alternatePhone" 
+              label="Alternate Phone" 
+              placeholder="Secondary number" 
+              icon={Phone} 
+            />
+            </>
+          )}
         </div>
       </div>
     </div>

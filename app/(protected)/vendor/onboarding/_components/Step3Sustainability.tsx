@@ -3,6 +3,7 @@
 import React from "react";
 import { Select, TextArea, FileUpload, Input } from "./FormFields";
 import { ShieldCheck, Info } from "lucide-react";
+import { SHOW_FULL_ONBOARDING } from "../onboardingConfig";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -180,27 +181,31 @@ export const Step3Sustainability = () => {
         <div className="md:col-span-2">
           <TextArea 
             name="sustainabilityPractice" 
-            label="Sustainability Practice Description *" 
+            label="Sustainability Practice Description" 
             placeholder="How does your business actively reduce environmental impact?" 
             rows={4}
           />
         </div>
 
-        <Input name="recycledContent" label="Recycled / Renewable Content %" placeholder="e.g. 80%" />
-        <Input name="carbonFootprint" label="Carbon Footprint Data" placeholder="kg CO2e per unit" />
-        <Input name="eprRegistration" label="EPR Registration (if applicable)" placeholder="EPR Reg. No." />
-        <Select 
-          name="socialCompliance" 
-          label="Social Compliance" 
-          options={[
-            { label: "Yes", value: "yes" },
-            { label: "No", value: "no" },
-            { label: "In Progress", value: "in-progress" },
-          ]} 
-        />
-        <div className="md:col-span-2">
-          <Input name="netZeroCommitment" label="Net Zero / Carbon Neutral Commitment" placeholder="Target year + verification body" />
-        </div>
+        {SHOW_FULL_ONBOARDING && (
+          <>
+          <Input name="recycledContent" label="Recycled / Renewable Content %" placeholder="e.g. 80%" />
+          <Input name="carbonFootprint" label="Carbon Footprint Data" placeholder="kg CO2e per unit" />
+          <Input name="eprRegistration" label="EPR Registration (if applicable)" placeholder="EPR Reg. No." />
+          <Select 
+            name="socialCompliance" 
+            label="Social Compliance" 
+            options={[
+              { label: "Yes", value: "yes" },
+              { label: "No", value: "no" },
+              { label: "In Progress", value: "in-progress" },
+            ]} 
+          />
+          <div className="md:col-span-2">
+            <Input name="netZeroCommitment" label="Net Zero / Carbon Neutral Commitment" placeholder="Target year + verification body" />
+          </div>
+          </>
+        )}
       </div>
     </div>
   );
