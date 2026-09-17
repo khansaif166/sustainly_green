@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
+import BuyerRFQModal from "../components/ContactVendorModal";
 import {
   fetchApprovedProducts,
   fetchApprovedVendors,
@@ -119,6 +120,8 @@ export default function BrowsePage({
     initialVendors.length || initialProducts.length,
   );
   const [expanded, setExpanded] = useState({ type: true, category: true, eco: true, location: false, sort: true });
+  const [rfqProduct, setRfqProduct] = useState<Product | null>(null);
+
   const vendorLocations = useMemo(() => Array.from(new Set(
     vendors.flatMap((vendor) => [vendor.city, vendor.state, vendor.country])
       .map((value) => vt(value).trim())
@@ -138,9 +141,8 @@ export default function BrowsePage({
           if (filters.badge === "eco_verified") list = list.filter(p => p.ecoVerified);
           if (filters.sortBy === "eco_score") list = list.sort((a, b) => (b.ecoScore || 0) - (a.ecoScore || 0));
           if (filters.sortBy === "name_az") list = list.sort((a, b) => vt(a.title).localeCompare(vt(b.title)));
-         setProducts(list);
-setTotalCount(list.length);
-// vendors already loaded from server via initialVendors — do NOT clear them
+          setProducts(list);
+          setTotalCount(list.length);
         } else {
           let list: Vendor[] = await fetchApprovedVendors();
           if (search) { const s = search.toLowerCase(); list = list.filter(v => vendorSearchText(v).includes(s)); }
@@ -291,17 +293,15 @@ setTotalCount(list.length);
     </aside>
   );
 
-/* ---- Product Card ---- */
+  /* ---- Product Card ---- */
   const ProductCard = ({ p }: { p: Product }) => {
-    // 1. Resolve Category Name — look up local categories by categoryId
     const localCat = categories.find((c) => c.id === p.categoryId);
     const categoryName = localCat?.name || "Uncategorized";
 
-    // 2. Resolve Vendor — look up local vendors by vendorId to get name + state
-   // 2. Resolve Vendor — look up local vendors by vendorId to get name + state
-const localVendor = vendors.find((v) => v.id === p.vendorId);
-const vendorName = localVendor?.companyName || p.vendorName || "Sustainly Vendor";
-const vendorState = localVendor?.state || "";
+    const localVendor = vendors.find((v) => v.id === p.vendorId);
+    const vendorName = localVendor?.companyName || p.vendorName || "Sustainly Vendor";
+    const vendorState = localVendor?.state || "";
+
     return viewMode === "grid" ? (
       <div className="bs-card" style={{ display: "flex", flexDirection: "column", height: "100%", borderRadius: "10px", overflow: "hidden", border: "1px solid #e5e7eb", background: "#fff", textDecoration: "none", position: "relative" }}>
         
@@ -372,12 +372,6 @@ const vendorState = localVendor?.state || "";
             <FiUsers size={10} style={{ marginRight: 4, display: "inline-block", verticalAlign: "middle" }}/> 
             <span style={{ verticalAlign: "middle" }}>{vendorName}</span>
           </p>
-          
-          {/* {p.description && (
-            <p style={{ fontSize: "11px", color: "#15803d", background: "transparent", margin: "2px 0 0", padding: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.4 }}>
-              {p.description.replace(/<[^>]+>/g, "")}
-            </p>
-          )} */}
 
           {/* Sustainability & Trust Markers */}
           <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
@@ -393,10 +387,10 @@ const vendorState = localVendor?.state || "";
             )}
             
             {vendorState && (
-  <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b7280" }}>
-    <FiMapPin size={11} /> {vendorState}
-  </span>
-)}
+              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b7280" }}>
+                <FiMapPin size={11} /> {vendorState}
+              </span>
+            )}
           </div>
 
           {/* Certifications */}
@@ -418,7 +412,7 @@ const vendorState = localVendor?.state || "";
             {typeof p.price === "number" && p.price > 0 ? `${p.currency || '₹'} ${p.price}` : p.priceType || "Price on request"}
           </div>
           
-          <button style={{ width: "100%", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"} onClick={(e) => { e.preventDefault(); }}>
+          <button style={{ width: "100%", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"} onClick={(e) => { e.preventDefault(); setRfqProduct(p); }}>
             Request Quote
           </button>
           
@@ -456,11 +450,11 @@ const vendorState = localVendor?.state || "";
           </p>
 
           {vendorState && (
-  <p style={{ fontSize: "11px", color: "#6b7280", margin: "0 0 6px" }}>
-    <FiMapPin size={10} style={{ marginRight: 4, display: "inline-block", verticalAlign: "middle" }}/> 
-    <span style={{ verticalAlign: "middle" }}>{vendorState}</span>
-  </p>
-)}
+            <p style={{ fontSize: "11px", color: "#6b7280", margin: "0 0 6px" }}>
+              <FiMapPin size={10} style={{ marginRight: 4, display: "inline-block", verticalAlign: "middle" }}/> 
+              <span style={{ verticalAlign: "middle" }}>{vendorState}</span>
+            </p>
+          )}
 
           {p.description && (
             <p className="bs-card-desc" style={{ fontSize: "12px", color: "#15803d", margin: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", background: "transparent" }}>
@@ -474,7 +468,7 @@ const vendorState = localVendor?.state || "";
             </div>
           )}
         </div>
-        <div className="bs-row-right" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px", flexShrink: 0, width: "140px" }}>
+        <div className="bs-row-right" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px", flexShrink: 0, width: "140px" }} onClick={(e) => e.stopPropagation()}>
           {p.ecoVerified && (
             <span className="bs-card-eco" style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "transparent", color: "#15803d", padding: 0, fontSize: "11px", fontWeight: 600 }}>
               <HiOutlineSparkles size={11} /> Eco Verified
@@ -484,13 +478,13 @@ const vendorState = localVendor?.state || "";
             {typeof p.price === "number" && p.price > 0 ? `${p.currency || '₹'} ${p.price}` : p.priceType || "On request"}
           </span>
 
-          <button style={{ width: "100%", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"} onClick={(e) => { e.preventDefault(); }}>
+          <button style={{ width: "100%", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setRfqProduct(p); }}>
             Request Quote
           </button>
           
-          <div style={{ width: "100%", display: "block", textAlign: "center", boxSizing: "border-box", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", textDecoration: "none", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"}>
-            View Detailss
-          </div>
+          <Link href={`/products/${p.id}`} style={{ width: "100%", display: "block", textAlign: "center", boxSizing: "border-box", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", textDecoration: "none", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"}>
+            View Details
+          </Link>
         </div>
       </Link>
     );
@@ -1175,6 +1169,17 @@ const vendorState = localVendor?.state || "";
             </div>
           </>
         )}
+
+        <BuyerRFQModal
+          open={!!rfqProduct}
+          onClose={() => setRfqProduct(null)}
+          vendorId={rfqProduct?.vendorId || ""}
+          productId={rfqProduct?.id || ""}
+          productTitle={rfqProduct?.title || ""}
+          productImage={rfqProduct?.images?.[0] || null}
+          vendorName={rfqProduct?.vendorName || ""}
+          listingType={Array.isArray(rfqProduct?.listingType) ? rfqProduct.listingType[0] : rfqProduct?.listingType || ""}
+        />
 
         <Footer />
       </div>
