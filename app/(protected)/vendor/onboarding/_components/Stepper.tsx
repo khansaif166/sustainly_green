@@ -8,14 +8,19 @@ interface StepperProps {
   totalSteps: number;
 }
 
-const steps = [
+const allSteps = [
   { id: 1, label: "Identity", icon: User },
   { id: 2, label: "Business", icon: Building2 },
   { id: 3, label: "Sustainability", icon: ShieldCheck },
   { id: 4, label: "Marketplace", icon: ShoppingBag },
 ];
 
-export const Stepper: React.FC<StepperProps> = ({ currentStep }) => {
+export const Stepper: React.FC<StepperProps> = ({ currentStep, totalSteps }) => {
+  // The trimmed flow folds steps 2-4 onto one page, so show only as many
+  // markers as there are real steps and relabel the last one to match.
+  const steps = allSteps.slice(0, totalSteps);
+  if (totalSteps === 2) steps[1] = { ...steps[1], label: "Business & Listing" };
+
   return (
     <div className="w-full max-w-4xl mx-auto px-4 mb-12">
       <div className="relative flex justify-between">
@@ -25,7 +30,7 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep }) => {
         {/* Active Progress Line */}
         <div 
           className="absolute top-1/2 left-0 h-0.5 bg-green-500 -translate-y-1/2 -z-10 transition-all duration-500" 
-          style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+          style={{ width: `${steps.length > 1 ? ((currentStep - 1) / (steps.length - 1)) * 100 : 0}%` }}
         />
 
         {steps.map((step) => {

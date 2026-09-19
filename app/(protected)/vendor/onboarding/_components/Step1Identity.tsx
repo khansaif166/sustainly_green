@@ -14,8 +14,14 @@ export const Step1Identity = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Identity & Legal</h2>
-        <p className="text-gray-500 mt-1">Please provide your company details as per official records.</p>
+        <h2 className="text-2xl font-bold text-gray-900">
+          {SHOW_FULL_ONBOARDING ? "Identity & Legal" : "Company & Contact"}
+        </h2>
+        <p className="text-gray-500 mt-1">
+          {SHOW_FULL_ONBOARDING
+            ? "Please provide your company details as per official records."
+            : "Just the essentials — you can add more detail to your profile later."}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
