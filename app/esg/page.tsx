@@ -15,16 +15,26 @@ import {
   FileSpreadsheet,
   Database,
   Search,
-  AlertOctagon
+  AlertOctagon,
+  CloudFog,
+  FileCheck,
+  Award,
+  FileText,
+  Target,
+  Layers,
+  ScrollText,
+  TrendingUp,
+  Kanban,
+  Cpu,
+  Scale
 } from "lucide-react";
 
-// Curated high-quality Unsplash imagery for the bento grid pain points
 const painPoints = [
   {
     image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80",
     title: "40% to 60% Effort on Collection",
     text: "The majority of total ESG reporting effort is consumed by data collection alone: chasing suppliers and reconciling mismatched formats.",
-    span: "col-span-1 md:col-span-2 row-span-2" // Large card
+    span: "col-span-1 md:col-span-2 row-span-2" 
   },
   {
     image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80",
@@ -42,7 +52,7 @@ const painPoints = [
     image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80",
     title: "Estimation Over Measurement",
     text: "A significant share of ESG data in circulation is partially estimated rather than measured, weakening report accuracy.",
-    span: "col-span-1 md:col-span-2 row-span-1" // Wide card
+    span: "col-span-1 md:col-span-2 row-span-1" 
   },
   {
     image: "https://images.unsplash.com/photo-1604594849809-dfedbc827105?auto=format&fit=crop&w=600&q=80",
@@ -60,10 +70,78 @@ const solutionPoints = [
   "Fewer errors, fewer re-submissions, fewer last-minute audit scrambles."
 ];
 
+const services = [
+  { 
+    icon: CloudFog, 
+    title: "Carbon & GHG Data Operation", 
+    desc: "Streamline Scope 1, 2, and 3 emissions tracking with rigorous data collection and calculation support." 
+  },
+  { 
+    icon: FileCheck, 
+    title: "Data & Evidence Operation", 
+    desc: "Consolidate and structure fragmented ESG data into centralized, audit-ready evidence repositories." 
+  },
+  { 
+    icon: Award, 
+    title: "BRSR ,ECOVADIS AND ESG ASSESSMENTS", 
+    desc: "Guided evidence gathering and submission management to maximize your assessment scores." 
+  },
+  { 
+    icon: FileText, 
+    title: "Reporting & Disclosure", 
+    desc: "End-to-end drafting and data compilation for annual sustainability and corporate ESG reports." 
+  },
+  { 
+    icon: Target, 
+    title: "SBTi & Climate Target Support", 
+    desc: "Data modeling and rigorous documentation preparation for Science Based Targets initiative approval." 
+  },
+  { 
+    icon: Layers, 
+    title: "ESG Framework & Disclosure Support", 
+    desc: "Ensure perfect alignment with global standards including GRI, SASB, TCFD, and ISSB." 
+  },
+  { 
+    icon: Search, 
+    title: "ESG Questionnaire & Due Diligence Desk", 
+    desc: "Provide rapid, accurate responses to investor, client, and supply chain ESG inquiries." 
+  },
+  { 
+    icon: ShieldCheck, 
+    title: "Certification & Audit Readiness Support", 
+    desc: "Pre-audit gap analysis and documentation structuring for smooth third-party assurance." 
+  },
+  { 
+    icon: ScrollText, 
+    title: "ESG Policies & Documentation Support", 
+    desc: "Drafting and refinement of corporate ESG policies, codes of conduct, and governance documents." 
+  },
+  { 
+    icon: TrendingUp, 
+    title: "Benchmark & Performance Support", 
+    desc: "Detailed peer analysis and continuous performance tracking against industry ESG leaders." 
+  },
+  { 
+    icon: Kanban, 
+    title: "ESG Project & Workflow Management", 
+    desc: "Dedicated PMO support to drive internal sustainability initiatives from concept to delivery." 
+  },
+  { 
+    icon: Cpu, 
+    title: "ESG Technology & Data Operation", 
+    desc: "Seamless system integration, platform management, and automated data pipeline support." 
+  },
+  { 
+    icon: Scale, 
+    title: "ESG Compliance & Regulatory Readiness", 
+    desc: "Proactive monitoring and gap mitigation for emerging regulations like BRSR Core and CSRD." 
+  }
+];
+
 const targetAudience = [
   {
     icon: FileSpreadsheet,
-    text: "Companies preparing BRSR, GRI, ESRS, CDP, SBTi or EcoVadis submissions."
+    text: "Companies preparing BRSR Core, BRSR, GRI, ESRS, CDP, SBTi or EcoVadis submissions."
   },
   {
     icon: Users,
@@ -122,11 +200,9 @@ export default function EsgDeliveryDeskPage() {
           <div className="esg-container hero-container">
             <div className="esg-hero-copy">
               <span className="esg-badge-animated">Your ESG Back Office</span>
-              <h1 className="esg-gradient-text">We Don't Compromise on Compliance. We Eliminate ESG Backlog.</h1>
-              <p className="esg-subtitle">Delivered as a Desk, Not a Headache.</p>
-              <p className="esg-hero-desc">
-                Data → Suppliers → Evidence → Carbon → Disclosures → Reporting → Readiness. One delivery desk handles the manual grind so your team focuses on decisions, not data entry.
-              </p>
+              <h1 className="esg-gradient-text">Stop Wasting 40% of Your Time on Messy ESG Data.</h1>
+              <p className="esg-subtitle">ESG Dedicated Delivery Desk</p>
+              
               <div className="esg-hero-actions">
                 <Link href="/contact?subject=esg-audit" className="esg-btn-primary">
                   Book a Free ESG Data Audit <ArrowRight size={18} strokeWidth={2.5} />
@@ -138,7 +214,6 @@ export default function EsgDeliveryDeskPage() {
             </div>
             
             <div className="esg-hero-visual">
-              {/* Floating UI Elements instead of SDG icons */}
               <div className="esg-floating-card card-1">
                 <Database size={32} className="text-emerald-500 mb-2" />
                 <div className="font-bold text-slate-800">Data Consolidated</div>
@@ -215,11 +290,36 @@ export default function EsgDeliveryDeskPage() {
           </div>
         </section>
 
-        {/* ===== WHO THIS IS FOR ===== */}
+        {/* ===== OUR SERVICES ===== */}
         <section className="esg-section bg-gray">
           <div className="esg-container">
             <div className="esg-section-head center">
-              <span className="esg-eyebrow">Target Audience</span>
+              <span className="esg-eyebrow">Capabilities</span>
+              <h2>Our Services</h2>
+             
+            </div>
+            
+            <div className="esg-services-grid">
+              {services.map((service, idx) => (
+                <div key={idx} className="service-card group">
+                  <div className="service-icon-wrap group-hover:scale-110">
+                    <service.icon size={26} className="service-icon" />
+                  </div>
+                  <div className="service-text-content">
+                    <h3 className="service-title">{service.title}</h3>
+                    <p className="service-desc">{service.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== WHO THIS IS FOR ===== */}
+        <section className="esg-section">
+          <div className="esg-container">
+            <div className="esg-section-head center">
+              <span className="esg-eyebrow-dark">Target Audience</span>
               <h2>Who This Is For</h2>
             </div>
             <div className="esg-audience-grid">
@@ -276,8 +376,8 @@ export default function EsgDeliveryDeskPage() {
         <section className="esg-cta-section">
           <div className="esg-container">
             <div className="esg-cta-content">
-              <h2>Stop Paying for Backlog. Start Paying for Delivery.</h2>
-              <p>Get a clear view of where your ESG data processes are leaking time and budget.</p>
+              <h2>Turn Backlogs into Insights—Efficient, In Time and cost Effective</h2>
+              
               <Link href="/contact?subject=esg-audit" className="esg-btn-primary esg-btn-large mt-4">
                 Book a Free 20-Minute ESG Data Audit <ArrowRight size={18} strokeWidth={2.5} />
               </Link>
@@ -413,7 +513,7 @@ export default function EsgDeliveryDeskPage() {
           font-size: 1.5rem;
           font-weight: 600;
           color: var(--esg-accent);
-          margin-bottom: 1.5rem;
+          margin-bottom: 2.5rem;
           letter-spacing: -0.01em;
         }
         .esg-hero-desc {
@@ -621,6 +721,78 @@ export default function EsgDeliveryDeskPage() {
           font-size: 1.25rem;
           font-weight: 500;
           color: #d1fae5;
+        }
+
+        /* ----- Services Grid ----- */
+        .esg-services-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          gap: 1.5rem;
+        }
+        .service-card {
+          background: #ffffff;
+          padding: 2.5rem;
+          border-radius: 20px;
+          border: 1px solid var(--esg-border);
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          text-align: left;
+          gap: 1.5rem;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          overflow: hidden;
+        }
+        .service-card::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; width: 100%; height: 4px;
+          background: var(--esg-accent);
+          transform: scaleX(0);
+          transform-origin: left;
+          transition: transform 0.4s ease;
+        }
+        .service-card:hover {
+          transform: translateY(-8px);
+          border-color: transparent;
+          box-shadow: 0 20px 40px -5px rgba(0,0,0,0.08);
+        }
+        .service-card:hover::before {
+          transform: scaleX(1);
+        }
+        .service-icon-wrap {
+          width: 60px;
+          height: 60px;
+          background: #ecfdf5;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--esg-primary);
+          transition: all 0.3s ease;
+        }
+        .service-card:hover .service-icon-wrap {
+          background: var(--esg-primary);
+          color: #fff;
+        }
+        .service-text-content {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        .service-title {
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: var(--esg-text-main);
+          margin: 0;
+          line-height: 1.3;
+        }
+        .service-desc {
+          font-size: 1rem;
+          color: var(--esg-text-muted);
+          line-height: 1.6;
+          margin: 0;
         }
 
         /* ----- Audience Grid ----- */

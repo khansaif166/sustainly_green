@@ -412,7 +412,7 @@ export default function BrowsePage({
             {typeof p.price === "number" && p.price > 0 ? `${p.currency || '₹'} ${p.price}` : p.priceType || "Price on request"}
           </div>
           
-          <button style={{ width: "100%", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"} onClick={(e) => { e.preventDefault(); setRfqProduct(p); }}>
+          <button style={{ width: "100%", background: "#ff9932", color: "#000", border: "none", padding: "8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#a55505"} onMouseOut={e => e.currentTarget.style.background = "#ff9932"} onClick={(e) => { e.preventDefault(); setRfqProduct(p); }}>
             Request Quote
           </button>
           
@@ -478,7 +478,7 @@ export default function BrowsePage({
             {typeof p.price === "number" && p.price > 0 ? `${p.currency || '₹'} ${p.price}` : p.priceType || "On request"}
           </span>
 
-          <button style={{ width: "100%", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setRfqProduct(p); }}>
+          <button style={{ width: "100%", background: "#ff9932", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#ff9932"} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setRfqProduct(p); }}>
             Request Quote
           </button>
           
