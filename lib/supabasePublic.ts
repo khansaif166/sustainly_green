@@ -130,6 +130,7 @@ export type PublicBlog = {
   title: string;
   excerpt?: string;
   content: string;
+  slug?: string | null;
   image?: string;
   createdAt?: string;
 };
