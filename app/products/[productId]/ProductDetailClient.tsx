@@ -20,7 +20,13 @@ import type { PublicProduct } from "@/lib/supabasePublic";
 
 type Product = PublicProduct;
 
-export default function ProductDetailClient({ product }: { product: Product }) {
+export default function ProductDetailClient({ 
+  product,
+  otherProducts = [] 
+}: { 
+  product: Product;
+  otherProducts?: Product[];
+}) {
   const [open, setOpen] = useState(false);
   const [activeImage, setActiveImage] = useState<string | null>(
     product.images?.[0] || null,
@@ -54,14 +60,15 @@ export default function ProductDetailClient({ product }: { product: Product }) {
           </Link>
 
           <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)] lg:gap-12">
+            {/* Existing Product Images Section */}
             <section className="min-w-0 space-y-4" aria-label="Product images">
               <div className="aspect-[3/2] overflow-hidden rounded-[1.75rem] border border-gray-200 bg-white shadow-sm">
                 {activeImage ? (
                   <img
-  src={activeImage}
-  alt={product.title}
-  className="h-full w-full object-contain object-center p-2" 
-/>
+                    src={activeImage}
+                    alt={product.title}
+                    className="h-full w-full object-contain object-center p-2" 
+                  />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-gray-500">
                     No image
@@ -85,16 +92,17 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       }`}
                     >
                       <img
-  src={image}
-  alt=""
-  className="h-16 w-20 rounded-lg object-contain object-center sm:h-20 sm:w-24"
-/>
+                        src={image}
+                        alt=""
+                        className="h-16 w-20 rounded-lg object-contain object-center sm:h-20 sm:w-24"
+                      />
                     </button>
                   ))}
                 </div>
               )}
             </section>
 
+            {/* Existing Product Details Section */}
             <section className="min-w-0 lg:sticky lg:top-24">
               <div className="rounded-[1.75rem] border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
                 <div className="flex flex-wrap items-center gap-2">
@@ -217,6 +225,74 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               </div>
             </section>
           </div>
+
+        {/* NEW: Other Products by Same Vendor */}
+          {otherProducts.length > 0 && (
+            <section className="mt-16 border-t border-gray-200 pt-10 sm:mt-20">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold tracking-tight text-gray-950">
+                  More from {product.vendorName}
+                </h2>
+                <Link
+                  href={`/find-vendors/${product.vendorId}`}
+                  className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+                >
+                  View all <span aria-hidden="true">&rarr;</span>
+                </Link>
+              </div>
+              
+              <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {otherProducts.map((p) => {
+                  const itemListingLabel = Array.isArray(p.listingType) 
+                    ? p.listingType.join(", ") 
+                    : p.listingType || "PRODUCT";
+                    
+                  return (
+                    <Link
+                      key={p.id}
+                      href={`/products/${p.id}`}
+                      className="group flex flex-col overflow-hidden rounded-[18px] border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                    >
+                      {/* Image matches BrowseClient (180px height, contain) */}
+                      <div className="relative flex h-[180px] shrink-0 items-center justify-center bg-white p-2.5">
+                        <img
+                          src={p.images?.[0] || "/placeholder-image.png"}
+                          alt={p.title}
+                          className="h-full w-full object-contain object-center transition duration-300 group-hover:scale-105"
+                        />
+                        {p.listingType && (
+                          <span className="absolute left-2.5 top-2.5 rounded bg-emerald-900 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+                            {Array.isArray(p.listingType) ? p.listingType[0] : p.listingType}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex flex-1 flex-col p-3.5">
+                        {/* Category / Listing Type */}
+                        <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-gray-500">
+                          {itemListingLabel}
+                        </p>
+                        
+                        {/* Title */}
+                        <h3 className="text-[15px] font-bold leading-tight text-gray-900 line-clamp-2">
+                          {p.title}
+                        </h3>
+                        
+                        {/* Price matches BrowseClient */}
+                        <div className="mt-auto pt-3">
+                          <p className="text-[15px] font-extrabold text-gray-900">
+                            {typeof p.price === "number" && p.price > 0 && p.priceType !== "Price on Request"
+                              ? `${p.currency || '₹'} ${p.price}`
+                              : p.priceType || "Price on request"}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </div>
 
         <BuyerRFQModal
