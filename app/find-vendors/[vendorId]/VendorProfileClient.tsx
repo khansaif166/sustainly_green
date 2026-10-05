@@ -22,7 +22,7 @@ import {
 import { HiOutlineSparkles } from "react-icons/hi2";
 
 type Vendor = PublicVendor;
-type Product = Pick<PublicProduct, "id" | "title" | "images" | "priceType" | "ecoVerified"> & {
+type Product = Pick<PublicProduct, "id" | "title" | "images" | "price" | "currency" | "priceType" | "listingType" | "ecoVerified"> & {
   ecoScore?: number;
 };
 type VendorDisplayFields = Vendor & {
@@ -280,7 +280,7 @@ export default function VendorProfileClient({
           padding: 4px 10px; border-radius: 50px;
         }
 
-        /* products grid */
+        /* products grid - Updated for BrowseClient styling */
         .vp-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
         .vp-prod-card {
           background: #fff; border: 1px solid rgba(0,0,0,0.07);
@@ -289,21 +289,23 @@ export default function VendorProfileClient({
         }
         .vp-prod-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.1); transform: translateY(-2px); }
         .vp-prod-img {
-          height: 160px;
-          background: linear-gradient(135deg, #f0f9f4, #e8f5ec);
+          height: 180px;
+          background: #ffffff;
+          padding: 10px;
           overflow: hidden; position: relative;
+          display: flex; align-items: center; justify-content: center;
         }
-        .vp-prod-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
-        .vp-prod-card:hover .vp-prod-img img { transform: scale(1.06); }
+        .vp-prod-img img { width: 100%; height: 100%; object-fit: contain; transition: transform .3s; }
         .vp-prod-ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #c4b5c0; }
-        .vp-prod-body { padding: 12px 14px 14px; flex: 1; }
-        .vp-prod-title { font-size: 13px; font-weight: 700; color: #111; margin: 0 0 5px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .vp-prod-price { font-size: 12px; color: #9ca3af; font-weight: 500; }
+        .vp-prod-body { padding: 12px 14px 14px; flex: 1; display: flex; flex-direction: column; }
+        .vp-prod-cat { font-size: 9px; font-weight: 700; color: #6b7280; letter-spacing: .05em; text-transform: uppercase; margin: 0 0 4px; }
+        .vp-prod-title { font-size: 14px; font-weight: 700; color: #111; margin: 0 0 6px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .vp-prod-price { font-size: 15px; color: #111; font-weight: 800; margin-top: auto; padding-top: 10px; }
         .vp-prod-eco {
           display: inline-flex; align-items: center; gap: 3px;
           background: rgba(22,163,74,0.1); color: #15803d;
           font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 50px;
-          margin-top: 6px;
+          margin-top: 6px; width: fit-content;
         }
 
         /* empty */
@@ -720,26 +722,39 @@ export default function VendorProfileClient({
                   </div>
                 ) : (
                   <div className="vp-products-grid">
-                    {products.map(p => (
-                      <Link key={p.id} href={productHref(p.id, p.title)} className="vp-prod-card">
-                        <div className="vp-prod-img">
-                          {p.images?.[0]
-                            ? <img src={p.images[0]} alt={p.title} />
-                            : <div className="vp-prod-ph"><FiPackage size={26} /></div>}
-                        </div>
-                        <div className="vp-prod-body">
-                          <h3 className="vp-prod-title">{p.title}</h3>
-                          <p className="vp-prod-price">{p.priceType || "Price on request"}</p>
-                          {p.ecoVerified && (
-                            <span className="vp-prod-eco">
-                              <img src="/eco-verified-badge.png" alt="" style={{ width: 13, height: 16, borderRadius: 2, objectFit: "cover" }} />
-                              Eco Verified
-                            </span>
-                          )}
-                          {p.ecoScore && <span className="vp-prod-eco"><HiOutlineSparkles size={10} />Eco {p.ecoScore}</span>}
-                        </div>
-                      </Link>
-                    ))}
+                    {products.map(p => {
+                      const itemListingLabel = Array.isArray(p.listingType) 
+                        ? p.listingType.join(", ") 
+                        : p.listingType || "PRODUCT";
+
+                      return (
+                        <Link key={p.id} href={productHref(p.id, p.title)} className="vp-prod-card">
+                          <div className="vp-prod-img">
+                            {p.images?.[0]
+                              ? <img src={p.images[0]} alt={p.title} />
+                              : <div className="vp-prod-ph"><FiPackage size={26} /></div>}
+                          </div>
+                          <div className="vp-prod-body">
+                            <p className="vp-prod-cat">{itemListingLabel}</p>
+                            <h3 className="vp-prod-title">{p.title}</h3>
+                            
+                            {p.ecoVerified && (
+                              <span className="vp-prod-eco mb-2">
+                                <img src="/eco-verified-badge.png" alt="" style={{ width: 13, height: 16, borderRadius: 2, objectFit: "cover" }} />
+                                Eco Verified
+                              </span>
+                            )}
+                            {p.ecoScore && <span className="vp-prod-eco mb-2"><HiOutlineSparkles size={10} />Eco {p.ecoScore}</span>}
+
+                            <p className="vp-prod-price">
+                              {typeof p.price === "number" && p.price > 0 && p.priceType !== "Price on Request"
+                                ? `${p.currency || '₹'} ${p.price}`
+                                : p.priceType || "Price on request"}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
               </div>
