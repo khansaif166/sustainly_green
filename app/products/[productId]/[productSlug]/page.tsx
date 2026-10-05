@@ -1,7 +1,10 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { fetchApprovedProductById } from "@/lib/supabasePublic";
+import {
+  fetchApprovedProductById,
+  fetchApprovedProducts,
+} from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
 import { productHref } from "@/lib/slug";
 import ProductDetailClient from "../ProductDetailClient";
@@ -28,6 +31,15 @@ const getProduct = cache(async (productId: string) => {
   }
 });
 
+const getOtherProducts = cache(async (vendorId: string, currentProductId: string) => {
+  try {
+    const list = await fetchApprovedProducts({ vendorId, limit: 12 });
+    return list.filter((p) => p.id !== currentProductId).slice(0, 4);
+  } catch {
+    return [];
+  }
+});
+
 export async function generateMetadata({
   params,
 }: ProductPageProps): Promise<Metadata> {
@@ -48,8 +60,8 @@ export async function generateMetadata({
   const canonical = `${getSiteUrl()}${productHref(productId, product.title)}`;
 
   const keySpec =
-    product.tagNames[0] ||
-    product.sustainabilityTags[0] ||
+    product.tagNames?.[0] ||
+    product.sustainabilityTags?.[0] ||
     product.listingType ||
     "Sustainable Product";
   const title = compact(
@@ -61,7 +73,7 @@ export async function generateMetadata({
       `Discover ${product.title} from ${product.vendorName} on ${SITE_NAME}, India's B2B sustainability marketplace.`,
     155,
   );
-  const image = product.images[0] || "/logo.png";
+  const image = product.images?.[0] || "/logo.png";
 
   return {
     title: { absolute: title },
@@ -95,9 +107,9 @@ function productStructuredData(
     "@type": "Product",
     name: product.title,
     description: product.description || undefined,
-    image: product.images.length ? product.images : undefined,
+    image: product.images?.length ? product.images : undefined,
     sku: product.id,
-    category: product.tagNames[0] || product.listingType || undefined,
+    category: product.tagNames?.[0] || product.listingType || undefined,
     brand: {
       "@type": "Brand",
       name: product.vendorName,
@@ -126,6 +138,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   if (!product) notFound();
 
+  const otherProducts = await getOtherProducts(product.vendorId, product.id);
+
   const canonical = `${getSiteUrl()}${productHref(productId, product.title)}`;
   const structuredData = productStructuredData(product, canonical);
 
@@ -137,7 +151,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
         }}
       />
-      <ProductDetailClient product={product} />
+      <ProductDetailClient product={product} otherProducts={otherProducts} />
     </>
   );
 }
