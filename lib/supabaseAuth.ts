@@ -429,8 +429,11 @@ export async function fetchCurrentProfile(accessToken?: string) {
   return rows[0] || null;
 }
 
-function isAppRole(value: unknown): value is AppRole {
-  return value === "ADMIN" || value === "BUYER" || value === "VENDOR";
+// user_metadata is client-writable (signup `data`, PUT /auth/v1/user), so only
+// the self-service roles are honoured here. ADMIN is granted by an admin, and
+// the guard_profile_privileged_columns trigger rejects it from clients anyway.
+function isSelfServiceRole(value: unknown): value is "BUYER" | "VENDOR" {
+  return value === "BUYER" || value === "VENDOR";
 }
 
 export async function ensureCurrentProfile(
@@ -450,7 +453,11 @@ export async function ensureCurrentProfile(
   const metadata = user.user_metadata || {};
   const metadataRole = metadata.role;
   const email = user.email || fallback.email || "";
-  const role = fallback.role || (isAppRole(metadataRole) ? metadataRole : "BUYER");
+  const role = isSelfServiceRole(fallback.role)
+    ? fallback.role
+    : isSelfServiceRole(metadataRole)
+      ? metadataRole
+      : "BUYER";
   const name =
     fallback.name ||
     (typeof metadata.name === "string" ? metadata.name : "") ||
