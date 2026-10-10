@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Building2, Package, Layers, ListTree,
   Tag, FileText, BarChart3, LogOut, Menu, X, Briefcase,
   Megaphone, ShoppingCart, ShieldCheck, Newspaper, Leaf,
-  BookOpen, Inbox,
+  BookOpen, Inbox, BadgeCheck,
 } from "lucide-react";
 import { fetchCurrentProfile, getCurrentUser, signOutSupabase } from "@/lib/supabaseAuth";
 import SessionTimeoutNotice from "@/app/components/SessionTimeoutNotice";
@@ -25,6 +25,7 @@ const NAV_SECTIONS = [
     items: [
       { name: "Users",   href: "/admin/users",   icon: Users      },
       { name: "Vendors", href: "/admin/vendors",  icon: Building2  },
+      { name: "Claims",  href: "/admin/vendor-claims", icon: BadgeCheck },
       { name: "Buyers",  href: "/admin/buyers",   icon: ShoppingCart },
     ],
   },
