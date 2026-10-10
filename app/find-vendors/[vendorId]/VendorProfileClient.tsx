@@ -12,7 +12,7 @@ import {
   type PublicProduct,
   type PublicVendor,
 } from "@/lib/supabasePublic";
-import { getValidSession } from "@/lib/supabaseAuth";
+import { ensureCurrentProfile, getValidSession } from "@/lib/supabaseAuth";
 import { getVendorBadgeMeta } from "@/lib/vendorBadges";
 import {
   FiMapPin, FiMail, FiGlobe, FiArrowLeft, FiPackage,
@@ -94,10 +94,21 @@ export default function VendorProfileClient({
 
     setClaimSubmitting(true); setClaimError("");
     try {
-      await submitVendorClaim({ vendorId: vendor.id, ...claimForm, profileId: session?.user?.id, accessToken: session?.accessToken });
+      // vendor_claims.profile_id is a profiles.id, which is not the auth user
+      // id. Sending session.user.id made RLS reject every claim.
+      const profile = await ensureCurrentProfile(session.accessToken);
+      await submitVendorClaim({ vendorId: vendor.id, ...claimForm, profileId: profile.id, accessToken: session.accessToken });
       setClaimSuccess(true); setClaimOpen(false);
       await loadVendor();
-    } catch { setClaimError("We could not submit this claim. It may already be under review."); }
+    } catch (err) {
+      console.error("VENDOR_CLAIM_ERROR", err);
+      const message = err instanceof Error ? err.message : "";
+      setClaimError(
+        /23505|duplicate key/i.test(message)
+          ? "You already have a claim under review for this business."
+          : "We couldn't submit your claim. Please try again, or contact support if it keeps happening.",
+      );
+    }
     finally { setClaimSubmitting(false); }
   };
 
@@ -775,16 +786,19 @@ export default function VendorProfileClient({
                 <div>
                   <h2 className="vp-login-title">Login required</h2>
                   <p className="vp-login-copy">
-                    Please login first to claim this business. We need an account so Sustainly can verify ownership and track the claim request.
+                    Please sign in to claim this business. We need an account so Sustainly can verify ownership and track the claim request. Sign in and you&apos;ll come straight back here to submit it.
                   </p>
                 </div>
               </div>
               <div className="vp-login-actions">
-                <Link href="/login" className="vp-login-btn vp-login-btn-primary">
+                {/* Both return to this listing. Not role=VENDOR: vendor onboarding
+                    would create a second vendor profile for a business that
+                    already has this one; approving the claim makes them a vendor. */}
+                <Link href={`/login?next=${encodeURIComponent(`/find-vendors/${vendor.id}`)}`} className="vp-login-btn vp-login-btn-primary">
                   <FiUser size={14} />Login
                 </Link>
-                <Link href="/register?role=VENDOR" className="vp-login-btn vp-login-btn-secondary">
-                  Create vendor account
+                <Link href={`/register?next=${encodeURIComponent(`/find-vendors/${vendor.id}`)}`} className="vp-login-btn vp-login-btn-secondary">
+                  Create an account
                 </Link>
               </div>
             </div>

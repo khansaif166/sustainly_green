@@ -201,7 +201,8 @@ function RegisterForm() {
       const safeNext = requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
         ? requestedPath
         : null;
-      router.push(role === "VENDOR" ? "/vendor/onboarding" : safeNext || redirectForRole(null));
+      // An explicit ?next= (e.g. back to a listing being claimed) wins.
+      router.push(safeNext || (role === "VENDOR" ? "/vendor/onboarding" : redirectForRole(null)));
     } catch (err: unknown) {
       console.error(err);
       setError(getRegistrationErrorMessage(err));
