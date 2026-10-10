@@ -32,6 +32,11 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     async function guard() {
       const user    = await getCurrentUser();
       const profile = user ? await fetchCurrentProfile() : null;
+      // A buyer here is usually a vendor who signed up with the wrong role;
+      // offer the switch instead of bouncing them through /login.
+      if (profile?.role === "BUYER") {
+        router.replace("/become-vendor"); return;
+      }
       if (!profile || (profile.role !== "VENDOR" && profile.role !== "ADMIN")) {
         router.replace("/login"); return;
       }

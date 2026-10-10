@@ -314,6 +314,7 @@ export async function signUpWithSupabase(input: {
   email: string;
   password: string;
   role: AppRole;
+  phone: string;
 }): Promise<SupabaseSignUpResult> {
   const normalizedEmail = input.email.trim().toLowerCase();
   const normalizedName = input.name.trim();
@@ -327,9 +328,13 @@ export async function signUpWithSupabase(input: {
     body: JSON.stringify({
       email: normalizedEmail,
       password: input.password,
+      // `phone` goes in metadata, not Supabase's own `phone` field (that one
+      // is for SMS sign-in). The set_profile_phone_from_signup trigger copies
+      // it onto profiles.phone when the profile row is created.
       data: {
         name: normalizedName,
         role: input.role,
+        phone: input.phone,
       },
     }),
   });

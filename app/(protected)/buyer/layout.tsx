@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, FileText, User, LogOut, Menu, X, BarChart3,
-  ChevronRight,
+  ChevronRight, Store,
 } from "lucide-react";
 import { fetchCurrentProfile, getCurrentUser, getStoredSession, signOutSupabase } from "@/lib/supabaseAuth";
 import SessionTimeoutNotice from "@/app/components/SessionTimeoutNotice";
@@ -16,6 +16,8 @@ const nav = [
   { name: "My RFQs", href: "/buyer/rfqs", icon: FileText },
   { name: "Reports", href: "/buyer/reports", icon: BarChart3 },
   { name: "Profile", href: "/buyer/profile", icon: User },
+  // For vendors who registered as buyers by mistake.
+  { name: "List your business", href: "/become-vendor", icon: Store },
 ];
 
 export default function BuyerLayout({ children }: { children: React.ReactNode }) {

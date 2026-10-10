@@ -108,6 +108,19 @@ export default function CheckEmailClient() {
                 </div>
               )}
 
+              {/* With email confirmation on, Supabase answers a signup for an
+                  existing email with success and sends nothing, so a vendor
+                  reusing their buyer email would wait here forever. */}
+              {isVendor && (
+                <p className="mt-4 text-sm leading-6 text-gray-600">
+                  Already have a Sustainly Green account with this email?{" "}
+                  <Link href="/login?next=/become-vendor" className="font-semibold text-gray-950 underline">
+                    Sign in to switch it to a vendor account
+                  </Link>
+                  .
+                </p>
+              )}
+
               <div className="mt-6 space-y-3 rounded-2xl border border-gray-100 bg-gray-50 p-4">
                 {[
                   "Open your inbox",
