@@ -4,10 +4,12 @@ import Link from "next/link";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
 import { ArrowRight, BadgeCheck, BookOpen, Network, SearchCheck } from "lucide-react";
+import { getSiteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Sustainly Green SDG Commitment | The Hub of Sustainability",
   description: "Discover how Sustainly Green supports SDG 12 and SDG 13 through verified sustainable suppliers, responsible sourcing, circular economy solutions, and lower-carbon business connections.",
+  alternates: { canonical: `${getSiteUrl()}/sdg-commitment` },
 };
 
 const primaryGoals = [

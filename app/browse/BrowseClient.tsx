@@ -13,6 +13,7 @@ import {
   type PublicVendor,
 } from "@/lib/supabasePublic";
 import { getVendorBadgeMeta } from "@/lib/vendorBadges";
+import { productHref } from "@/lib/slug";
 import {
   FiSearch, FiX, FiArrowLeft, FiGrid, FiList, FiPackage, FiAward,
   FiTool, FiUsers, FiMapPin, FiFilter, FiChevronDown,
@@ -115,7 +116,9 @@ export default function BrowsePage({
   const [localSearch, setLocalSearch] = useState(search);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  // Page lives in the URL (?page=N) rather than component state so each page
+  // of results is a real, linkable URL Googlebot can reach and crawl.
+  const currentPage = Math.max(1, Number.parseInt(params.get("page") || "1", 10) || 1);
   const [totalCount, setTotalCount] = useState(
     initialVendors.length || initialProducts.length,
   );
@@ -133,7 +136,7 @@ export default function BrowsePage({
       setLoading(true);
       try {
         if (type !== "Vendor") {
-          let list: Product[] = await fetchApprovedProducts({ listingType: type, categoryId: categoryId || undefined, limit: 100 });
+          let list: Product[] = await fetchApprovedProducts({ listingType: type, categoryId: categoryId || undefined, limit: 1000 });
           if (search) {
             const s = search.toLowerCase();
             list = list.filter(p => (p.title || "").toLowerCase().includes(s) || (p.description || "").toLowerCase().includes(s) || (p.tags || []).some(t => t.toLowerCase().includes(s)));
@@ -165,7 +168,15 @@ export default function BrowsePage({
   }, [type, categoryId, search, filters]);
 
   useEffect(() => { setLocalSearch(search); }, [search]);
-  useEffect(() => { setCurrentPage(1); }, [type, category, search, filters.badge, filters.location, filters.sortBy]);
+  // Filters are local state, so changing one has to drop ?page= explicitly.
+  // type/category/q changes already do via updateUrl().
+  const filterKey = `${filters.badge}|${filters.location}|${filters.sortBy}`;
+  const lastFilterKey = useRef(filterKey);
+  useEffect(() => {
+    if (lastFilterKey.current === filterKey) return;
+    lastFilterKey.current = filterKey;
+    if (params.get("page")) updateUrl("page", "");
+  }, [filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleSearch(val: string) {
     setLocalSearch(val);
@@ -177,7 +188,16 @@ export default function BrowsePage({
     const url = new URLSearchParams(params.toString());
     if (value) url.set(key, value);
     else url.delete(key);
+    if (key !== "page") url.delete("page");
     router.push(`/browse?${url.toString()}`);
+  }
+
+  function pageHref(page: number) {
+    const url = new URLSearchParams(params.toString());
+    if (page > 1) url.set("page", String(page));
+    else url.delete("page");
+    const query = url.toString();
+    return `/browse${query ? `?${query}` : ""}`;
   }
 
   function resetAll() { setFilters(DEFAULT_FILTERS); router.push(`/browse?type=${type}`); }
@@ -307,7 +327,7 @@ export default function BrowsePage({
         
         {/* 1. Image & Top Overlays */}
         <Link 
-          href={`/products/${p.id}`} 
+          href={productHref(p.id, p.title)} 
           className="bs-card-img" 
           style={{ 
             position: "relative", 
@@ -359,7 +379,7 @@ export default function BrowsePage({
           <p style={{ fontSize: "9px", fontWeight: 700, color: "#6b7280", margin: 0, textTransform: "uppercase" }}>
             {Array.isArray(p.listingType) ? p.listingType.join(", ") : p.listingType || "PRODUCT"}
           </p>
-          <Link href={`/products/${p.id}`} style={{ textDecoration: "none" }}>
+          <Link href={productHref(p.id, p.title)} style={{ textDecoration: "none" }}>
             <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#111", margin: 0, lineHeight: 1.2 }}>{p.title}</h3>
           </Link>
           
@@ -416,14 +436,14 @@ export default function BrowsePage({
             Request Quote
           </button>
           
-          <Link href={`/products/${p.id}`} style={{ display: "block", textAlign: "center", width: "100%", boxSizing: "border-box", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", textDecoration: "none", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"}>
+          <Link href={productHref(p.id, p.title)} style={{ display: "block", textAlign: "center", width: "100%", boxSizing: "border-box", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", textDecoration: "none", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"}>
             View Details
           </Link>
         </div>
       </div>
     ) : (
       /* ---- List Mode ---- */
-      <Link href={`/products/${p.id}`} className="bs-row" style={{ display: "flex", gap: "14px", textDecoration: "none", background: "#fff", padding: "14px", borderRadius: "16px", border: "1px solid rgba(0,0,0,0.07)", position: "relative" }}>
+      <Link href={productHref(p.id, p.title)} className="bs-row" style={{ display: "flex", gap: "14px", textDecoration: "none", background: "#fff", padding: "14px", borderRadius: "16px", border: "1px solid rgba(0,0,0,0.07)", position: "relative" }}>
         <div className="bs-row-thumb" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "#fff", padding: "4px", width: "110px", height: "110px", flexShrink: 0, border: "1px solid #f3f4f6", borderRadius: "12px" }}>
           {p.images?.[0] ? (
             <img 
@@ -482,7 +502,7 @@ export default function BrowsePage({
             Request Quote
           </button>
           
-          <Link href={`/products/${p.id}`} style={{ width: "100%", display: "block", textAlign: "center", boxSizing: "border-box", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", textDecoration: "none", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"}>
+          <Link href={productHref(p.id, p.title)} style={{ width: "100%", display: "block", textAlign: "center", boxSizing: "border-box", background: "#064e3b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", textDecoration: "none", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#022c22"} onMouseOut={e => e.currentTarget.style.background = "#064e3b"}>
             View Details
           </Link>
         </div>
@@ -581,13 +601,25 @@ export default function BrowsePage({
     return Array.from({ length: end - start + 1 }, (_, index) => start + index);
   }, [safePage, totalPages]);
 
-  function goToPage(page: number) {
-    const nextPage = Math.min(Math.max(page, 1), totalPages);
-    setCurrentPage(nextPage);
+  function scrollToResults() {
     requestAnimationFrame(() => {
       resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
+
+  // Real <a href> links, not buttons: crawlers follow hrefs but never click.
+  const PageLink = ({ page, label, active }: { page: number; label?: string; active?: boolean }) => (
+    <Link
+      href={pageHref(page)}
+      scroll={false}
+      onClick={scrollToResults}
+      className={`bs-page-btn${active ? " bs-page-btn-active" : ""}`}
+      aria-current={active ? "page" : undefined}
+      rel={label === "Previous" ? "prev" : label === "Next" ? "next" : undefined}
+    >
+      {label || page}
+    </Link>
+  );
 
   /* ============================================================ RENDER */
   return (
@@ -1023,12 +1055,17 @@ export default function BrowsePage({
           border-radius: 10px; background: #fff; color: #374151; font-size: 12.5px;
           font-weight: 700; cursor: pointer; font-family: inherit;
           transition: background .15s, color .15s, border-color .15s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          box-sizing: border-box;
+          text-decoration: none;
         }
-        .bs-page-btn:hover:not(:disabled) {
+        .bs-page-btn:hover:not([aria-disabled="true"]):not(.bs-page-btn-active) {
           background: rgba(22,163,74,0.08); border-color: rgba(22,163,74,0.24); color: #15803d;
         }
         .bs-page-btn-active { background: #16a34a; border-color: #16a34a; color: #fff; }
-        .bs-page-btn:disabled { opacity: .42; cursor: not-allowed; }
+        .bs-page-btn[aria-disabled="true"] { opacity: .42; cursor: not-allowed; }
 
         /* ── MOBILE DRAWER ── */
         .bs-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; animation: bsFadeIn .15s ease; }
@@ -1219,34 +1256,27 @@ export default function BrowsePage({
                   Showing <strong>{pageStart + 1}-{pageEnd}</strong> of <strong>{items.length}</strong>
                 </p>
                 <div className="bs-page-controls">
-                  <button className="bs-page-btn" onClick={() => goToPage(safePage - 1)} disabled={safePage === 1}>
-                    Previous
-                  </button>
+                  {safePage === 1
+                    ? <span className="bs-page-btn" aria-disabled="true">Previous</span>
+                    : <PageLink page={safePage - 1} label="Previous" />}
                   {pageNumbers[0] > 1 && (
                     <>
-                      <button className="bs-page-btn" onClick={() => goToPage(1)}>1</button>
+                      <PageLink page={1} />
                       {pageNumbers[0] > 2 && <span className="bs-page-meta">…</span>}
                     </>
                   )}
                   {pageNumbers.map(page => (
-                    <button
-                      key={page}
-                      className={`bs-page-btn${safePage === page ? " bs-page-btn-active" : ""}`}
-                      onClick={() => goToPage(page)}
-                      aria-current={safePage === page ? "page" : undefined}
-                    >
-                      {page}
-                    </button>
+                    <PageLink key={page} page={page} active={safePage === page} />
                   ))}
                   {pageNumbers[pageNumbers.length - 1] < totalPages && (
                     <>
                       {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && <span className="bs-page-meta">…</span>}
-                      <button className="bs-page-btn" onClick={() => goToPage(totalPages)}>{totalPages}</button>
+                      <PageLink page={totalPages} />
                     </>
                   )}
-                  <button className="bs-page-btn" onClick={() => goToPage(safePage + 1)} disabled={safePage === totalPages}>
-                    Next
-                  </button>
+                  {safePage === totalPages
+                    ? <span className="bs-page-btn" aria-disabled="true">Next</span>
+                    : <PageLink page={safePage + 1} label="Next" />}
                 </div>
               </div>
             )}
