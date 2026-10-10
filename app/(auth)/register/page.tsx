@@ -11,13 +11,14 @@ import {
   SupabaseAuthError,
 } from "@/lib/supabaseAuth";
 
-// React Icons
+import { HiCheckCircle } from "react-icons/hi";
 import {
-  HiBadgeCheck,
-  HiGlobeAlt,
-  HiShieldCheck,
-  HiOfficeBuilding,
-} from "react-icons/hi";
+  AuthShell,
+  PasswordInput,
+  authButtonClass,
+  authInputClass,
+  authLabelClass,
+} from "../_components/AuthShell";
 
 type SignupRole = "BUYER" | "VENDOR";
 
@@ -26,21 +27,27 @@ const ROLE_OPTIONS: Array<{ value: SignupRole; title: string; hint: string }> = 
   { value: "VENDOR", title: "I want to sell", hint: "List my business" },
 ];
 
-const COPY: Record<SignupRole | "NONE", { heading: string; sub: string; panel: string }> = {
+const COPY: Record<
+  SignupRole | "NONE",
+  { heading: string; sub: string; badge: string; panel: string }
+> = {
   VENDOR: {
     heading: "List your business",
     sub: "Create a vendor account to showcase your products to verified buyers.",
-    panel: "Grow your sustainable business with verified buyers",
+    badge: "For suppliers 🌱",
+    panel: "Grow your sustainable business with verified buyers.",
   },
   BUYER: {
     heading: "Create your buyer account",
     sub: "Source sustainable products from verified suppliers.",
-    panel: "Source from verified sustainable suppliers",
+    badge: "For buyers 🌱",
+    panel: "Source from India's verified sustainable suppliers.",
   },
   NONE: {
     heading: "Create your account",
     sub: "Tell us how you'll use Sustainly Green.",
-    panel: "Sign in to your global business workspace",
+    badge: "Join Sustainly Green 🌱",
+    panel: "Where India's Sustainable Business Begins.",
   },
 };
 
@@ -204,235 +211,151 @@ function RegisterForm() {
     }
   }
 
-  const leftPanel = (
-    <div className="hidden md:flex relative flex-col justify-center px-12 bg-gradient-to-br from-green-900 to-emerald-700 text-white">
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-20"
-        style={{ backgroundImage: "url('/images/register-bg.jpg')" }}
-      />
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 mb-8 px-3 py-1.5 text-sm font-medium absolute top-6 left-10"
-      >
-        <img src="/log.webp" alt="Sustainly Green" className="h-14 rounded-xl p-2 bg-white" />
-      </Link>
-
-      <div className="relative z-10 max-w-lg">
-        <h1 className="text-3xl font-bold leading-tight">{copy.panel}</h1>
-
-        <p className="mt-4 text-sm text-green-100">
-          Manage products, connect with verified buyers, and grow your
-          business across international markets on a trusted B2B platform.
-        </p>
-
-        <ul className="mt-6 space-y-4 text-sm">
-          <li className="flex items-center gap-3">
-            <HiBadgeCheck className="text-xl text-green-300" />
-            Trusted buyers & verified vendors worldwide
-          </li>
-          <li className="flex items-center gap-3">
-            <HiGlobeAlt className="text-xl text-green-300" />
-            Global reach across multiple countries
-          </li>
-          <li className="flex items-center gap-3">
-            <HiShieldCheck className="text-xl text-green-300" />
-            Secure, compliant & scalable infrastructure
-          </li>
-          <li className="flex items-center gap-3">
-            <HiOfficeBuilding className="text-xl text-green-300" />
-            Built for enterprises, SMEs & manufacturers
-          </li>
-        </ul>
-
-        <p className="mt-10 text-xs text-green-200">
-          Sustainly · Powering global sustainable B2B trade
-        </p>
-      </div>
-    </div>
-  );
-
   // ── Registration form ────────────────────────────────────────────────
   return (
-    <main className="min-h-screen grid grid-cols-1 md:grid-cols-2">
-      {leftPanel}
-
-      {/* ================= RIGHT FORM ================= */}
-      <div className="flex items-center justify-center px-6 bg-gray-50 pt-10">
-        <div className="w-full max-w-md">
-          {/* Header */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900">
-              {copy.heading}
-            </h2>
-            <p className="text-sm text-gray-600 mt-2">
-              {copy.sub}
-            </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-2">
-            {/* Role — first, so nobody signs up without noticing it */}
-            <div className="pb-4">
-              <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-3">
-                I&apos;m joining to
-              </label>
-
-              <div className="grid grid-cols-2 gap-3" role="radiogroup">
-                {ROLE_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={role === option.value}
-                    onClick={() => chooseRole(option.value)}
-                    className={`rounded-2xl px-4 py-3 text-left border transition
-                      ${
-                        role === option.value
-                          ? "bg-black text-white border-black"
-                          : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
-                      }`}
-                  >
-                    <span className="block text-sm font-semibold">{option.title}</span>
-                    <span
-                      className={`block text-xs mt-0.5 ${
-                        role === option.value ? "text-gray-300" : "text-gray-500"
-                      }`}
-                    >
-                      {option.hint}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {role === "VENDOR" && (
-                <p className="mt-3 text-xs text-gray-500">
-                  Vendor accounts require admin approval.
-                </p>
-              )}
-            </div>
-
-            {/* Name */}
-            <div>
-              <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-2">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
-                required
-                className="w-full bg-transparent border-b-2 border-gray-300
-                           py-2 text-lg font-medium text-gray-900
-                           focus:outline-none focus:border-black"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-2">
-                Work Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                required
-                className="w-full bg-transparent border-b-2 border-gray-300
-                           py-2 text-lg font-medium text-gray-900
-                           focus:outline-none focus:border-black"
-              />
-            </div>
-
-            {/* Mobile */}
-            <div>
-              <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-2">
-                Mobile Number
-              </label>
-              <input
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98765 43210"
-                required
-                className="w-full bg-transparent border-b-2 border-gray-300
-                           py-2 text-lg font-medium text-gray-900
-                           focus:outline-none focus:border-black"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-xs uppercase tracking-wide font-semibold text-gray-600 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimum 8 characters"
-                required
-                className="w-full bg-transparent border-b-2 border-gray-300
-                           py-2 text-lg font-medium text-gray-900
-                           focus:outline-none focus:border-black"
-              />
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="pt-2 text-sm text-red-600 font-medium">
-                {error}
-                {existingAccount && (
-                  <>
-                    {" "}
-                    <Link href={loginHref} className="underline text-black">
-                      {role === "VENDOR"
-                        ? "Sign in to switch it to a vendor account"
-                        : "Sign in instead"}
-                    </Link>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Submit */}
-            <div className="pt-4">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-full bg-black text-white py-3 text-sm font-semibold
-                           hover:bg-gray-900 transition disabled:opacity-60"
-              >
-                {loading
-                  ? "Creating account..."
-                  : role === "VENDOR"
-                    ? "Create vendor account"
-                    : role === "BUYER"
-                      ? "Create buyer account"
-                      : "Create account"}
-              </button>
-            </div>
-          </form>
-
-          {/* Footer */}
-          <div className="mt-8 text-sm text-gray-600">
-            Already registered?{" "}
-            <Link
-              href={loginHref}
-              className="font-semibold text-black hover:underline"
-            >
-              Sign in
-            </Link>
-          </div>
-
-          <p className="mt-6 text-xs text-gray-400">
-            Secure registration powered by Supabase Authentication
-          </p>
-        </div>
+    <AuthShell badge={copy.badge} heading={copy.panel}>
+      {/* Header */}
+      <div className="mb-6 text-center lg:text-left">
+        <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+          {copy.heading}
+        </h2>
+        <p className="text-sm text-gray-500 mt-2 font-medium">{copy.sub}</p>
       </div>
-    </main>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Role — first, so nobody signs up without noticing it */}
+        <div>
+          <label className={authLabelClass}>I&apos;m joining to</label>
+          <div className="grid grid-cols-2 gap-3" role="radiogroup">
+            {ROLE_OPTIONS.map((option) => {
+              const selected = role === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => chooseRole(option.value)}
+                  // Outline via ring, not border: globals.css sets
+                  // `button { border: none }`, which overrides border utilities.
+                  className={`relative rounded-xl px-4 py-3 text-left transition-all
+                    ${
+                      selected
+                        ? "bg-emerald-50 ring-2 ring-[#059669]"
+                        : "bg-white ring-1 ring-gray-200 hover:ring-gray-300 hover:bg-gray-50"
+                    }`}
+                >
+                  {selected && (
+                    <HiCheckCircle className="absolute top-2.5 right-2.5 text-lg text-[#059669]" />
+                  )}
+                  <span className="block text-[13px] font-bold text-gray-900">{option.title}</span>
+                  <span className="block text-[11px] text-gray-500 mt-0.5">{option.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+          {role === "VENDOR" && (
+            <p className="mt-2 text-xs text-gray-500">Vendor accounts require admin approval.</p>
+          )}
+        </div>
+
+        {/* Name */}
+        <div>
+          <label className={authLabelClass}>Full Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="John Doe"
+            autoComplete="name"
+            required
+            className={authInputClass}
+          />
+        </div>
+
+        {/* Email + Mobile side by side on wide screens */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={authLabelClass}>Business Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@company.com"
+              autoComplete="email"
+              required
+              className={authInputClass}
+            />
+          </div>
+          <div>
+            <label className={authLabelClass}>Mobile Number</label>
+            <input
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+91 98765 43210"
+              required
+              className={authInputClass}
+            />
+          </div>
+        </div>
+
+        {/* Password */}
+        <div>
+          <label className={authLabelClass}>Password</label>
+          <PasswordInput
+            value={password}
+            onChange={setPassword}
+            placeholder="Minimum 8 characters"
+            autoComplete="new-password"
+          />
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="text-sm font-semibold text-red-500 bg-red-50 p-3 rounded-xl border border-red-100">
+            {error}
+            {existingAccount && (
+              <>
+                {" "}
+                <Link href={loginHref} className="underline text-gray-900">
+                  {role === "VENDOR"
+                    ? "Sign in to switch it to a vendor account"
+                    : "Sign in instead"}
+                </Link>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Submit */}
+        <button type="submit" disabled={loading} className={authButtonClass}>
+          {loading
+            ? "Creating account..."
+            : role === "VENDOR"
+              ? "Create vendor account"
+              : role === "BUYER"
+                ? "Create buyer account"
+                : "Create account"}
+        </button>
+      </form>
+
+      {/* Footer */}
+      <div className="mt-6 text-center text-[13px] text-gray-500">
+        Already have an account?{" "}
+        <Link href={loginHref} className="font-bold text-[#059669] hover:underline">
+          Sign in
+        </Link>
+      </div>
+
+      <div className="mt-4 text-center text-[11px] text-gray-400 leading-relaxed">
+        By creating an account, I agree to the{" "}
+        <Link href="/privacy-policy" className="underline hover:text-gray-600">Privacy Policy</Link> and{" "}
+        <Link href="/terms" className="underline hover:text-gray-600">Terms of Service</Link>.
+      </div>
+    </AuthShell>
   );
 }
