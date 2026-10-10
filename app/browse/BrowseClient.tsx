@@ -14,7 +14,7 @@ import {
 } from "@/lib/supabasePublic";
 import { getVendorBadgeMeta } from "@/lib/vendorBadges";
 import {
-  FiSearch, FiX, FiArrowLeft, FiGrid, FiList, FiPackage,
+  FiSearch, FiX, FiArrowLeft, FiGrid, FiList, FiPackage, FiAward,
   FiTool, FiUsers, FiMapPin, FiFilter, FiChevronDown,
   FiChevronUp, FiRefreshCw, FiExternalLink, FiSliders,
   FiHeart, FiCheckCircle
@@ -596,92 +596,171 @@ export default function BrowsePage({
         /* ── BASE ── */
         .bs-page { min-height: 100vh; background: #f6f7f5; max-width: 100%; overflow-x: hidden; }
 
-        /* ── HERO ── */
+        /* ── NEW HERO REDESIGN ── */
         .bs-hero {
-          background: linear-gradient(145deg, #0a1a10 0%, #0f2318 40%, #0c1e13 100%);
-          padding: 40px 24px 32px;
+          background: #fdf9f1;
+          padding: 48px 24px;
           position: relative;
           overflow: hidden;
-          max-width: 100%;
+          border-bottom: 1px solid #e5e7eb;
         }
-        .bs-hero::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(ellipse 700px 400px at 85% 60%, rgba(22,163,74,0.12) 0%, transparent 65%),
-            radial-gradient(ellipse 400px 300px at 10% 40%, rgba(29,185,84,0.06) 0%, transparent 60%);
-          pointer-events: none;
+        /* Geometric Beige Background Shapes */
+        .bs-hero-bg-shape1 {
+          position: absolute; top: -50px; left: -100px;
+          width: 500px; height: 500px;
+          background: #f4ead5;
+          border-radius: 50%; z-index: 0;
+          opacity: 0.6; filter: blur(60px); pointer-events: none;
         }
+        .bs-hero-bg-shape2 {
+          position: absolute; bottom: -150px; right: 10%;
+          width: 700px; height: 400px;
+          background: #f9edd4;
+          transform: rotate(-15deg); border-radius: 100px;
+          z-index: 0; opacity: 0.7; pointer-events: none;
+        }
+
         .bs-hero-inner {
-          max-width: 1200px;
-          margin: 0 auto;
-          position: relative;
-          z-index: 1;
-          min-width: 0;
+          max-width: 1240px; margin: 0 auto;
+          position: relative; z-index: 1;
+          display: flex; flex-wrap: wrap; gap: 40px;
+          align-items: center; justify-content: space-between;
         }
+        .bs-hero-left {
+          flex: 1 1 450px;
+          max-width: 540px;
+        }
+        .bs-hero-right {
+          display: flex; gap: 16px;
+          flex-wrap: wrap; justify-content: flex-end;
+          flex: 1 1 auto;
+        }
+
         .bs-back {
           display: inline-flex; align-items: center; gap: 6px;
-          color: rgba(255,255,255,0.45); font-size: 13px; font-weight: 500;
-          text-decoration: none; margin-bottom: 24px;
-          transition: color .18s;
+          color: #6b7280; font-size: 13px; font-weight: 600;
+          text-decoration: none; margin-bottom: 16px;
+          transition: color .2s;
         }
-        .bs-back:hover { color: rgba(255,255,255,0.85); }
-        .bs-hero-h { font-size: clamp(26px,3.5vw,38px); font-weight: 800; color: #fff; margin: 0 0 6px; letter-spacing: -.03em; line-height: 1.1; }
-        .bs-hero-sub { font-size: 14px; color: rgba(255,255,255,0.45); margin: 0 0 28px; }
-        .bs-page-vendor .bs-hero { padding: 24px 24px 20px; }
-        .bs-page-vendor .bs-back { margin-bottom: 14px; }
-        .bs-page-vendor .bs-hero-sub { margin-bottom: 16px; }
-        .bs-page-vendor .bs-tabs { margin-top: 14px; }
+        .bs-back:hover { color: #111; }
+        .bs-hero-h {
+          font-size: clamp(28px, 3.5vw, 40px); font-weight: 800;
+          color: #111827; margin: 0 0 8px;
+          letter-spacing: -0.03em; line-height: 1.1;
+        }
+        .bs-hero-sub {
+          font-size: 15px; color: #4b5563; font-weight: 500;
+          margin: 0 0 28px;
+        }
 
         /* search */
         .bs-search-wrap {
           display: flex; align-items: center; gap: 12px;
-          background: rgba(255,255,255,0.07);
-          border: 1.5px solid rgba(255,255,255,0.1);
-          border-radius: 16px; padding: 12px 18px;
-          max-width: 640px;
-          min-width: 0;
-          backdrop-filter: blur(12px);
-          transition: border-color .2s, background .2s;
+          background: #fff;
+          border: 1px solid #d1d5db;
+          border-radius: 50px; padding: 12px 20px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+          width: 100%;
+          transition: border-color .2s, box-shadow .2s;
         }
-        .bs-search-wrap:focus-within { border-color: #1db954; background: rgba(255,255,255,0.1); }
-        .bs-search-icon { color: rgba(255,255,255,0.35); flex-shrink: 0; }
+        .bs-search-wrap:focus-within {
+          border-color: #16a34a;
+          box-shadow: 0 8px 24px rgba(22,163,74,0.08);
+        }
+        .bs-search-icon { color: #6b7280; flex-shrink: 0; }
         .bs-search-in {
           flex: 1; background: none; border: none; outline: none;
-          color: #fff; font-size: 15px; font-family: inherit;
+          color: #111; font-size: 15px; font-weight: 500; font-family: inherit;
           min-width: 0;
         }
-        .bs-search-in::placeholder { color: rgba(255,255,255,0.3); }
+        .bs-search-in::placeholder { color: #9ca3af; font-weight: 400; }
         .bs-search-clear {
-          width: 26px; height: 26px; border-radius: 6px; border: none; cursor: pointer;
-          background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);
+          width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer;
+          background: #f3f4f6; color: #6b7280;
           display: flex; align-items: center; justify-content: center; flex-shrink: 0;
           transition: background .15s;
         }
-        .bs-search-clear:hover { background: rgba(255,255,255,0.2); color: #fff; }
+        .bs-search-clear:hover { background: #e5e7eb; color: #111; }
 
         /* type tabs */
-        .bs-tabs { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+        .bs-tabs { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
         .bs-tab {
           display: inline-flex; align-items: center; gap: 6px;
-          padding: 8px 18px; border-radius: 50px; font-size: 13px; font-weight: 600;
-          border: 1.5px solid rgba(255,255,255,0.1);
-          background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5);
+          padding: 8px 20px; border-radius: 50px; font-size: 13px; font-weight: 700;
+          border: 1.5px solid #d1d5db;
+          background: #fff; color: #4b5563;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.02);
           cursor: pointer; transition: all .2s; text-decoration: none;
         }
-        .bs-tab:hover { border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.08); }
-        .bs-tab.bs-tab-active { background: #16a34a; border-color: #16a34a; color: #fff; }
+        .bs-tab:hover { border-color: #9ca3af; background: #f9fafb; color: #111; }
+        .bs-tab.bs-tab-active { background: #16a34a !important; border-color: #16a34a !important; color: #fff !important; }
+
+        /* ── PROMO CARDS (Right Side Hero) ── */
+        .promo-card {
+          width: 175px; height: 240px;
+          border-radius: 18px; padding: 22px 16px 16px;
+          position: relative; display: flex; flex-direction: column;
+          color: #fff; text-decoration: none;
+          box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+          overflow: hidden; transition: transform .3s ease, box-shadow .3s ease;
+        }
+        .promo-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 16px 36px rgba(0,0,0,0.12);
+        }
+        
+        .promo-blue { background: linear-gradient(145deg, #15344b, #15344b); }
+        .promo-green { background: linear-gradient(145deg, #0b5146, #0b5146); }
+        .promo-orange { background: linear-gradient(145deg, #6b482d, #6b482d); }
+        
+        .promo-badge-wrap {
+          position: absolute; top: -8px; right: -8px;
+          background: #eab308; color: #422006;
+          font-size: 9px; font-weight: 800; text-align: center;
+          width: 46px; height: 46px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+          line-height: 1.1; z-index: 2;
+        }
+        
+        .promo-card h3 {
+          font-size: 17px; font-weight: 800; margin: 0 0 6px;
+          line-height: 1.2; position: relative; z-index: 2; text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .promo-card p {
+          font-size: 12px; font-weight: 500; opacity: 0.9; margin: 0;
+          line-height: 1.4; position: relative; z-index: 2;
+        }
+        
+        .promo-icon-bg {
+  position: absolute; 
+  bottom: 75px; 
+  right: 10px;
+  font-size: 58px; 
+  /* Increase opacity and set color to white to stand out against the gradients */
+  color: #ffffff;
+  z-index: 1;
+  transform: rotate(-10deg);
+  /* Optional: Add a soft drop shadow to make them pop even more */
+  filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.2)); 
+}
+        
+        .promo-btn {
+          margin-top: auto; position: relative; z-index: 2;
+          background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.4);
+          border-radius: 50px; padding: 8px 12px; font-size: 12px; font-weight: 700;
+          color: #fff; text-align: center; backdrop-filter: blur(4px);
+          transition: background .2s;
+        }
+        .promo-card:hover .promo-btn { background: rgba(255,255,255,0.35); }
 
         /* ── CONTENT WRAP ── */
         .bs-wrap {
           max-width: 1200px; margin: 0 auto;
           padding: 28px 24px 72px;
           display: flex; gap: 24px; align-items: flex-start;
-          min-width: 0;
-          width: 100%;
+          min-width: 0; width: 100%;
         }
-        .bs-page-vendor .bs-wrap { padding-top: 18px; }
 
         /* ── SIDEBAR ── */
         .bs-sidebar {
@@ -697,14 +776,8 @@ export default function BrowsePage({
         @media (max-width:900px) {
           .bs-wrap > .bs-sidebar { display: none; }
           .bs-drawer .bs-sidebar {
-            display: block;
-            width: 100%;
-            position: static;
-            max-height: none;
-            overflow: visible;
-            border: none;
-            box-shadow: none;
-            padding: 0;
+            display: block; width: 100%; position: static; max-height: none;
+            overflow: visible; border: none; box-shadow: none; padding: 0;
           }
         }
         .bs-sb-head {
@@ -739,8 +812,8 @@ export default function BrowsePage({
           color: #4b5563; text-align: left; width: 100%; font-family: inherit;
           transition: background .12s, color .12s;
         }
-        .bs-opt:hover { background: rgba(22,163,74,0.07); color: #15803d; }
-        .bs-opt-active { background: rgba(22,163,74,0.1) !important; color: #15803d !important; font-weight: 700 !important; }
+        .bs-opt:hover { background: rgba(22,163,74,0.07); color: #15344b; }
+        .bs-opt-active { background: rgba(22,163,74,0.1) !important; color: #15344b !important; font-weight: 700 !important; }
         .bs-text-input {
           width: 100%; padding: 7px 10px; border: 1.5px solid rgba(0,0,0,0.1);
           border-radius: 8px; font-size: 13px; font-family: inherit;
@@ -938,53 +1011,24 @@ export default function BrowsePage({
 
         /* ── PAGINATION ── */
         .bs-pagination {
-          margin-top: 22px;
-          padding: 14px 16px;
-          border: 1px solid rgba(0,0,0,0.07);
-          border-radius: 16px;
-          background: #fff;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 14px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+          margin-top: 22px; padding: 14px 16px; border: 1px solid rgba(0,0,0,0.07);
+          border-radius: 16px; background: #fff; display: flex; align-items: center;
+          justify-content: space-between; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
         }
-        .bs-page-meta {
-          margin: 0;
-          color: #6b7280;
-          font-size: 13px;
-          font-weight: 600;
-        }
+        .bs-page-meta { margin: 0; color: #6b7280; font-size: 13px; font-weight: 600; }
         .bs-page-meta strong { color: #111; }
         .bs-page-controls { display: flex; align-items: center; gap: 6px; }
         .bs-page-btn {
-          min-width: 34px;
-          height: 34px;
-          padding: 0 11px;
-          border: 1px solid rgba(0,0,0,0.1);
-          border-radius: 10px;
-          background: #fff;
-          color: #374151;
-          font-size: 12.5px;
-          font-weight: 700;
-          cursor: pointer;
-          font-family: inherit;
+          min-width: 34px; height: 34px; padding: 0 11px; border: 1px solid rgba(0,0,0,0.1);
+          border-radius: 10px; background: #fff; color: #374151; font-size: 12.5px;
+          font-weight: 700; cursor: pointer; font-family: inherit;
           transition: background .15s, color .15s, border-color .15s;
         }
         .bs-page-btn:hover:not(:disabled) {
-          background: rgba(22,163,74,0.08);
-          border-color: rgba(22,163,74,0.24);
-          color: #15803d;
+          background: rgba(22,163,74,0.08); border-color: rgba(22,163,74,0.24); color: #15803d;
         }
-        .bs-page-btn-active {
-          background: #16a34a;
-          border-color: #16a34a;
-          color: #fff;
-        }
-        .bs-page-btn:disabled {
-          opacity: .42;
-          cursor: not-allowed;
-        }
+        .bs-page-btn-active { background: #16a34a; border-color: #16a34a; color: #fff; }
+        .bs-page-btn:disabled { opacity: .42; cursor: not-allowed; }
 
         /* ── MOBILE DRAWER ── */
         .bs-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; animation: bsFadeIn .15s ease; }
@@ -1001,14 +1045,23 @@ export default function BrowsePage({
           background: #f3f4f6; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #374151;
         }
 
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+          .bs-hero-inner { flex-direction: column; align-items: stretch; gap: 24px; }
+          .bs-hero-right {
+            flex-wrap: nowrap; overflow-x: auto; padding-bottom: 10px;
+            justify-content: flex-start; scroll-snap-type: x mandatory;
+            margin: 0 -24px; padding: 0 24px 16px;
+          }
+          .promo-card { scroll-snap-align: start; flex-shrink: 0; }
+        }
+
         @media (max-width: 640px) {
           .bs-wrap { padding: 18px 14px 56px; display: block; }
-          .bs-hero { padding: 28px 16px 24px; }
-          .bs-page-vendor .bs-hero { padding: 20px 16px 18px; }
-          .bs-page-vendor .bs-wrap { padding-top: 14px; }
+          .bs-hero { padding: 28px 16px 16px; }
           .bs-hero-h { font-size: 28px; overflow-wrap: anywhere; }
           .bs-hero-sub { font-size: 13px; line-height: 1.45; }
-          .bs-search-wrap { width: 100%; padding: 11px 14px; border-radius: 14px; }
+          .bs-search-wrap { width: 100%; padding: 11px 14px; border-radius: 50px; }
           .bs-tabs { gap: 6px; }
           .bs-tab { padding: 8px 12px; font-size: 12px; }
           .bs-toolbar { align-items: flex-start; }
@@ -1018,37 +1071,80 @@ export default function BrowsePage({
           .bs-pagination { align-items: stretch; flex-direction: column; }
           .bs-page-controls { justify-content: center; flex-wrap: wrap; }
           .bs-page-meta { text-align: center; }
+          .bs-hero-right { margin: 0 -16px; padding: 0 16px 12px; }
         }
       `}</style>
 
       <div className={`bs-page${type === "Vendor" ? " bs-page-vendor" : ""}`}>
         <Header />
 
-        {/* ── HERO ── */}
+        {/* ── REDESIGNED HERO ── */}
         <div className="bs-hero">
+          <div className="bs-hero-bg-shape1"></div>
+          <div className="bs-hero-bg-shape2"></div>
+          
           <div className="bs-hero-inner">
-            <Link href="/" className="bs-back"><FiArrowLeft size={13} />Back to Home</Link>
-            <h1 className="bs-hero-h">Browse Marketplace</h1>
-            <p className="bs-hero-sub">Discover ESG-verified vendors, products &amp; services across India</p>
+            
+            {/* Left Content */}
+            <div className="bs-hero-left">
+              <Link href="/" className="bs-back"><FiArrowLeft size={13} />Back to Home</Link>
+              <h1 className="bs-hero-h">Browse Marketplace</h1>
+              <p className="bs-hero-sub">Discover ESG-verified vendors, products &amp; services across India</p>
 
-            <div className="bs-search-wrap">
-              <FiSearch size={17} className="bs-search-icon" />
-              <input
-                type="text" className="bs-search-in" autoComplete="off"
-                placeholder={type === "Vendor" ? "Search vendors by name, category, location…" : type === "Service" ? "Search services…" : "Search products by name, tag, certification…"}
-                value={localSearch} onChange={e => handleSearch(e.target.value)}
-              />
-              {localSearch && (
-                <button className="bs-search-clear" onClick={() => handleSearch("")}><FiX size={12} /></button>
-              )}
+              <div className="bs-search-wrap">
+                <FiSearch size={18} className="bs-search-icon" />
+                <input
+                  type="text" className="bs-search-in" autoComplete="off"
+                  placeholder={type === "Vendor" ? "Search vendors by name, category, location…" : type === "Service" ? "Search services…" : "Search products, vendors, categories or certifications..."}
+                  value={localSearch} onChange={e => handleSearch(e.target.value)}
+                />
+                {localSearch && (
+                  <button className="bs-search-clear" onClick={() => handleSearch("")}><FiX size={12} /></button>
+                )}
+              </div>
+
+              <div className="bs-tabs">
+                {[{ val: "Product", label: "Products", Icon: FiPackage }, { val: "Vendor", label: "Vendors", Icon: FiUsers }, { val: "Service", label: "Services", Icon: FiTool }].map(({ val, label, Icon }) => (
+                  <button key={val} className={`bs-tab${type === val ? " bs-tab-active" : ""}`} onClick={() => updateUrl("type", val)}>
+                    <Icon size={13} />{label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="bs-tabs">
-              {[{ val: "Product", label: "Products", Icon: FiPackage }, { val: "Vendor", label: "Vendors", Icon: FiUsers }, { val: "Service", label: "Services", Icon: FiTool }].map(({ val, label, Icon }) => (
-                <button key={val} className={`bs-tab${type === val ? " bs-tab-active" : ""}`} onClick={() => updateUrl("type", val)}>
-                  <Icon size={13} />{label}
-                </button>
-              ))}
+            {/* Right Promo Cards */}
+            <div className="bs-hero-right">
+              
+              {/* Card 1: Blue */}
+              <div className="promo-card promo-blue">
+                 <div className="promo-badge-wrap">100%<br/>Certified</div>
+                 <h3>Bulk Sourcing</h3>
+                 <p>Get Quick Quotes</p>
+                 <FiPackage className="promo-icon-bg" />
+                 <div className="promo-btn">Get Quotes</div>
+              </div>
+
+              {/* Card 2: Green */}
+              <div className="promo-card promo-green">
+                 <div className="promo-badge-wrap">100%<br/>Certified</div>
+                 <h3>VERIFIED Vendors</h3>
+                 <p>Discover Sustainable Brands</p>
+                 <FiUsers className="promo-icon-bg" />
+                 <div className="promo-btn">Browse Vendors</div>
+              </div>
+
+              {/* Card 3: Orange */}
+              <div className="promo-card promo-orange">
+   <div className="promo-badge-wrap">100%<br/>Certified</div>
+   <h3>ESG & Green Services</h3>
+   <p>Best Rates & Estimates</p>
+   
+   {/* Replace <FiTool /> with <FiAward /> or <FaCertificate /> */}
+   <FiAward className="promo-icon-bg" />
+   
+   <div className="promo-btn">Explore Services</div>
+</div>
+
             </div>
           </div>
         </div>
@@ -1185,4 +1281,4 @@ export default function BrowsePage({
       </div>
     </>
   );
-}
+} 
