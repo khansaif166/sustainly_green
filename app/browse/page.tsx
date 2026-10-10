@@ -62,7 +62,9 @@ const getBrowseData = cache(
     let products = await fetchApprovedProducts({
       listingType: type,
       categoryId,
-      limit: 100,
+      // Every approved product must fit, or the overflow has no crawlable
+      // link anywhere on the site (BrowseClient paginates this list locally).
+      limit: 1000,
     }).catch(() => []);
 
     if (query) {
@@ -86,13 +88,26 @@ const getBrowseData = cache(
   },
 );
 
-function browseCanonical(type: string, category: string, query: string) {
+function pageNumber(value: string) {
+  const page = Number.parseInt(value, 10);
+  return Number.isFinite(page) && page > 1 ? page : 1;
+}
+
+function browseCanonical(
+  type: string,
+  category: string,
+  query: string,
+  page = 1,
+) {
   const params = new URLSearchParams();
   if (type && type.toLowerCase() !== "product") {
     params.set("type", type.toLowerCase());
   }
   if (category) params.set("category", category.toLowerCase());
   if (query) params.set("q", query);
+  // Paginated pages are self-canonical: pointing ?page=N at page 1 would tell
+  // Google to drop the only page that links to those products.
+  if (page > 1) params.set("page", String(page));
   const suffix = params.toString();
   return `${getSiteUrl()}/browse${suffix ? `?${suffix}` : ""}`;
 }
@@ -104,17 +119,19 @@ export async function generateMetadata({
   const type = first(values.type) || "product";
   const category = first(values.category);
   const query = first(values.q);
+  const page = pageNumber(first(values.page));
   const data = await getBrowseData(type, category, query);
   const resultCount = data.products.length + data.vendors.length;
-  const canonical = browseCanonical(type, category, query);
+  const canonical = browseCanonical(type, category, query, page);
   const categoryName = data.selectedCategory?.name;
-  const title = categoryName
+  const baseTitle = categoryName
     ? `Verified ${categoryName} Suppliers in India`
     : data.type === "Vendor"
       ? "Verified Sustainable Suppliers in India"
       : data.type === "Service"
         ? "Sustainable Business Services in India"
         : "Sustainable Products and Suppliers in India";
+  const title = page > 1 ? `${baseTitle} – Page ${page}` : baseTitle;
   const description = categoryName
     ? `Discover verified ${categoryName} suppliers, products, and sourcing solutions across India on Sustainly Green.`
     : "Browse sustainable products, responsible suppliers, and green business services across India on Sustainly Green.";

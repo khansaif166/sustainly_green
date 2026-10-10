@@ -17,6 +17,7 @@ import Footer from "@/app/components/layouts/Footer";
 import BuyerRFQModal from "../../components/ContactVendorModal";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import type { PublicProduct } from "@/lib/supabasePublic";
+import { productHref } from "@/lib/slug";
 
 type Product = PublicProduct;
 
@@ -250,7 +251,7 @@ export default function ProductDetailClient({
                   return (
                     <Link
                       key={p.id}
-                      href={`/products/${p.id}`}
+                      href={productHref(p.id, p.title)}
                       className="group flex flex-col overflow-hidden rounded-[18px] border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md"
                     >
                       {/* Image matches BrowseClient (180px height, contain) */}
