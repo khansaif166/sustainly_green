@@ -4,12 +4,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, XCircle, ExternalLink, Search, Trash2, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { getVendorBadgeMeta, VENDOR_BADGES, type VendorBadgeType } from "@/lib/vendorBadges";
+import {
+  MAX_IMPORT_ROWS,
+  OPTIONAL_COLUMNS,
+  parseVendorSheet,
+  REQUIRED_COLUMNS,
+  TEMPLATE_COLUMNS,
+  TEMPLATE_EXAMPLE_ROW,
+} from "@/lib/vendorImport";
 
 type VendorStatusFilter = "ALL" | "APPROVED" | "PENDING";
 
-const IMPORT_COLUMNS = ["Logo", "Company Name", "Categories", "Products/ Services", "Address", "State", "Operating Hours", "Business Description"];
 const MAX_IMPORT_SIZE = 5 * 1024 * 1024;
-const MAX_IMPORT_ROWS = 1000;
 
 type FileValidation = {
   status: "validating" | "valid" | "invalid";
@@ -129,11 +135,8 @@ export default function AdminVendorsPage() {
 
   async function downloadTemplate() {
     const XLSX = await import("xlsx");
-    const sheet = XLSX.utils.aoa_to_sheet([
-      IMPORT_COLUMNS,
-      ["https://example.com/logo.png", "Example Green Company", "Renewable Energy, Solar", "Solar panels; Installation", "12 Example Road", "Karnataka", "Mon-Sat, 9:00 AM-6:00 PM", "Sustainable energy products and services."],
-    ]);
-    sheet["!cols"] = [{ wch: 34 }, { wch: 28 }, { wch: 30 }, { wch: 34 }, { wch: 38 }, { wch: 20 }, { wch: 30 }, { wch: 48 }];
+    const sheet = XLSX.utils.aoa_to_sheet([TEMPLATE_COLUMNS, TEMPLATE_EXAMPLE_ROW]);
+    sheet["!cols"] = TEMPLATE_COLUMNS.map((_, i) => ({ wch: Math.min(48, Math.max(18, String(TEMPLATE_EXAMPLE_ROW[i] ?? "").length + 4)) }));
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, "Vendors");
     XLSX.writeFile(workbook, "vendor-import-template.xlsx");
@@ -167,16 +170,13 @@ export default function AdminVendorsPage() {
         return;
       }
       const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: false, blankrows: true });
-      const clean = (value: unknown) => value == null ? "" : String(value).trim().replace(/\s+/g, " ");
-      const headers = (rows[0] || []).map(clean);
-      const correctHeaders = headers.length === IMPORT_COLUMNS.length && IMPORT_COLUMNS.every((header) => headers.includes(header));
-      if (!correctHeaders) {
-        setFileValidation({ status: "invalid", message: `The file must contain only these columns, in any order: ${IMPORT_COLUMNS.join(", ")}.` });
+      // Same rules as the server import (lib/vendorImport.ts).
+      const result = parseVendorSheet(rows);
+      if (!result.ok) {
+        setFileValidation({ status: "invalid", message: result.columnError });
         return;
       }
-      const populatedRows = rows.slice(1)
-        .map((row, index) => ({ row, excelRow: index + 2 }))
-        .filter(({ row }) => row.some((value) => clean(value)));
+      const populatedRows = result.rows;
       if (!populatedRows.length) {
         setFileValidation({ status: "invalid", message: "The worksheet has no vendor data." });
         return;
@@ -186,18 +186,7 @@ export default function AdminVendorsPage() {
         return;
       }
 
-      const errors: string[] = [];
-      const seen = new Map<string, number>();
-      for (const { row, excelRow } of populatedRows) {
-        const values = IMPORT_COLUMNS.map((column) => clean(row[headers.indexOf(column)]));
-        const missing = IMPORT_COLUMNS.filter((column, index) => column !== "Logo" && !values[index]);
-        if (missing.length) errors.push(`Row ${excelRow}: missing ${missing.join(", ")}.`);
-        if (values[0] && !/^https?:\/\/\S+$/i.test(values[0])) errors.push(`Row ${excelRow}: Logo must be an http(s) URL.`);
-        const key = [values[1], values[4], values[5]].map((value) => value.toLocaleLowerCase()).join("|");
-        const firstRow = seen.get(key);
-        if (firstRow) errors.push(`Row ${excelRow}: duplicate of row ${firstRow}.`);
-        else seen.set(key, excelRow);
-      }
+      const errors = result.rowErrors.map((error) => `Row ${error.row}: ${error.message}`);
       if (errors.length) {
         const remaining = errors.length > 5 ? ` Plus ${errors.length - 5} more error${errors.length - 5 === 1 ? "" : "s"}.` : "";
         setFileValidation({ status: "invalid", message: `${errors.slice(0, 5).join(" ")}${remaining}`, rowCount: populatedRows.length });
@@ -380,7 +369,8 @@ export default function AdminVendorsPage() {
                   if (file) void validateSelectedFile(file);
                 }}
               />
-              <p className="av-columns"><b>Required columns, in any order:</b> {IMPORT_COLUMNS.join(" • ")}</p>
+              <p className="av-columns"><b>Required columns, in any order:</b> {REQUIRED_COLUMNS.join(" • ")}</p>
+              <p className="av-columns"><b>Optional columns:</b> {OPTIONAL_COLUMNS.map((column) => column.label).join(" • ")}</p>
               {importFile && (
                 <div className={`av-selected-file ${fileValidation?.status || "validating"}`}>
                   <FileSpreadsheet size={21} style={{ flexShrink: 0 }} />

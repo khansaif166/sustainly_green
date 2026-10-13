@@ -7,43 +7,17 @@ import {
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
+import { MAX_IMPORT_ROWS, parseVendorSheet, vendorKey } from "@/lib/vendorImport";
 
 export const runtime = "nodejs";
 
-const REQUIRED_HEADERS = [
-  "Logo",
-  "Company Name",
-  "Categories",
-  "Products/ Services",
-  "Address",
-  "State",
-  "Operating Hours",
-  "Business Description",
-] as const;
-
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const MAX_ROWS = 1_000;
 
 type ExistingVendor = {
   company_name: string;
   registered_address: string | null;
   state: string | null;
 };
-
-function clean(value: unknown) {
-  return value == null ? "" : String(value).trim().replace(/\s+/g, " ");
-}
-
-function list(value: unknown) {
-  return clean(value)
-    .split(/[,;\n]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function vendorKey(companyName: string, address: string, state: string) {
-  return [companyName, address, state].map((value) => clean(value).toLocaleLowerCase()).join("|");
-}
 
 export async function POST(request: Request) {
   try {
@@ -81,76 +55,49 @@ export async function POST(request: Request) {
       raw: false,
       blankrows: false,
     });
-    const headers = (rows[0] || []).map(clean);
-    const headersAreExact =
-      headers.length === REQUIRED_HEADERS.length &&
-      REQUIRED_HEADERS.every((header) => headers.includes(header));
-    if (!headersAreExact) {
-      return apiError("The Excel columns do not match the required template.", 400, {
-        requiredColumns: [...REQUIRED_HEADERS],
-        receivedColumns: headers,
+    const result = parseVendorSheet(rows);
+    if (!result.ok) {
+      return apiError(result.columnError, 400);
+    }
+    if (!result.rows.length) return apiError("The worksheet has no vendor rows.", 400);
+    if (result.rows.length > MAX_IMPORT_ROWS) {
+      return apiError(`A maximum of ${MAX_IMPORT_ROWS} vendor rows can be imported at once.`, 400);
+    }
+    if (result.rowErrors.length) {
+      return apiError("Fix the highlighted Excel rows and upload the file again.", 400, {
+        rowErrors: result.rowErrors,
       });
     }
 
-    const dataRows = rows.slice(1).filter((row) => row.some((value) => clean(value)));
-    if (!dataRows.length) return apiError("The worksheet has no vendor rows.", 400);
-    if (dataRows.length > MAX_ROWS) {
-      return apiError(`A maximum of ${MAX_ROWS} vendor rows can be imported at once.`, 400);
-    }
-
-    const rowErrors: Array<{ row: number; message: string }> = [];
     const importBatchId = `admin_excel_${randomUUID()}`;
-    const parsed = dataRows.map((row, index) => {
-      const [logo, companyName, categoriesValue, productsValue, address, state, operatingHours, description] = REQUIRED_HEADERS.map(
-        (header) => clean(row[headers.indexOf(header)]),
-      );
-      const excelRow = index + 2;
-      const values = [logo, companyName, categoriesValue, productsValue, address, state, operatingHours, description];
-      const missing = REQUIRED_HEADERS.filter(
-        (header, columnIndex) => header !== "Logo" && !values[columnIndex],
-      );
-      if (missing.length) rowErrors.push({ row: excelRow, message: `Missing ${missing.join(", ")}.` });
-      if (logo && !/^https?:\/\/\S+$/i.test(logo)) {
-        rowErrors.push({ row: excelRow, message: "Logo must be a valid http(s) image URL." });
-      }
-      const categories = list(categoriesValue);
-      return {
-        key: vendorKey(companyName, address, state),
-        excelRow,
-        record: {
-          company_name: companyName,
-          logo_url: logo || null,
-          primary_category: categories[0] || null,
-          sub_categories: categories.slice(1),
-          key_products: list(productsValue),
-          registered_address: address || null,
-          state: state || null,
-          country: "India",
-          short_description: description || null,
-          public_contact: { operatingHours: operatingHours || null },
-          claim_status: "UNCLAIMED",
-          source: "CLIENT_IMPORT",
-          import_batch_id: importBatchId,
-          approved: true,
-          status: "approved",
-          listing_verified: false,
-          raw_firebase: { importFile: file.name, sheetName: workbook.SheetNames[0], rowNumber: excelRow },
-        },
-      };
-    });
-
-    const seen = new Map<string, number>();
-    for (const vendor of parsed) {
-      const firstRow = seen.get(vendor.key);
-      if (firstRow) {
-        rowErrors.push({ row: vendor.excelRow, message: `Duplicate of row ${firstRow}.` });
-      } else {
-        seen.set(vendor.key, vendor.excelRow);
-      }
-    }
-    if (rowErrors.length) {
-      return apiError("Fix the highlighted Excel rows and upload the file again.", 400, { rowErrors });
-    }
+    const parsed = result.rows.map((row) => ({
+      key: row.key,
+      excelRow: row.excelRow,
+      record: {
+        company_name: row.companyName,
+        logo_url: row.logo || null,
+        primary_category: row.categories[0] || null,
+        sub_categories: row.categories.slice(1),
+        key_products: row.products,
+        registered_address: row.address || null,
+        state: row.state || null,
+        country: "India",
+        short_description: row.description || null,
+        // Public listing details that have no dedicated column live here,
+        // alongside operatingHours (admin badge edits merge, not replace).
+        public_contact: Object.fromEntries(
+          Object.entries({ operatingHours: row.operatingHours || null, ...row.extra })
+            .filter(([, value]) => value !== null && value !== ""),
+        ),
+        claim_status: "UNCLAIMED",
+        source: "CLIENT_IMPORT",
+        import_batch_id: importBatchId,
+        approved: true,
+        status: "approved",
+        listing_verified: false,
+        raw_firebase: { importFile: file.name, sheetName: workbook.SheetNames[0], rowNumber: row.excelRow },
+      },
+    }));
 
     const existing = await supabaseServiceFetch<ExistingVendor[]>(
       "/rest/v1/vendors?select=company_name,registered_address,state&limit=20000",
