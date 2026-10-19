@@ -41,6 +41,7 @@ type SupabaseProductRow = {
   currency: string | null;
   moq: number | string | null;
   ship_regions: string[] | null;
+  in_stock: boolean | null;
   sustainability_claim: string | null;
   approved: boolean | null;
   featured: boolean | null;
@@ -114,6 +115,7 @@ export type PublicProduct = {
   listingType?: string;
   availableFor: string[];
   shipRegions: string[];
+  inStock: boolean;
   categoryId?: string; 
   priceType?: string;
   price?: number;
@@ -199,6 +201,7 @@ const PRODUCT_SELECT = [
   "currency",
   "moq",
   "ship_regions",
+  "in_stock",
   "sustainability_claim",
   "approved",
   "featured",
@@ -359,6 +362,7 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
     listingType: stringValue(row.listing_type) || undefined,
     availableFor: stringArray(row.available_for),
     shipRegions: stringArray(row.ship_regions),
+    inStock: row.in_stock !== false,
     categoryId: stringValue(row.category_id) || undefined,   // <-- ADD
     priceType: stringValue(row.price_type) || undefined,
     price: numberValue(row.price),

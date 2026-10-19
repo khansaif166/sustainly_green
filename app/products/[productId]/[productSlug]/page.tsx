@@ -100,7 +100,12 @@ function productStructuredData(
   product: NonNullable<Awaited<ReturnType<typeof getProduct>>>,
   canonical: string,
 ) {
+  // Google requires a Product snippet to carry offers, review or
+  // aggregateRating. "Price on Request" listings have none of these, and
+  // inventing a rating would breach Google's guidelines, so they get no
+  // Product markup at all rather than an invalid one.
   const hasPrice = typeof product.price === "number" && product.price > 0;
+  if (!hasPrice) return null;
 
   return {
     "@context": "https://schema.org",
@@ -114,21 +119,19 @@ function productStructuredData(
       "@type": "Brand",
       name: product.vendorName,
     },
-    ...(hasPrice
-      ? {
-          offers: {
-            "@type": "Offer",
-            url: canonical,
-            priceCurrency: product.currency,
-            price: product.price,
-            availability: "https://schema.org/InStock",
-            seller: {
-              "@type": "Organization",
-              name: product.vendorName,
-            },
-          },
-        }
-      : {}),
+    offers: {
+      "@type": "Offer",
+      url: canonical,
+      priceCurrency: product.currency,
+      price: product.price,
+      availability: product.inStock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      seller: {
+        "@type": "Organization",
+        name: product.vendorName,
+      },
+    },
   };
 }
 
@@ -145,12 +148,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
-        }}
-      />
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+          }}
+        />
+      )}
       <ProductDetailClient product={product} otherProducts={otherProducts} />
     </>
   );
