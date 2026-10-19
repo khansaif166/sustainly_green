@@ -4,9 +4,11 @@ import {
   fetchActiveCategories,
   fetchApprovedProducts,
   fetchApprovedVendors,
+  fetchPublishedBlogs,
 } from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
 import HomeClient, {
+  type BlogCard,
   type CategoryItem,
   type ProductCard,
   type SupplierCard,
@@ -226,11 +228,30 @@ const getHomepageData = cache(async () => {
     }
   } catch {}
 
+  // Links from the homepage to individual posts help them get crawled.
+  let initialLatestBlogs: BlogCard[] = [];
+  try {
+    const blogs = await fetchPublishedBlogs({ limit: 3 });
+    initialLatestBlogs = blogs.map((blog) => {
+      const text = blog.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      const excerpt = blog.excerpt || text;
+      return {
+        id: blog.id,
+        slug: blog.slug,
+        title: blog.title,
+        excerpt: excerpt.length > 150 ? `${excerpt.slice(0, 149).trimEnd()}…` : excerpt,
+        image: blog.image,
+        createdAt: blog.createdAt,
+      };
+    });
+  } catch {}
+
   return {
     initialCategories,
     initialBestSellers,
     initialFeaturedProducts,
     initialFeaturedSuppliers,
+    initialLatestBlogs,
   };
 });
 
@@ -240,6 +261,7 @@ export default async function HomePage() {
     initialBestSellers,
     initialFeaturedProducts,
     initialFeaturedSuppliers,
+    initialLatestBlogs,
   } = await getHomepageData();
 
   return (
@@ -248,6 +270,7 @@ export default async function HomePage() {
       initialBestSellers={initialBestSellers}
       initialFeaturedProducts={initialFeaturedProducts}
       initialFeaturedSuppliers={initialFeaturedSuppliers}
+      initialLatestBlogs={initialLatestBlogs}
     />
   );
 }
