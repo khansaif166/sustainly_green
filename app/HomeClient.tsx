@@ -9,7 +9,7 @@ import {
   fetchApprovedProducts,
   fetchApprovedVendors,
 } from "@/lib/supabasePublic";
-import { blogHref, productHref } from "@/lib/slug";
+import { blogHref, categoryHref, productHref } from "@/lib/slug";
 import {
   AUTH_SESSION_CLEARED_EVENT,
   AUTH_SESSION_SAVED_EVENT,
@@ -45,6 +45,7 @@ import {
 
 export type CategoryItem = {
   id: string;
+  slug?: string;
   name: string;
   icon: string;
 };
@@ -170,17 +171,19 @@ const topTabs = [
   "Services",
 ];
 
+// Category pages, not /browse?q= searches: robots.txt blocks search URLs, so
+// those links passed no SEO value. Each points at a category with listings.
 const searchTags = [
-  "Solar Panels",
-  "Lithium Battery",
-  "LED High Bay Light",
-  "Rainwater Harvesting",
-  "Compost Machine",
-  "Bamboo Products",
-  "Recycled Plastic",
-  "Heat Pump",
-  "EV Charger",
-  "Water Purifier",
+  { label: "Solar Panels", category: "clean-energy" },
+  { label: "Bamboo Products", category: "eco-products" },
+  { label: "Cane & Rattan Furniture", category: "furniture-&-interiors" },
+  { label: "Recycled Plastic Furniture", category: "eco-home-&-living" },
+  { label: "Herbal Soaps & Shampoos", category: "personal-care" },
+  { label: "Organic Spices & Seeds", category: "agri-solutions" },
+  { label: "Paper Bags", category: "packaging" },
+  { label: "Eco Resorts & Stays", category: "eco-tourism" },
+  { label: "Bamboo Bottles & Mugs", category: "kitchen-&-dining" },
+  { label: "Scrap & Recycling", category: "waste-&-recycling" },
 ];
 
 const trustItems = [
@@ -657,7 +660,7 @@ export default function HomeClient({
           <aside className="sidebar-card">
             <div className="sidebar-list">
               {categoryOptions.map((category) => (
-                <Link key={category.id} href={`/browse?category=${category.id}`} className="sidebar-link">
+                <Link key={category.id} href={categoryHref(category.id, category.slug)} className="sidebar-link">
                   <span className="sidebar-icon">{iconForCategory(category.icon)}</span>
                   <span className="sidebar-label">{category.name}</span>
                 </Link>
@@ -840,7 +843,7 @@ export default function HomeClient({
           </div>
           <div className="category-strip">
             {categoryOptions.map((category) => (
-              <Link key={category.id} href={`/browse?category=${category.id}`} className="category-pill-card">
+              <Link key={category.id} href={categoryHref(category.id, category.slug)} className="category-pill-card">
                 <span className="category-pill-icon">{iconForCategory(category.icon)}</span>
                 <span>{category.name}</span>
               </Link>
@@ -973,9 +976,9 @@ export default function HomeClient({
           </div>
           <div className="tag-row">
             {searchTags.map((tag) => (
-              <Link key={tag} href={`/browse?q=${encodeURIComponent(tag)}`} className="tag-chip">
+              <Link key={tag.label} href={`/browse?category=${encodeURIComponent(tag.category)}`} className="tag-chip">
                 <Search size={13} />
-                {tag}
+                {tag.label}
               </Link>
             ))}
           </div>

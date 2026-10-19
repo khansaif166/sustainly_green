@@ -249,7 +249,7 @@ export default function BrowsePage({
             <div className="bs-opts">
               <button className={`bs-opt${!category ? " bs-opt-active" : ""}`} onClick={() => updateUrl("category", "")}>All Categories</button>
               {categories.map(c => (
-                <button key={c.id} className={`bs-opt${category === c.id ? " bs-opt-active" : ""}`} onClick={() => updateUrl("category", c.id)}>{c.name}</button>
+                <button key={c.id} className={`bs-opt${categoryId === c.id ? " bs-opt-active" : ""}`} onClick={() => updateUrl("category", c.slug || c.id)}>{c.name}</button>
               ))}
             </div>
           )}

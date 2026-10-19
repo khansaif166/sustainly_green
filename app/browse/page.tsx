@@ -122,7 +122,14 @@ export async function generateMetadata({
   const page = pageNumber(first(values.page));
   const data = await getBrowseData(type, category, query);
   const resultCount = data.products.length + data.vendors.length;
-  const canonical = browseCanonical(type, category, query, page);
+  // ?category=<uuid> and ?category=<slug> render the same page; both declare
+  // the slug form canonical, matching the sitemap and internal links.
+  const canonical = browseCanonical(
+    type,
+    data.selectedCategory?.slug || category,
+    query,
+    page,
+  );
   const categoryName = data.selectedCategory?.name;
   const baseTitle = categoryName
     ? `Verified ${categoryName} Suppliers in India`

@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import Link from "next/link";
+import { categoryHref } from "@/lib/slug";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import { FiArrowLeft, FiGrid, FiSearch } from "react-icons/fi";
@@ -35,6 +36,7 @@ import {
 
 export type Category = {
   id: string;
+  slug?: string;
   name: string;
   imageUrl?: string;
   description?: string;
@@ -513,7 +515,7 @@ export default function CategoriesClient({
                 return (
                   <Link
                     key={category.id}
-                    href={`/browse?category=${category.id}`}
+                    href={categoryHref(category.id, category.slug)}
                     className="cat-card"
                     style={cardStyle}
                   >

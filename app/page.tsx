@@ -166,6 +166,7 @@ const getHomepageData = cache(async () => {
     if (categories.length > 0) {
       initialCategories = categories.map((item, index) => ({
         id: item.id,
+        slug: item.slug,
         name: item.name,
         icon: categoryIcon(item, index),
       }));
