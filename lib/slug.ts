@@ -29,3 +29,13 @@ export function productHref(id: string, title?: string | null): string {
 export function blogHref(id: string, slug?: string | null): string {
   return `/blogs/${slug || id}`;
 }
+
+/**
+ * Canonical /browse href for a category: the slug form, which is what
+ * sitemap-categories.xml lists and the browse page canonicalises to. Linking
+ * the UUID form gave every category a second, competing URL.
+ */
+export function categoryHref(id: string, slug?: string | null): string {
+  // Lower-cased like the sitemap and the canonical, so all three always match.
+  return `/browse?category=${encodeURIComponent(slug ? slug.toLowerCase() : id)}`;
+}
