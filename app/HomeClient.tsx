@@ -9,7 +9,7 @@ import {
   fetchApprovedProducts,
   fetchApprovedVendors,
 } from "@/lib/supabasePublic";
-import { productHref } from "@/lib/slug";
+import { blogHref, productHref } from "@/lib/slug";
 import {
   AUTH_SESSION_CLEARED_EVENT,
   AUTH_SESSION_SAVED_EVENT,
@@ -331,11 +331,21 @@ function iconForCategory(icon: string) {
 }
 
 
+export type BlogCard = {
+  id: string;
+  slug?: string;
+  title: string;
+  excerpt: string;
+  image?: string;
+  createdAt?: string;
+};
+
 type HomeClientProps = {
   initialCategories: CategoryItem[];
   initialBestSellers: ProductCard[];
   initialFeaturedProducts: ProductCard[];
   initialFeaturedSuppliers: SupplierCard[];
+  initialLatestBlogs: BlogCard[];
 };
 
 export default function HomeClient({
@@ -343,6 +353,7 @@ export default function HomeClient({
   initialBestSellers,
   initialFeaturedProducts,
   initialFeaturedSuppliers,
+  initialLatestBlogs,
 }: HomeClientProps) {
   const router = useRouter();
   const cityStripRef = useRef<HTMLDivElement>(null);
@@ -1035,11 +1046,54 @@ export default function HomeClient({
             ))}
           </div>
         </section>
+
+        {initialLatestBlogs.length > 0 && (
+          <section className="section-block home-blog-section">
+            <div className="section-head">
+              <h2>Latest from the Blog</h2>
+              <Link href="/blogs">View all articles</Link>
+            </div>
+            <div className="home-blog-grid">
+              {initialLatestBlogs.map((blog) => (
+                <Link key={blog.id} href={blogHref(blog.id, blog.slug)} className="home-blog-card">
+                  <div className="home-blog-media">
+                    {blog.image ? (
+                      <img src={blog.image} alt={blog.title} loading="lazy" />
+                    ) : (
+                      <Leaf size={28} />
+                    )}
+                  </div>
+                  <div className="home-blog-body">
+                    {blog.createdAt && (
+                      <p className="home-blog-date">
+                        {new Date(blog.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      </p>
+                    )}
+                    <h3>{blog.title}</h3>
+                    {blog.excerpt && <p className="home-blog-excerpt">{blog.excerpt}</p>}
+                    <span className="home-blog-more">Read article <ArrowRight size={14} /></span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       <Footer />
 
       <style>{`
+        .home-blog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+        .home-blog-card { display: flex; flex-direction: column; background: #fff; border: 1px solid rgba(0,0,0,0.07); border-radius: 16px; overflow: hidden; text-decoration: none; color: inherit; transition: transform .2s, box-shadow .2s; }
+        .home-blog-card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.08); }
+        .home-blog-media { aspect-ratio: 16 / 9; background: linear-gradient(135deg, #ecfdf5, #d1fae5); display: flex; align-items: center; justify-content: center; color: #059669; overflow: hidden; }
+        .home-blog-media img { width: 100%; height: 100%; object-fit: cover; }
+        .home-blog-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .home-blog-date { margin: 0; font-size: 12px; color: #6b7280; font-weight: 600; }
+        .home-blog-body h3 { margin: 0; font-size: 16px; line-height: 1.35; color: #111827; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .home-blog-excerpt { margin: 0; font-size: 13.5px; line-height: 1.55; color: #4b5563; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .home-blog-more { margin-top: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #059669; }
+        @media (max-width: 900px) { .home-blog-grid { grid-template-columns: 1fr; } }
         .market-home {
           background: #fcfdfb;
           color: #10241b;
