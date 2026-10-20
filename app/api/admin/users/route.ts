@@ -9,7 +9,9 @@ import {
 
 type ProfileRow = {
   id: string;
+  name: string | null;
   email: string;
+  phone: string | null;
   role: "ADMIN" | "VENDOR" | "BUYER";
   disabled: boolean;
 };
@@ -19,14 +21,17 @@ export async function GET(request: Request) {
     await requireRole(request, ["ADMIN"]);
 
     const rows = await supabaseServiceFetch<ProfileRow[]>(
-      "/rest/v1/profiles?select=id,email,role,disabled&order=created_at.desc&limit=10000",
+      "/rest/v1/profiles?select=id,name,email,phone,role,disabled&order=created_at.desc&limit=10000",
     );
 
     return apiOk({
       ok: true,
       users: rows.map((row) => ({
         id: row.id,
+        name: row.name || "",
         email: row.email,
+        // Collected on the register form; empty for accounts created before.
+        phone: row.phone || "",
         role: row.role,
         blocked: row.disabled,
       })),

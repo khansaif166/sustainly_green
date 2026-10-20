@@ -18,6 +18,7 @@ import {
   FiMapPin, FiMail, FiGlobe, FiArrowLeft, FiPackage,
   FiCheckCircle, FiClock, FiAlertCircle, FiExternalLink, FiX,
   FiAward, FiShield, FiUser, FiPhone, FiBriefcase, FiLink, FiFileText, FiLock,
+  FiStar, FiLinkedin, FiMap, FiTag,
 } from "react-icons/fi";
 import { HiOutlineSparkles } from "react-icons/hi2";
 
@@ -32,6 +33,31 @@ type VendorDisplayFields = Vendor & {
   ecoScore?: number;
   GreenLensScore?: number;
 };
+
+// Listing details from the admin Excel import live in vendors.public_contact
+// (see lib/vendorImport.ts). Imported data is untrusted: only http(s) links
+// are rendered, and a rating outside 0-5 is ignored.
+function listingDetails(publicContact: Record<string, unknown> | undefined, fallbackWebsite?: string) {
+  const pc = publicContact || {};
+  const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  const link = (value: unknown) => {
+    const url = text(value);
+    return /^https?:\/\/\S+$/i.test(url) ? url : "";
+  };
+  const ratingValue = typeof pc.rating === "number" ? pc.rating : Number.parseFloat(text(pc.rating));
+  return {
+    tagline: text(pc.tagline),
+    brand: text(pc.brand),
+    industry: text(pc.industry),
+    productOfferings: text(pc.productOfferings),
+    sustainability: text(pc.sustainability),
+    operatingHours: text(pc.operatingHours),
+    website: link(pc.website) || link(fallbackWebsite),
+    linkedin: link(pc.linkedin),
+    mapLink: link(pc.mapLink),
+    rating: Number.isFinite(ratingValue) && ratingValue >= 0 && ratingValue <= 5 ? ratingValue : null,
+  };
+}
 
 export default function VendorProfileClient({
   initialVendor,
@@ -129,6 +155,7 @@ export default function VendorProfileClient({
 
   const companyName = (vendor.companyName || "").replace(/^\/+/, "").trim() || "Vendor";
   const displayVendor = vendor as VendorDisplayFields;
+  const listing = listingDetails(vendor.publicContact, displayVendor.website);
   const initials = companyName.slice(0, 2).toUpperCase();
   const certs = (vendor.certifications || []) as string[];
 
@@ -563,6 +590,10 @@ export default function VendorProfileClient({
           .vp-form-note { max-width: none; }
           .vp-form-err { margin: 0 16px 12px; }
         }
+        .vp-hero-tagline { margin: 6px 0 0; font-size: 15px; font-style: italic; color: rgba(255,255,255,0.75); }
+        .vp-detail + .vp-detail { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(0,0,0,0.06); }
+        .vp-detail-lbl { margin: 0 0 4px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #9ca3af; }
+        .vp-detail-val { margin: 0; font-size: 14px; line-height: 1.65; color: #374151; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
@@ -598,10 +629,14 @@ export default function VendorProfileClient({
                 </div>
 
                 <h1 className="vp-hero-name">{companyName}</h1>
+                {listing.tagline && <p className="vp-hero-tagline">{listing.tagline}</p>}
 
                 <div className="vp-hero-meta">
                   {vendor.location && <span className="vp-hero-meta-item"><FiMapPin size={12} />{vendor.location}</span>}
                   {displayVendor.category && <span className="vp-hero-meta-item"><FiAward size={12} />{displayVendor.category}</span>}
+                  {listing.industry && <span className="vp-hero-meta-item"><FiBriefcase size={12} />{listing.industry}</span>}
+                  {listing.brand && <span className="vp-hero-meta-item"><FiTag size={12} />Brand: {listing.brand}</span>}
+                  {listing.rating !== null && <span className="vp-hero-meta-item"><FiStar size={12} />{listing.rating.toFixed(1)} / 5</span>}
                   {vendor.email && <span className="vp-hero-meta-item"><FiMail size={12} />{vendor.email}</span>}
                 </div>
 
@@ -658,7 +693,7 @@ export default function VendorProfileClient({
           <aside className="vp-sidebar">
 
             {/* Contact */}
-            {(vendor.email || displayVendor.website || vendor.location) && (
+            {(vendor.email || listing.website || listing.linkedin || listing.mapLink || listing.operatingHours || vendor.location) && (
               <div className="vp-card">
                 <p className="vp-card-title">Contact & Info</p>
                 {vendor.location && (
@@ -671,9 +706,25 @@ export default function VendorProfileClient({
                     <FiMail size={14} className="vp-contact-icon" />{vendor.email}
                   </a>
                 )}
-                {displayVendor.website && (
-                  <a href={displayVendor.website} target="_blank" rel="noopener noreferrer" className="vp-contact-row">
+                {listing.operatingHours && (
+                  <span className="vp-contact-row">
+                    <FiClock size={14} className="vp-contact-icon" />{listing.operatingHours}
+                  </span>
+                )}
+                {/* Vendor-supplied links: nofollow, as with any third-party listing link. */}
+                {listing.website && (
+                  <a href={listing.website} target="_blank" rel="noopener noreferrer nofollow" className="vp-contact-row">
                     <FiGlobe size={14} className="vp-contact-icon" />Website <FiExternalLink size={11} style={{ marginLeft: "auto", opacity: .5 }} />
+                  </a>
+                )}
+                {listing.linkedin && (
+                  <a href={listing.linkedin} target="_blank" rel="noopener noreferrer nofollow" className="vp-contact-row">
+                    <FiLinkedin size={14} className="vp-contact-icon" />LinkedIn <FiExternalLink size={11} style={{ marginLeft: "auto", opacity: .5 }} />
+                  </a>
+                )}
+                {listing.mapLink && (
+                  <a href={listing.mapLink} target="_blank" rel="noopener noreferrer nofollow" className="vp-contact-row">
+                    <FiMap size={14} className="vp-contact-icon" />View on map <FiExternalLink size={11} style={{ marginLeft: "auto", opacity: .5 }} />
                   </a>
                 )}
               </div>
@@ -709,6 +760,24 @@ export default function VendorProfileClient({
 
           {/* Main */}
           <main className="vp-main">
+
+            {(listing.productOfferings || listing.sustainability) && (
+              <div className="vp-card">
+                <p className="vp-card-title">Business details</p>
+                {listing.productOfferings && (
+                  <div className="vp-detail">
+                    <p className="vp-detail-lbl">Product offerings</p>
+                    <p className="vp-detail-val">{listing.productOfferings}</p>
+                  </div>
+                )}
+                {listing.sustainability && (
+                  <div className="vp-detail">
+                    <p className="vp-detail-lbl">Sustainability</p>
+                    <p className="vp-detail-val">{listing.sustainability}</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Full description */}
             {vendor.description && String(vendor.description).length > 180 && (
