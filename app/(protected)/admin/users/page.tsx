@@ -6,7 +6,9 @@ import { getStoredSession } from "@/lib/supabaseAuth";
 
 type UserType = {
   id: string;
+  name?: string;
   email: string;
+  phone?: string;
   role: "ADMIN" | "VENDOR" | "BUYER";
   blocked?: boolean;
 };
@@ -16,6 +18,12 @@ const ROLE_META: Record<string, { bg: string; color: string }> = {
   VENDOR: { bg: "#eff6ff", color: "#3b82f6" },
   BUYER:  { bg: "#f0fdf4", color: "#16a34a" },
 };
+
+// Stored normalised ("+919876543210"); shown grouped for reading.
+function formatPhone(phone: string) {
+  const india = phone.match(/^\+91(\d{5})(\d{5})$/);
+  return india ? `+91 ${india[1]} ${india[2]}` : phone;
+}
 
 export default function AdminUsers() {
   const [users,   setUsers]   = useState<UserType[]>([]);
@@ -85,7 +93,12 @@ export default function AdminUsers() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return users.filter(u => {
-      const matchSearch = u.email?.toLowerCase().includes(q);
+      // Mobile numbers are stored as "+919876543210" but shown as
+      // "+91 98765 43210", so compare digits only for the phone match.
+      const qDigits = q.replace(/\D/g, "");
+      const matchSearch =
+        [u.email, u.name].some(v => v?.toLowerCase().includes(q)) ||
+        (qDigits.length >= 3 && Boolean(u.phone?.replace(/\D/g, "").includes(qDigits)));
       const matchRole   = role === "ALL" || u.role === role;
       return matchSearch && matchRole;
     });
@@ -199,7 +212,7 @@ export default function AdminUsers() {
         <div className="au-bar">
           <div className="au-search">
             <Search size={14} color="#9ca3af" className="au-search-icon" />
-            <input placeholder="Search by email…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+            <input placeholder="Search by name, email or mobile…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
           </div>
           <select className="au-select" value={role} onChange={e => { setRole(e.target.value as any); setPage(1); }}>
             <option value="ALL">All Roles</option>
@@ -220,6 +233,7 @@ export default function AdminUsers() {
             <thead>
               <tr>
                 <th>User</th>
+                <th>Mobile</th>
                 <th>Role</th>
                 <th>Status</th>
                 <th style={{ textAlign: "right" }}>Actions</th>
@@ -227,7 +241,7 @@ export default function AdminUsers() {
             </thead>
             <tbody>
               {paginated.length === 0 && (
-                <tr><td colSpan={4} style={{ textAlign: "center", color: "#9ca3af", padding: "28px 16px" }}>No users found.</td></tr>
+                <tr><td colSpan={5} style={{ textAlign: "center", color: "#9ca3af", padding: "28px 16px" }}>No users found.</td></tr>
               )}
               {paginated.map(u => {
                 const roleMeta  = ROLE_META[u.role] || { bg: "#f3f4f6", color: "#6b7280" };
@@ -237,8 +251,16 @@ export default function AdminUsers() {
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div className="au-avatar">{initials}</div>
-                        <span style={{ fontWeight: 600, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>{u.email}</span>
+                        <div style={{ minWidth: 0 }}>
+                          <span style={{ display: "block", fontWeight: 600, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>{u.email}</span>
+                          {u.name && <span style={{ display: "block", fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>{u.name}</span>}
+                        </div>
                       </div>
+                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      {u.phone
+                        ? <a href={`tel:${u.phone}`} style={{ color: "#111", fontWeight: 600, textDecoration: "none" }}>{formatPhone(u.phone)}</a>
+                        : <span style={{ color: "#9ca3af" }}>—</span>}
                     </td>
                     <td>
                       <span className="au-role-badge" style={{ background: roleMeta.bg, color: roleMeta.color }}>{u.role}</span>
