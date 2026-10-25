@@ -27,8 +27,7 @@ import {
 } from "@/lib/supabaseAuth";
 import {
   fetchActiveCategories,
-  fetchApprovedProducts,
-  fetchApprovedVendors,
+  searchSuggestions,
 } from "@/lib/supabasePublic";
 
 type Suggestion = {
@@ -58,8 +57,6 @@ export default function Header() {
   const [selectedCategory, setSelectedCategory] = useState("");
 
   /* MASTER DATA */
-  const [products, setProducts] = useState<Suggestion[]>([]);
-  const [vendors, setVendors] = useState<Suggestion[]>([]);
   const [categories, setCategories] = useState<Suggestion[]>([]);
   const [openMobileCategories, setOpenMobileCategories] = useState(false);
 
@@ -118,67 +115,54 @@ export default function Header() {
     };
   }, []);
 
-  /* ---------------- LOAD SEARCH DATA (ONCE) ---------------- */
+  /* ---------------- LOAD CATEGORIES (ONCE) ---------------- */
   useEffect(() => {
-    async function loadSearchData() {
-      try {
-        const publicProducts = await fetchApprovedProducts({ limit: 20 });
-        setProducts(
-          publicProducts.map((product) => ({
-            id: product.id,
-            title: product.title,
-            type: "product",
-          })),
-        );
-      } catch (e) {}
-
-      try {
-        const publicVendors = await fetchApprovedVendors();
-        setVendors(
-          publicVendors.map((vendor) => ({
-            id: vendor.id,
-            title: vendor.companyName,
-            type: "vendor",
-          })),
-        );
-      } catch (e) {}
-
-      try {
-        const publicCategories = await fetchActiveCategories();
+    fetchActiveCategories()
+      .then((publicCategories) =>
         setCategories(
           publicCategories.map((category) => ({
             id: category.id,
             title: category.name,
             type: "category",
           })),
-        );
-      } catch (e) {}
-    }
-
-    loadSearchData();
+        ),
+      )
+      .catch(() => {});
   }, []);
 
   /* ---------------- FILTER SUGGESTIONS ---------------- */
+  // Products and vendors are looked up in the database as you type, rather
+  // than downloading every vendor on every page load.
   useEffect(() => {
-    if (!queryText.trim()) {
+    const text = queryText.trim();
+    if (!text) {
       setSuggestions([]);
       setShowDropdown(false);
       return;
     }
 
-    const q = queryText.toLowerCase();
+    let cancelled = false;
+    const q = text.toLowerCase();
+    const categoryMatches = categories
+      .filter((c) => c.title.toLowerCase().includes(q))
+      .slice(0, 2);
 
-    const matches = [
-      ...products.filter((p) => p.title.toLowerCase().includes(q)).slice(0, 3),
-      ...vendors.filter((v) => v.title.toLowerCase().includes(q)).slice(0, 2),
-      ...categories
-        .filter((c) => c.title.toLowerCase().includes(q))
-        .slice(0, 2),
-    ];
+    const timer = setTimeout(async () => {
+      const found = await searchSuggestions(text).catch(() => ({ products: [], vendors: [] }));
+      if (cancelled) return;
+      setSuggestions([
+        ...found.products.map((p) => ({ ...p, type: "product" as const })),
+        ...found.vendors.map((v) => ({ ...v, type: "vendor" as const })),
+        ...categoryMatches,
+      ]);
+      setShowDropdown(true);
+    }, 250);
 
-    setSuggestions(matches);
-    setShowDropdown(true);
-  }, [queryText, products, vendors, categories]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [queryText, categories]);
 
   /* ---------------- DASHBOARD LINK ---------------- */
   const dashboardLink =

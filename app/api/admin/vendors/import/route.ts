@@ -4,6 +4,7 @@ import { apiError, apiOk } from "@/lib/apiResponse";
 import {
   requireRole,
   supabaseServiceFetch,
+  supabaseServiceFetchAll,
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
@@ -99,8 +100,8 @@ export async function POST(request: Request) {
       },
     }));
 
-    const existing = await supabaseServiceFetch<ExistingVendor[]>(
-      "/rest/v1/vendors?select=company_name,registered_address,state&limit=20000",
+    const existing = await supabaseServiceFetchAll<ExistingVendor>(
+      "/rest/v1/vendors?select=company_name,registered_address,state&order=id.asc",
     );
     const existingKeys = new Set(existing.map((vendor) => vendorKey(
       vendor.company_name,

@@ -170,6 +170,25 @@ export async function supabaseServiceFetch<T>(
   return parseSupabaseResponse<T>(response);
 }
 
+// Supabase returns at most 1000 rows per request, whatever `limit` says, so
+// lists that can grow past that are read page by page. The path must carry a
+// stable `order` so pages never overlap or skip rows.
+const SUPABASE_PAGE_SIZE = 1000;
+
+export async function supabaseServiceFetchAll<T>(path: string, maxRows = 50_000): Promise<T[]> {
+  const base = path.replace(/([?&])(limit|offset)=\d+&?/g, "$1").replace(/[?&]$/, "");
+  const separator = base.includes("?") ? "&" : "?";
+  const rows: T[] = [];
+  while (rows.length < maxRows) {
+    const page = await supabaseServiceFetch<T[]>(
+      `${base}${separator}limit=${SUPABASE_PAGE_SIZE}&offset=${rows.length}`,
+    );
+    rows.push(...page);
+    if (page.length < SUPABASE_PAGE_SIZE) break;
+  }
+  return rows.slice(0, maxRows);
+}
+
 // Return a count without downloading rows. PostgREST supports exact counts
 // through the Prefer/Content-Range protocol even when database aggregates are
 // disabled, which is the default on many Supabase projects.

@@ -401,15 +401,237 @@ function mapCareer(row: SupabaseCareerRow): PublicCareer {
   };
 }
 
-export async function fetchApprovedVendors(limit = 1000): Promise<PublicVendor[]> {
+export async function fetchApprovedVendors(limit = 20_000): Promise<PublicVendor[]> {
+  // Supabase caps every response at 1000 rows, so read in pages until done.
+  const pageSize = 1000;
+  const rows: SupabaseVendorRow[] = [];
+  while (rows.length < limit) {
+    const params = new URLSearchParams({
+      select: VENDOR_SELECT,
+      approved: "eq.true",
+      order: "company_name.asc,id.asc",
+      limit: String(Math.min(pageSize, limit - rows.length)),
+      offset: String(rows.length),
+    });
+    const page = await supabaseGet<SupabaseVendorRow[]>(`vendors?${params}`);
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows.map(mapVendor);
+}
+
+/* ---------- Paged listings (Browse, Find Vendors) ----------
+ * The database does the filtering, sorting and paging, so a page downloads
+ * only the rows it shows plus a total count — never the whole table.
+ */
+
+export type PagedResult<T> = { items: T[]; total: number };
+
+export type VendorBadgeFilter = "" | "verified" | "approved" | "listed" | "claim_requested";
+
+export type VendorPageQuery = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  badge?: string;
+  location?: string;
+  sort?: string;
+};
+
+export type ProductPageQuery = {
+  page?: number;
+  pageSize?: number;
+  listingType?: string;
+  categoryId?: string;
+  search?: string;
+  ecoVerifiedOnly?: boolean;
+  sort?: string;
+};
+
+// Splits a search box value into words safe to drop into a PostgREST filter.
+// Characters with meaning in the filter syntax are removed, not escaped.
+function searchTerms(value: string | undefined) {
+  return (value || "")
+    .toLowerCase()
+    .replace(/[*%,()"\\:.]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+// Every word has to appear in at least one of the columns.
+function everyTermInSomeColumn(terms: string[], columns: string[]) {
+  return terms.map((term) => `or(${columns.map((column) => `${column}.ilike.*${term}*`).join(",")})`);
+}
+
+function vendorBadgeConditions(badge: string | undefined) {
+  const notClaimFlow = "or(claim_status.is.null,claim_status.not.in.(UNCLAIMED,CLAIM_REQUESTED))";
+  switch (badge) {
+    case "claim_requested": return ["claim_status.eq.CLAIM_REQUESTED"];
+    case "listed": return ["claim_status.eq.UNCLAIMED"];
+    case "verified": return [notClaimFlow, "listing_verified.is.true"];
+    case "approved": return [notClaimFlow, "or(listing_verified.is.null,listing_verified.is.false)"];
+    default: return [];
+  }
+}
+
+async function supabaseGetPage<T>(path: string, offset: number, pageSize: number): Promise<PagedResult<T>> {
+  requireSupabaseConfig();
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY!,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Prefer: "count=exact",
+      "Range-Unit": "items",
+      Range: `${offset}-${offset + pageSize - 1}`,
+    },
+  });
+
+  // 416 = the page is past the end of the results.
+  if (response.status === 416) {
+    const total = Number(response.headers.get("content-range")?.split("/")[1]);
+    return { items: [], total: Number.isFinite(total) ? total : 0 };
+  }
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(`Supabase request failed: ${response.status} ${message}`);
+  }
+
+  const total = Number(response.headers.get("content-range")?.split("/")[1]);
+  const items = (await response.json()) as T[];
+  return { items, total: Number.isFinite(total) ? total : items.length };
+}
+
+// Runs a paged query; a page number past the end falls back to the last page.
+async function fetchClampedPage<T>(
+  path: string,
+  page: number,
+  pageSize: number,
+): Promise<PagedResult<T> & { page: number }> {
+  const first = await supabaseGetPage<T>(path, (page - 1) * pageSize, pageSize);
+  const lastPage = Math.max(1, Math.ceil(first.total / pageSize));
+  if (page <= lastPage) return { ...first, page };
+  const last = await supabaseGetPage<T>(path, (lastPage - 1) * pageSize, pageSize);
+  return { ...last, page: lastPage };
+}
+
+export async function fetchApprovedVendorsPage(
+  query: VendorPageQuery = {},
+): Promise<PagedResult<PublicVendor> & { page: number }> {
+  const pageSize = query.pageSize || 12;
+  const page = Math.max(1, Math.floor(query.page || 1));
+  const conditions = [
+    ...everyTermInSomeColumn(searchTerms(query.search), [
+      "company_name", "short_description", "primary_category", "city", "state", "country",
+    ]),
+    ...everyTermInSomeColumn(searchTerms(query.location), [
+      "city", "state", "country", "registered_address",
+    ]),
+    ...vendorBadgeConditions(query.badge),
+  ];
   const params = new URLSearchParams({
     select: VENDOR_SELECT,
     approved: "eq.true",
-    order: "company_name.asc",
-    limit: String(limit),
+    order: query.sort === "eco_score"
+      ? "eco_score.desc.nullslast,company_name.asc,id.asc"
+      : "company_name.asc,id.asc",
   });
-  const rows = await supabaseGet<SupabaseVendorRow[]>(`vendors?${params}`);
-  return rows.map(mapVendor);
+  if (conditions.length) params.set("and", `(${conditions.join(",")})`);
+
+  const result = await fetchClampedPage<SupabaseVendorRow>(`vendors?${params}`, page, pageSize);
+  return { ...result, items: result.items.map(mapVendor) };
+}
+
+export async function fetchApprovedProductsPage(
+  query: ProductPageQuery = {},
+): Promise<PagedResult<PublicProduct> & { page: number }> {
+  const pageSize = query.pageSize || 12;
+  const page = Math.max(1, Math.floor(query.page || 1));
+  const conditions = everyTermInSomeColumn(searchTerms(query.search), [
+    "title", "description", "sustainability_claim",
+  ]);
+  const params = new URLSearchParams({
+    select: PRODUCT_SELECT,
+    approved: "eq.true",
+    order: query.sort === "name_az" ? "title.asc,id.asc" : "created_at.desc,id.desc",
+  });
+  if (query.listingType) params.set("listing_type", `eq.${query.listingType}`);
+  if (query.categoryId) params.set("category_id", `eq.${query.categoryId}`);
+  if (query.ecoVerifiedOnly) params.set("eco_verified", "is.true");
+  if (conditions.length) params.set("and", `(${conditions.join(",")})`);
+
+  const result = await fetchClampedPage<SupabaseProductRow>(`products?${params}`, page, pageSize);
+  return { ...result, items: result.items.map(mapProduct) };
+}
+
+/** Name and state of just the vendors behind the products on screen. */
+export async function fetchVendorSummaries(
+  ids: string[],
+): Promise<Array<{ id: string; companyName: string; state?: string }>> {
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (!unique.length) return [];
+  const params = new URLSearchParams({
+    select: "id,company_name,state",
+    id: `in.(${unique.join(",")})`,
+  });
+  const rows = await supabaseGet<Array<{ id: string; company_name: string | null; state: string | null }>>(
+    `vendors?${params}`,
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    companyName: stringValue(row.company_name) || "Unnamed Vendor",
+    state: stringValue(row.state) || undefined,
+  }));
+}
+
+/** Distinct vendor states, for the location filter's suggestions. */
+export async function fetchVendorStates(): Promise<string[]> {
+  const states = new Set<string>();
+  for (let offset = 0; offset < 50_000; offset += 1000) {
+    const params = new URLSearchParams({
+      select: "state",
+      approved: "eq.true",
+      state: "not.is.null",
+      order: "state.asc,id.asc",
+      limit: "1000",
+      offset: String(offset),
+    });
+    const rows = await supabaseGet<Array<{ state: string | null }>>(`vendors?${params}`);
+    rows.forEach((row) => { const state = stringValue(row.state); if (state) states.add(state); });
+    if (rows.length < 1000) break;
+  }
+  return Array.from(states).sort((a, b) => a.localeCompare(b));
+}
+
+/** Header search-as-you-type: a few matching products and vendors. */
+export async function searchSuggestions(
+  text: string,
+): Promise<{ products: Array<{ id: string; title: string }>; vendors: Array<{ id: string; title: string }> }> {
+  const terms = searchTerms(text);
+  if (!terms.length) return { products: [], vendors: [] };
+  const productParams = new URLSearchParams({
+    select: "id,title",
+    approved: "eq.true",
+    and: `(${terms.map((term) => `title.ilike.*${term}*`).join(",")})`,
+    order: "created_at.desc",
+    limit: "3",
+  });
+  const vendorParams = new URLSearchParams({
+    select: "id,company_name",
+    approved: "eq.true",
+    and: `(${terms.map((term) => `company_name.ilike.*${term}*`).join(",")})`,
+    order: "company_name.asc",
+    limit: "2",
+  });
+  const [products, vendors] = await Promise.all([
+    supabaseGet<Array<{ id: string; title: string | null }>>(`products?${productParams}`).catch(() => []),
+    supabaseGet<Array<{ id: string; company_name: string | null }>>(`vendors?${vendorParams}`).catch(() => []),
+  ]);
+  return {
+    products: products.map((row) => ({ id: row.id, title: stringValue(row.title) || "Untitled Product" })),
+    vendors: vendors.map((row) => ({ id: row.id, title: stringValue(row.company_name) || "Unnamed Vendor" })),
+  };
 }
 
 export async function fetchActiveCategories(limit = 100): Promise<PublicCategory[]> {
@@ -433,8 +655,7 @@ export async function fetchApprovedProducts(options: {
   const params = new URLSearchParams({
     select: PRODUCT_SELECT,
     approved: "eq.true",
-    order: "created_at.desc",
-    limit: String(options.limit || 100),
+    order: "created_at.desc,id.desc",
   });
 
   if (options.listingType) {
@@ -453,7 +674,17 @@ export async function fetchApprovedProducts(options: {
     params.set("featured", `eq.${options.featured}`);
   }
 
-  const rows = await supabaseGet<SupabaseProductRow[]>(`products?${params}`);
+  // Supabase caps every response at 1000 rows, so read in pages until done.
+  const limit = options.limit || 100;
+  const pageSize = 1000;
+  const rows: SupabaseProductRow[] = [];
+  while (rows.length < limit) {
+    params.set("limit", String(Math.min(pageSize, limit - rows.length)));
+    params.set("offset", String(rows.length));
+    const page = await supabaseGet<SupabaseProductRow[]>(`products?${params}`);
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
   return rows.map(mapProduct);
 }
 

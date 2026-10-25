@@ -2,6 +2,7 @@ import { apiError, apiOk } from "@/lib/apiResponse";
 import {
   requireRole,
   supabaseServiceFetch,
+  supabaseServiceFetchAll,
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
@@ -81,8 +82,8 @@ export async function GET(request: Request) {
   try {
     await requireRole(request, ["ADMIN"]);
 
-    const rows = await supabaseServiceFetch<VendorRow[]>(
-      "/rest/v1/vendors?select=id,profile_id,company_name,logo_url,registration_type,cin_registration,gst_number,year_of_incorporation,business_type,primary_category,sub_categories,country,city,state,pin_code,business_email,whatsapp,primary_contact_name,designation,primary_sustainability_cert,issuing_body,certificate_file_url,short_description,approved,status,claim_status,listing_verified,public_contact&order=created_at.desc&limit=10000",
+    const rows = await supabaseServiceFetchAll<VendorRow>(
+      "/rest/v1/vendors?select=id,profile_id,company_name,logo_url,registration_type,cin_registration,gst_number,year_of_incorporation,business_type,primary_category,sub_categories,country,city,state,pin_code,business_email,whatsapp,primary_contact_name,designation,primary_sustainability_cert,issuing_body,certificate_file_url,short_description,approved,status,claim_status,listing_verified,public_contact&order=created_at.desc,id.desc",
     );
 
     return apiOk({ ok: true, vendors: rows.map(mapVendor) });

@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import BuyerRFQModal from "../components/ContactVendorModal";
 import {
-  fetchApprovedProducts,
-  fetchApprovedVendors,
+  fetchVendorStates,
   type PublicProduct,
   type PublicVendor,
 } from "@/lib/supabasePublic";
@@ -32,8 +31,7 @@ type Product = PublicProduct & {
 type Vendor = PublicVendor & { GreenLensScore?: number };
 type Category = { id: string; name: string; slug?: string; imageUrl?: string };
 interface FilterState { badge: string; location: string; sortBy: string; }
-const DEFAULT_FILTERS: FilterState = { badge: "", location: "", sortBy: "newest" };
-const PAGE_SIZE = 12;
+const DEFAULT_SORT = "newest";
 
 const BADGES = [
   { val: "", label: "All Badges", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
@@ -67,19 +65,6 @@ function vendorBadgeLabel(v: Vendor) {
   return badge?.label || "Approved";
 }
 
-function vendorSearchText(v: Vendor) {
-  return [
-    v.companyName,
-    v.description,
-    v.category,
-    v.location,
-    v.city,
-    v.state,
-    v.country,
-    ...(v.subCategories || []),
-  ].map((value) => vt(value)).join(" ").toLowerCase();
-}
-
 /* ============================================================
    MAIN COMPONENT
 ============================================================ */
@@ -87,10 +72,18 @@ export default function BrowsePage({
   initialProducts = [],
   initialVendors = [],
   initialCategories = [],
+  totalCount = 0,
+  page = 1,
+  pageSize = 12,
+  vendorSummaries = [],
 }: {
   initialProducts?: Product[];
   initialVendors?: Vendor[];
   initialCategories?: Category[];
+  totalCount?: number;
+  page?: number;
+  pageSize?: number;
+  vendorSummaries?: Array<{ id: string; companyName: string; state?: string }>;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -100,96 +93,80 @@ export default function BrowsePage({
   const category = params.get("category") || "";
   const search = params.get("q") || "";
 
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [vendors, setVendors] = useState<Vendor[]>(initialVendors);
-  const [categories] = useState<Category[]>(initialCategories);
+  // The server sends just the rows for this page; every filter, the sort and
+  // the page number live in the URL so the database can do the work.
+  const products = initialProducts;
+  const vendors = initialVendors;
+  const categories = initialCategories;
+  const filters: FilterState = {
+    badge: params.get("badge") || "",
+    location: params.get("loc") || "",
+    sortBy: params.get("sort") || DEFAULT_SORT,
+  };
   const categoryId =
     categories.find(
       (item) =>
         item.id === category ||
         item.slug?.toLowerCase() === category.toLowerCase(),
     )?.id || category;
-  const [loading, setLoading] = useState(false);
+  const [loading, startNavigation] = useTransition();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [localSearch, setLocalSearch] = useState(search);
+  const [localLocation, setLocalLocation] = useState(filters.location);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const locationDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
   // Page lives in the URL (?page=N) rather than component state so each page
   // of results is a real, linkable URL Googlebot can reach and crawl.
-  const currentPage = Math.max(1, Number.parseInt(params.get("page") || "1", 10) || 1);
-  const [totalCount, setTotalCount] = useState(
-    initialVendors.length || initialProducts.length,
-  );
+  const currentPage = page;
   const [expanded, setExpanded] = useState({ type: true, category: true, eco: true, location: false, sort: true });
   const [rfqProduct, setRfqProduct] = useState<Product | null>(null);
 
-  const vendorLocations = useMemo(() => Array.from(new Set(
-    vendors.flatMap((vendor) => [vendor.city, vendor.state, vendor.country])
-      .map((value) => vt(value).trim())
-      .filter(Boolean),
-  )).sort((a, b) => a.localeCompare(b)), [vendors]);
+  const vendorById = useMemo(
+    () => new Map(vendorSummaries.map((vendor) => [vendor.id, vendor])),
+    [vendorSummaries],
+  );
 
+  // Location suggestions load only once someone opens the Location filter.
+  const [vendorLocations, setVendorLocations] = useState<string[]>([]);
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        if (type !== "Vendor") {
-          let list: Product[] = await fetchApprovedProducts({ listingType: type, categoryId: categoryId || undefined, limit: 1000 });
-          if (search) {
-            const s = search.toLowerCase();
-            list = list.filter(p => (p.title || "").toLowerCase().includes(s) || (p.description || "").toLowerCase().includes(s) || (p.tags || []).some(t => t.toLowerCase().includes(s)));
-          }
-          if (filters.badge === "eco_verified") list = list.filter(p => p.ecoVerified);
-          if (filters.sortBy === "eco_score") list = list.sort((a, b) => (b.ecoScore || 0) - (a.ecoScore || 0));
-          if (filters.sortBy === "name_az") list = list.sort((a, b) => vt(a.title).localeCompare(vt(b.title)));
-          setProducts(list);
-          setTotalCount(list.length);
-        } else {
-          let list: Vendor[] = await fetchApprovedVendors();
-          if (search) { const s = search.toLowerCase(); list = list.filter(v => vendorSearchText(v).includes(s)); }
-          if (filters.badge) list = list.filter(v => vendorBadge(v) === filters.badge);
-          if (filters.location) {
-            const locationTerms = filters.location.trim().toLowerCase().split(/\s+/).filter(Boolean);
-            list = list.filter(v => {
-              const searchableLocation = [v.location, v.city, v.state, v.country]
-                .map(value => vt(value)).join(" ").toLowerCase();
-              return locationTerms.every(term => searchableLocation.includes(term));
-            });
-          }
-          if (filters.sortBy === "eco_score") list = list.sort((a, b) => (b.ecoScore || 0) - (a.ecoScore || 0));
-          if (filters.sortBy === "name_az") list = list.sort((a, b) => vt(a.companyName).localeCompare(vt(b.companyName)));
-          setVendors(list); setProducts([]); setTotalCount(list.length);
-        }
-      } catch (e) { console.error(e); } finally { setLoading(false); }
-    }
-    load();
-  }, [type, categoryId, search, filters]);
+    if (type !== "Vendor" || !expanded.location || vendorLocations.length) return;
+    fetchVendorStates().then(setVendorLocations).catch(() => {});
+  }, [type, expanded.location, vendorLocations.length]);
 
-  useEffect(() => { setLocalSearch(search); }, [search]);
-  // Filters are local state, so changing one has to drop ?page= explicitly.
-  // type/category/q changes already do via updateUrl().
-  const filterKey = `${filters.badge}|${filters.location}|${filters.sortBy}`;
-  const lastFilterKey = useRef(filterKey);
-  useEffect(() => {
-    if (lastFilterKey.current === filterKey) return;
-    lastFilterKey.current = filterKey;
-    if (params.get("page")) updateUrl("page", "");
-  }, [filterKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Sync the boxes from the URL (back button, cleared chip) — but not while
+  // a typed value is still waiting to be applied, or keystrokes get lost.
+  useEffect(() => { if (!debounce.current) setLocalSearch(search); }, [search]);
+  useEffect(() => { if (!locationDebounce.current) setLocalLocation(filters.location); }, [filters.location]);
 
   function handleSearch(val: string) {
     setLocalSearch(val);
     if (debounce.current) clearTimeout(debounce.current);
-    debounce.current = setTimeout(() => updateUrl("q", val), 350);
+    debounce.current = setTimeout(() => { debounce.current = null; updateUrl("q", val, {}, true); }, 350);
   }
 
-  function updateUrl(key: string, value: string) {
+  function handleLocation(val: string) {
+    setLocalLocation(val);
+    if (locationDebounce.current) clearTimeout(locationDebounce.current);
+    locationDebounce.current = setTimeout(() => { locationDebounce.current = null; updateUrl("loc", val, {}, true); }, 350);
+  }
+
+  // Any change other than the page number starts again from page 1. Typing
+  // replaces the history entry, so Back doesn't step through every letter.
+  function updateUrl(key: string, value: string, extra: Record<string, string> = {}, replace = false) {
     const url = new URLSearchParams(params.toString());
-    if (value) url.set(key, value);
-    else url.delete(key);
+    for (const [name, next] of Object.entries({ [key]: value, ...extra })) {
+      if (next) url.set(name, next);
+      else url.delete(name);
+    }
     if (key !== "page") url.delete("page");
-    router.push(`/browse?${url.toString()}`);
+    const href = `/browse?${url.toString()}`;
+    startNavigation(() => (replace ? router.replace(href, { scroll: false }) : router.push(href)));
+  }
+
+  function setFilter(key: "badge" | "sort", value: string) {
+    updateUrl(key, key === "sort" && value === DEFAULT_SORT ? "" : value);
   }
 
   function pageHref(page: number) {
@@ -200,7 +177,7 @@ export default function BrowsePage({
     return `/browse${query ? `?${query}` : ""}`;
   }
 
-  function resetAll() { setFilters(DEFAULT_FILTERS); router.push(`/browse?type=${type}`); }
+  function resetAll() { startNavigation(() => router.push(`/browse?type=${type}`)); }
 
   const activeCount = [filters.badge, filters.location].filter(Boolean).length;
 
@@ -227,10 +204,7 @@ export default function BrowsePage({
               <button
                 key={val}
                 className={`bs-opt${type === val ? " bs-opt-active" : ""}`}
-                onClick={() => {
-                  setFilters(current => ({ ...current, badge: "" }));
-                  updateUrl("type", val);
-                }}
+                onClick={() => updateUrl("type", val, { badge: "", loc: "" })}
               >
                 <Icon size={13} />{label}
               </button>
@@ -267,7 +241,7 @@ export default function BrowsePage({
               ? BADGES.filter(({ val }) => val !== "eco_verified")
               : BADGES.filter(({ val }) => val === "" || val === "eco_verified")
             ).map(({ val, label }) => (
-              <button key={val} className={`bs-opt${filters.badge === val ? " bs-opt-active" : ""}`} onClick={() => setFilters(f => ({ ...f, badge: val }))}>{label}</button>
+              <button key={val} className={`bs-opt${filters.badge === val ? " bs-opt-active" : ""}`} onClick={() => setFilter("badge", val)}>{label}</button>
             ))}
           </div>
         )}
@@ -285,8 +259,8 @@ export default function BrowsePage({
                 type="search"
                 list="vendor-location-options"
                 placeholder="City, state or country…"
-                value={filters.location}
-                onChange={e => setFilters(f => ({ ...f, location: e.target.value }))}
+                value={localLocation}
+                onChange={e => handleLocation(e.target.value)}
                 className="bs-text-input"
               />
               <datalist id="vendor-location-options">
@@ -305,7 +279,7 @@ export default function BrowsePage({
         {expanded.sort && (
           <div className="bs-opts">
             {[{ val: "newest", label: "Newest First" }, { val: "eco_score", label: "Eco Score ↓" }, { val: "name_az", label: "Name A → Z" }].map(({ val, label }) => (
-              <button key={val} className={`bs-opt${filters.sortBy === val ? " bs-opt-active" : ""}`} onClick={() => setFilters(f => ({ ...f, sortBy: val }))}>{label}</button>
+              <button key={val} className={`bs-opt${filters.sortBy === val ? " bs-opt-active" : ""}`} onClick={() => setFilter("sort", val)}>{label}</button>
             ))}
           </div>
         )}
@@ -318,7 +292,7 @@ export default function BrowsePage({
     const localCat = categories.find((c) => c.id === p.categoryId);
     const categoryName = localCat?.name || "Uncategorized";
 
-    const localVendor = vendors.find((v) => v.id === p.vendorId);
+    const localVendor = vendorById.get(p.vendorId);
     const vendorName = localVendor?.companyName || p.vendorName || "Sustainly Vendor";
     const vendorState = localVendor?.state || "";
 
@@ -587,12 +561,12 @@ export default function BrowsePage({
 
   const items = type === "Vendor" ? vendors : products;
   const isEmpty = !loading && items.length === 0;
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(currentPage, totalPages);
-  const pageStart = (safePage - 1) * PAGE_SIZE;
-  const pageEnd = Math.min(pageStart + PAGE_SIZE, items.length);
-  const visibleVendors = vendors.slice(pageStart, pageEnd);
-  const visibleProducts = products.slice(pageStart, pageEnd);
+  const pageStart = (safePage - 1) * pageSize;
+  const pageEnd = pageStart + items.length;
+  const visibleVendors = vendors;
+  const visibleProducts = products;
   const pageNumbers = useMemo(() => {
     const windowSize = 5;
     const halfWindow = Math.floor(windowSize / 2);
@@ -1213,11 +1187,11 @@ export default function BrowsePage({
             {(filters.badge || filters.location) && (
               <div className="bs-active-chips">
                 {filters.badge && (
-                  <button className="bs-chip" onClick={() => setFilters(f => ({ ...f, badge: "" }))}>
+                  <button className="bs-chip" onClick={() => setFilter("badge", "")}>
                     {BADGES.find((item) => item.val === filters.badge)?.label || filters.badge} <FiX size={10} />
                   </button>
                 )}
-                {filters.location && <button className="bs-chip" onClick={() => setFilters(f => ({ ...f, location: "" }))}>{filters.location} <FiX size={10} /></button>}
+                {filters.location && <button className="bs-chip" onClick={() => updateUrl("loc", "")}>{filters.location} <FiX size={10} /></button>}
               </div>
             )}
 
@@ -1253,7 +1227,7 @@ export default function BrowsePage({
             {!loading && !isEmpty && totalPages > 1 && (
               <div className="bs-pagination" aria-label={`${type} pagination`}>
                 <p className="bs-page-meta">
-                  Showing <strong>{pageStart + 1}-{pageEnd}</strong> of <strong>{items.length}</strong>
+                  Showing <strong>{pageStart + 1}-{pageEnd}</strong> of <strong>{totalCount}</strong>
                 </p>
                 <div className="bs-page-controls">
                   {safePage === 1
