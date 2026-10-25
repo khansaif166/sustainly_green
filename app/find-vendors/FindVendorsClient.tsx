@@ -6,8 +6,10 @@ import { type PublicVendor } from "@/lib/supabasePublic";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
 import Link from "next/link";
-import { Search, BadgeCheck, Clock } from "lucide-react";
+import { Search, BadgeCheck, Clock, Globe } from "lucide-react";
 import { getVendorBadgeMeta } from "@/lib/vendorBadges";
+import { vendorHref } from "@/lib/slug";
+import { vendorWebsite } from "@/lib/vendorWebsite";
 
 /* ---------------- TYPES ---------------- */
 type Vendor = PublicVendor & { name?: string };
@@ -106,7 +108,7 @@ export default function FindVendorsClient({
             {vendors.map((v) => (
               <Link
                 key={v.id}
-                href={`/find-vendors/${v.id}`}
+                href={vendorHref(v.id, v.slug)}
                 className="bg-[var(--color-bg-white)] rounded-2xl p-6 space-y-4 shadow-[0_12px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition"
               >
                 {/* HEADER */}
@@ -165,6 +167,14 @@ export default function FindVendorsClient({
                 <p className="text-xs text-[var(--color-text-secondary)] line-clamp-3">
                   {v.description || "Sustainable business listed on Sustainly"}
                 </p>
+
+                {/* Plain text, not a link: the whole card is already a link. */}
+                {vendorWebsite(v.publicContact) && (
+                  <p className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)] min-w-0">
+                    <Globe className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{vendorWebsite(v.publicContact)?.label}</span>
+                  </p>
+                )}
 
                 {/* CTA */}
                 <span className="inline-block text-xs font-medium text-[var(--color-primary-green)]">

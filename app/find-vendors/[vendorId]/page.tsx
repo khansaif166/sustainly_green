@@ -1,11 +1,12 @@
 import { cache } from "react";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import {
   fetchApprovedProducts,
   fetchApprovedVendorById,
 } from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
+import { vendorHref } from "@/lib/slug";
 import VendorProfileClient from "./VendorProfileClient";
 
 export const revalidate = 900;
@@ -49,7 +50,8 @@ export async function generateMetadata({
 }: VendorPageProps): Promise<Metadata> {
   const { vendorId } = await params;
   const data = await getVendorData(vendorId);
-  const canonical = `${getSiteUrl()}/find-vendors/${encodeURIComponent(vendorId)}`;
+  // Always the readable /find-vendors/{slug} form, even when reached by uuid.
+  const canonical = `${getSiteUrl()}${data ? vendorHref(data.vendor.id, data.vendor.slug) : `/find-vendors/${encodeURIComponent(vendorId)}`}`;
 
   if (!data) {
     return {
@@ -101,6 +103,13 @@ export default async function VendorPage({ params }: VendorPageProps) {
   const data = await getVendorData(vendorId);
 
   if (!data) notFound();
+
+  // Old /find-vendors/{uuid} links (and any other spelling) move to the
+  // readable URL with a 308, so shared links and Google keep working.
+  const href = vendorHref(data.vendor.id, data.vendor.slug);
+  if (data.vendor.slug && decodeURIComponent(vendorId) !== data.vendor.slug) {
+    permanentRedirect(href);
+  }
 
   return (
     <VendorProfileClient

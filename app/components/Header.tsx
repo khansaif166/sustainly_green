@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { productHref } from "@/lib/slug";
+import { productHref, vendorHref } from "@/lib/slug";
 import {
   Bell,
   ShoppingCart,
@@ -32,6 +32,7 @@ import {
 
 type Suggestion = {
   id: string;
+  slug?: string;
   title: string;
   type: "product" | "vendor" | "category";
 };
@@ -251,7 +252,7 @@ export default function Header() {
                       setShowDropdown(false);
                       if (s.type === "product")
                         router.push(productHref(s.id, s.title));
-                      if (s.type === "vendor") router.push(`/find-vendors/${s.id}`);
+                      if (s.type === "vendor") router.push(vendorHref(s.id, s.slug));
                       if (s.type === "category")
                         router.push(`/browse?category=${s.id}`);
                     }}

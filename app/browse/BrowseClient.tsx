@@ -12,12 +12,13 @@ import {
   type PublicVendor,
 } from "@/lib/supabasePublic";
 import { getVendorBadgeMeta } from "@/lib/vendorBadges";
-import { productHref } from "@/lib/slug";
+import { productHref, vendorHref } from "@/lib/slug";
+import { vendorWebsite } from "@/lib/vendorWebsite";
 import {
   FiSearch, FiX, FiArrowLeft, FiGrid, FiList, FiPackage, FiAward,
   FiTool, FiUsers, FiMapPin, FiFilter, FiChevronDown,
   FiChevronUp, FiRefreshCw, FiExternalLink, FiSliders,
-  FiHeart, FiCheckCircle
+  FiHeart, FiCheckCircle, FiGlobe
 } from "react-icons/fi";
 import { HiOutlineSparkles, HiOutlineShieldCheck } from "react-icons/hi2";
 
@@ -83,7 +84,7 @@ export default function BrowsePage({
   totalCount?: number;
   page?: number;
   pageSize?: number;
-  vendorSummaries?: Array<{ id: string; companyName: string; state?: string }>;
+  vendorSummaries?: Array<{ id: string; slug?: string; companyName: string; state?: string }>;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -488,7 +489,7 @@ export default function BrowsePage({
   const logoInitials = (v: Vendor) => (typeof v.logoText === "string" && v.logoText.trim() ? v.logoText : (vt(v.companyName, "V").slice(0, 2) || "V")).toUpperCase();
 
   const VendorCard = ({ v }: { v: Vendor }) => viewMode === "grid" ? (
-    <Link href={`/find-vendors/${v.id}`} className="bs-card bs-vendor-card">
+    <Link href={vendorHref(v.id, v.slug)} className="bs-card bs-vendor-card">
       <div className="bs-vc-head">
         <div className="bs-vc-logo">
           {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }} /> : logoInitials(v)}
@@ -525,13 +526,17 @@ export default function BrowsePage({
         </div>
       )}
 
+      {vendorWebsite(v.publicContact) && (
+        <p className="bs-vc-web"><FiGlobe size={11} /><span>{vendorWebsite(v.publicContact)?.label}</span></p>
+      )}
+
       <div className="bs-vc-foot">
         {(v.state || v.location) && <span className="bs-vc-loc"><FiMapPin size={11} />{vt(v.state || v.location)}</span>}
         <span className="bs-view-cta">{v.isUnclaimed ? "View Listing" : "View Profile"} <FiExternalLink size={10} /></span>
       </div>
     </Link>
   ) : (
-    <Link href={`/find-vendors/${v.id}`} className="bs-row">
+    <Link href={vendorHref(v.id, v.slug)} className="bs-row">
       <div className="bs-vc-logo" style={{ width: 52, height: 52, fontSize: 16, flexShrink: 0, borderRadius: 12 }}>
         {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} /> : logoInitials(v)}
       </div>
@@ -550,6 +555,9 @@ export default function BrowsePage({
           </div>
         )}
         {v.description && <p className="bs-card-desc">{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 110)}…</p>}
+        {vendorWebsite(v.publicContact) && (
+          <p className="bs-vc-web"><FiGlobe size={11} /><span>{vendorWebsite(v.publicContact)?.label}</span></p>
+        )}
       </div>
       <div className="bs-row-right">
         <span className="bs-vc-tier" style={badgeStyle(vendorBadge(v))}>{vendorBadgeLabel(v)}</span>
@@ -997,6 +1005,8 @@ export default function BrowsePage({
           border-top: 1px solid rgba(0,0,0,0.06); padding-top: 10px;
         }
         .bs-vc-loc { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #9ca3af; font-weight: 500; }
+        .bs-vc-web { display: flex; align-items: center; gap: 5px; margin: 8px 0 0; font-size: 12px; color: #15803d; font-weight: 600; min-width: 0; }
+        .bs-vc-web span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         /* ── SKELETON ── */
         .bs-skel {

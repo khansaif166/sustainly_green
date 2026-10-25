@@ -31,6 +31,15 @@ export function blogHref(id: string, slug?: string | null): string {
 }
 
 /**
+ * Public URL for a vendor: /find-vendors/{slug}, e.g. /find-vendors/ea-water-private-limited.
+ * The uuid form still resolves and redirects there — see
+ * app/find-vendors/[vendorId]/page.tsx.
+ */
+export function vendorHref(id: string, slug?: string | null): string {
+  return `/find-vendors/${encodeURIComponent(slug || id)}`;
+}
+
+/**
  * Canonical /browse href for a category: the slug form, which is what
  * sitemap-categories.xml lists and the browse page canonicalises to. Linking
  * the UUID form gave every category a second, competing URL.

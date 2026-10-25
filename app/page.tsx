@@ -213,6 +213,7 @@ const getHomepageData = cache(async () => {
         const companyName = vendor.companyName || `Supplier ${index + 1}`;
         return {
           id: vendor.id,
+          slug: vendor.slug,
           name: companyName,
           country: vendor.country || vendor.location || "India",
           state: vendor.state || vendor.city || undefined,

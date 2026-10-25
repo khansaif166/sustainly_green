@@ -1,5 +1,6 @@
 type SupabaseVendorRow = {
   id: string;
+  slug?: string | null;
   company_name: string | null;
   logo_url: string | null;
   registered_address: string | null;
@@ -30,6 +31,7 @@ type SupabaseCategoryRow = {
 type SupabaseProductRow = {
   id: string;
   vendor_id: string;
+  vendor?: { slug: string | null } | null;
   vendor_name: string | null;
   title: string | null;
   description: string | null;
@@ -73,6 +75,7 @@ type SupabaseCareerRow = {
 
 export type PublicVendor = {
   id: string;
+  slug?: string;
   companyName: string;
   logoUrl?: string;
   description?: string;
@@ -108,6 +111,7 @@ export type PublicCategory = {
 export type PublicProduct = {
   id: string;
   vendorId: string;
+  vendorSlug?: string;
   vendorName: string;
   title: string;
   description?: string;
@@ -169,6 +173,7 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const VENDOR_SELECT = [
   "id",
+  "slug",
   "company_name",
   "logo_url",
   "registered_address",
@@ -207,6 +212,7 @@ const PRODUCT_SELECT = [
   "featured",
   "eco_verified",
   "product_images(url,sort_order)",
+  "vendor:vendors(slug)",
 ].join(",");
 
 function requireSupabaseConfig() {
@@ -293,6 +299,7 @@ function mapVendor(row: SupabaseVendorRow): PublicVendor {
 
   return {
     id: row.id,
+    slug: stringValue(row.slug) || undefined,
     companyName,
     logoUrl: stringValue(row.logo_url) || undefined,
     description: stringValue(row.short_description) || registeredAddress || undefined,
@@ -355,6 +362,7 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
   return {
     id: row.id,
     vendorId: row.vendor_id,
+    vendorSlug: stringValue(row.vendor?.slug) || undefined,
     vendorName: stringValue(row.vendor_name) || "Listed Supplier",
     title: stringValue(row.title) || "Untitled Product",
     description: stringValue(row.description) || undefined,
@@ -568,18 +576,19 @@ export async function fetchApprovedProductsPage(
 /** Name and state of just the vendors behind the products on screen. */
 export async function fetchVendorSummaries(
   ids: string[],
-): Promise<Array<{ id: string; companyName: string; state?: string }>> {
+): Promise<Array<{ id: string; slug?: string; companyName: string; state?: string }>> {
   const unique = Array.from(new Set(ids.filter(Boolean)));
   if (!unique.length) return [];
   const params = new URLSearchParams({
-    select: "id,company_name,state",
+    select: "id,slug,company_name,state",
     id: `in.(${unique.join(",")})`,
   });
-  const rows = await supabaseGet<Array<{ id: string; company_name: string | null; state: string | null }>>(
+  const rows = await supabaseGet<Array<{ id: string; slug: string | null; company_name: string | null; state: string | null }>>(
     `vendors?${params}`,
   );
   return rows.map((row) => ({
     id: row.id,
+    slug: stringValue(row.slug) || undefined,
     companyName: stringValue(row.company_name) || "Unnamed Vendor",
     state: stringValue(row.state) || undefined,
   }));
@@ -607,7 +616,7 @@ export async function fetchVendorStates(): Promise<string[]> {
 /** Header search-as-you-type: a few matching products and vendors. */
 export async function searchSuggestions(
   text: string,
-): Promise<{ products: Array<{ id: string; title: string }>; vendors: Array<{ id: string; title: string }> }> {
+): Promise<{ products: Array<{ id: string; title: string }>; vendors: Array<{ id: string; slug?: string; title: string }> }> {
   const terms = searchTerms(text);
   if (!terms.length) return { products: [], vendors: [] };
   const productParams = new URLSearchParams({
@@ -618,7 +627,7 @@ export async function searchSuggestions(
     limit: "3",
   });
   const vendorParams = new URLSearchParams({
-    select: "id,company_name",
+    select: "id,slug,company_name",
     approved: "eq.true",
     and: `(${terms.map((term) => `company_name.ilike.*${term}*`).join(",")})`,
     order: "company_name.asc",
@@ -626,11 +635,11 @@ export async function searchSuggestions(
   });
   const [products, vendors] = await Promise.all([
     supabaseGet<Array<{ id: string; title: string | null }>>(`products?${productParams}`).catch(() => []),
-    supabaseGet<Array<{ id: string; company_name: string | null }>>(`vendors?${vendorParams}`).catch(() => []),
+    supabaseGet<Array<{ id: string; slug: string | null; company_name: string | null }>>(`vendors?${vendorParams}`).catch(() => []),
   ]);
   return {
     products: products.map((row) => ({ id: row.id, title: stringValue(row.title) || "Untitled Product" })),
-    vendors: vendors.map((row) => ({ id: row.id, title: stringValue(row.company_name) || "Unnamed Vendor" })),
+    vendors: vendors.map((row) => ({ id: row.id, slug: stringValue(row.slug) || undefined, title: stringValue(row.company_name) || "Unnamed Vendor" })),
   };
 }
 
@@ -688,13 +697,18 @@ export async function fetchApprovedProducts(options: {
   return rows.map(mapProduct);
 }
 
-export async function fetchApprovedVendorById(id: string): Promise<PublicVendor | null> {
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Looks a vendor up by its slug (the public URL) or, for old links, its uuid. */
+export async function fetchApprovedVendorById(idOrSlug: string): Promise<PublicVendor | null> {
+  const value = decodeURIComponent(idOrSlug).trim();
   const params = new URLSearchParams({
     select: VENDOR_SELECT,
-    id: `eq.${id}`,
     approved: "eq.true",
     limit: "1",
   });
+  if (UUID_PATTERN.test(value)) params.set("id", `eq.${value}`);
+  else params.set("slug", `eq.${value.toLowerCase()}`);
   const rows = await supabaseGet<SupabaseVendorRow[]>(`vendors?${params}`);
   return rows[0] ? mapVendor(rows[0]) : null;
 }

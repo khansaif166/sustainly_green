@@ -17,7 +17,7 @@ import Footer from "@/app/components/layouts/Footer";
 import BuyerRFQModal from "../../components/ContactVendorModal";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import type { PublicProduct } from "@/lib/supabasePublic";
-import { productHref } from "@/lib/slug";
+import { productHref, vendorHref } from "@/lib/slug";
 
 type Product = PublicProduct;
 
@@ -134,7 +134,7 @@ export default function ProductDetailClient({
                 <p className="mt-2 text-sm text-gray-500">
                   Supplied by{" "}
                   <Link
-                    href={`/find-vendors/${product.vendorId}`}
+                    href={vendorHref(product.vendorId, product.vendorSlug)}
                     className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
                   >
                     {product.vendorName}
@@ -235,7 +235,7 @@ export default function ProductDetailClient({
                   More from {product.vendorName}
                 </h2>
                 <Link
-                  href={`/find-vendors/${product.vendorId}`}
+                  href={vendorHref(product.vendorId, product.vendorSlug)}
                   className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
                 >
                   View all <span aria-hidden="true">&rarr;</span>
