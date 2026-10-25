@@ -11,6 +11,7 @@ type ProductSeoRow = DatedRow & {
 };
 
 type VendorSeoRow = DatedRow & {
+  slug: string | null;
   short_description: string | null;
   registered_address: string | null;
   primary_sustainability_cert: string | null;
@@ -133,7 +134,7 @@ export async function vendorSitemapEntries() {
   // registered_address when short_description is empty (lib/supabasePublic.ts).
   const vendorQuery = new URLSearchParams({
     select:
-      "id,updated_at,short_description,registered_address,primary_sustainability_cert",
+      "id,slug,updated_at,short_description,registered_address,primary_sustainability_cert",
     approved: "eq.true",
     or: "(short_description.not.is.null,registered_address.not.is.null)",
     primary_sustainability_cert: "not.is.null",
@@ -155,7 +156,7 @@ export async function vendorSitemapEntries() {
   return vendors
     .filter((vendor) => vendorsWithProducts.has(vendor.id))
     .map((vendor) => ({
-      url: `${siteUrl}/find-vendors/${encodeURIComponent(vendor.id)}`,
+      url: `${siteUrl}/find-vendors/${encodeURIComponent(vendor.slug || vendor.id)}`,
       lastModified: vendor.updated_at,
     }));
 }

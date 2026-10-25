@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { productHref } from "@/lib/slug";
+import { productHref, vendorHref } from "@/lib/slug";
+import { vendorWebsite } from "@/lib/vendorWebsite";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
 import {
@@ -45,6 +46,7 @@ function listingDetails(publicContact: Record<string, unknown> | undefined, fall
     return /^https?:\/\/\S+$/i.test(url) ? url : "";
   };
   const ratingValue = typeof pc.rating === "number" ? pc.rating : Number.parseFloat(text(pc.rating));
+  const website = vendorWebsite(pc, fallbackWebsite);
   return {
     tagline: text(pc.tagline),
     brand: text(pc.brand),
@@ -52,7 +54,8 @@ function listingDetails(publicContact: Record<string, unknown> | undefined, fall
     productOfferings: text(pc.productOfferings),
     sustainability: text(pc.sustainability),
     operatingHours: text(pc.operatingHours),
-    website: link(pc.website) || link(fallbackWebsite),
+    website: website?.url || "",
+    websiteLabel: website?.label || "",
     linkedin: link(pc.linkedin),
     mapLink: link(pc.mapLink),
     rating: Number.isFinite(ratingValue) && ratingValue >= 0 && ratingValue <= 5 ? ratingValue : null,
@@ -241,7 +244,16 @@ export default function VendorProfileClient({
           font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.65;
           max-width: 560px; margin: 0;
         }
-        .vp-hero-cta { flex-shrink: 0; padding-top: 4px; }
+        .vp-hero-cta { flex-shrink: 0; padding-top: 4px; display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+        .vp-web-btn {
+          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+          background: rgba(255,255,255,0.08); color: #fff;
+          padding: 10px 20px; border-radius: 50px;
+          border: 1px solid rgba(255,255,255,0.25);
+          font-size: 14px; font-weight: 700; text-decoration: none;
+          transition: background .18s, border-color .18s;
+        }
+        .vp-web-btn:hover { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.45); }
         .vp-claim-btn {
           display: inline-flex; align-items: center; gap: 8px;
           background: #16a34a; color: #fff;
@@ -647,6 +659,12 @@ export default function VendorProfileClient({
 
               {/* CTA */}
               <div className="vp-hero-cta">
+                {/* Vendor-supplied link: nofollow, as with any third-party listing link. */}
+                {listing.website && (
+                  <a href={listing.website} target="_blank" rel="noopener noreferrer nofollow" className="vp-web-btn">
+                    <FiGlobe size={14} />Visit website <FiExternalLink size={12} style={{ opacity: .7 }} />
+                  </a>
+                )}
                 {vendor.isUnclaimed && (
                   <button className="vp-claim-btn" onClick={openClaimFlow}>
                     <FiShield size={14} />Claim this business
@@ -714,7 +732,7 @@ export default function VendorProfileClient({
                 {/* Vendor-supplied links: nofollow, as with any third-party listing link. */}
                 {listing.website && (
                   <a href={listing.website} target="_blank" rel="noopener noreferrer nofollow" className="vp-contact-row">
-                    <FiGlobe size={14} className="vp-contact-icon" />Website <FiExternalLink size={11} style={{ marginLeft: "auto", opacity: .5 }} />
+                    <FiGlobe size={14} className="vp-contact-icon" />{listing.websiteLabel || "Website"} <FiExternalLink size={11} style={{ marginLeft: "auto", opacity: .5 }} />
                   </a>
                 )}
                 {listing.linkedin && (
@@ -863,10 +881,10 @@ export default function VendorProfileClient({
                 {/* Both return to this listing. Not role=VENDOR: vendor onboarding
                     would create a second vendor profile for a business that
                     already has this one; approving the claim makes them a vendor. */}
-                <Link href={`/login?next=${encodeURIComponent(`/find-vendors/${vendor.id}`)}`} className="vp-login-btn vp-login-btn-primary">
+                <Link href={`/login?next=${encodeURIComponent(vendorHref(vendor.id, vendor.slug))}`} className="vp-login-btn vp-login-btn-primary">
                   <FiUser size={14} />Login
                 </Link>
-                <Link href={`/register?next=${encodeURIComponent(`/find-vendors/${vendor.id}`)}`} className="vp-login-btn vp-login-btn-secondary">
+                <Link href={`/register?next=${encodeURIComponent(vendorHref(vendor.id, vendor.slug))}`} className="vp-login-btn vp-login-btn-secondary">
                   Create an account
                 </Link>
               </div>

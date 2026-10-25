@@ -9,7 +9,7 @@ import {
   fetchApprovedProducts,
   fetchApprovedVendors,
 } from "@/lib/supabasePublic";
-import { blogHref, categoryHref, productHref } from "@/lib/slug";
+import { blogHref, categoryHref, productHref, vendorHref } from "@/lib/slug";
 import {
   AUTH_SESSION_CLEARED_EVENT,
   AUTH_SESSION_SAVED_EVENT,
@@ -62,6 +62,7 @@ export type ProductCard = {
 
 export type SupplierCard = {
   id: string;
+  slug?: string;
   name: string;
   country: string;
   state?: string;
@@ -951,7 +952,7 @@ export default function HomeClient({
             </div>
             <div className="card-grid four-up">
               {featuredSuppliers.map((supplier, index) => (
-                <Link key={supplier.id} href={`/find-vendors/${supplier.id}`} className="supplier-card">
+                <Link key={supplier.id} href={vendorHref(supplier.id, supplier.slug)} className="supplier-card">
                   {getVendorBadgeMeta(supplier) && (
                     <img src={getVendorBadgeMeta(supplier)?.src} alt={getVendorBadgeMeta(supplier)?.label} className="supplier-verified-img" />
                   )}
