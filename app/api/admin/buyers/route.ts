@@ -2,6 +2,7 @@ import { apiError, apiOk } from "@/lib/apiResponse";
 import {
   requireRole,
   supabaseServiceFetch,
+  supabaseServiceFetchAll,
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
@@ -23,8 +24,8 @@ export async function GET(request: Request) {
   try {
     await requireRole(request, ["ADMIN"]);
 
-    const rows = await supabaseServiceFetch<BuyerRow[]>(
-      "/rest/v1/buyers?select=id,profile_id,company_info,business_overview,sustainability,procurement,approved,status,updated_at&order=updated_at.desc&limit=10000",
+    const rows = await supabaseServiceFetchAll<BuyerRow>(
+      "/rest/v1/buyers?select=id,profile_id,company_info,business_overview,sustainability,procurement,approved,status,updated_at&order=updated_at.desc,id.desc",
     );
 
     return apiOk({

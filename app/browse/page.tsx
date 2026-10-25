@@ -2,13 +2,18 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import {
   fetchActiveCategories,
-  fetchApprovedProducts,
-  fetchApprovedVendors,
+  fetchApprovedProductsPage,
+  fetchApprovedVendorsPage,
+  fetchVendorSummaries,
+  type PublicProduct,
+  type PublicVendor,
 } from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
 import BrowseClient from "./BrowseClient";
 
 export const revalidate = 900;
+
+const BROWSE_PAGE_SIZE = 12;
 
 type BrowsePageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -18,8 +23,32 @@ function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] || "" : value || "";
 }
 
+type BrowseQuery = {
+  type: string;
+  category: string;
+  q: string;
+  page: number;
+  badge: string;
+  loc: string;
+  sort: string;
+};
+
+function readQuery(values: Record<string, string | string[] | undefined>): BrowseQuery {
+  return {
+    type: first(values.type) || "product",
+    category: first(values.category),
+    q: first(values.q),
+    page: pageNumber(first(values.page)),
+    badge: first(values.badge),
+    loc: first(values.loc),
+    sort: first(values.sort),
+  };
+}
+
+// Only the rows on the requested page come back from the database, along
+// with the total count used to build the page links.
 const getBrowseData = cache(
-  async (typeValue: string, categoryValue: string, searchValue: string) => {
+  async (typeValue: string, categoryValue: string, searchValue: string, page: number, badge: string, loc: string, sort: string) => {
     const type =
       typeValue.toLowerCase() === "vendor"
         ? "Vendor"
@@ -33,60 +62,58 @@ const getBrowseData = cache(
         item.slug?.toLowerCase() === categoryValue.toLowerCase(),
     );
     const categoryId = selectedCategory?.id || categoryValue || undefined;
-    const query = searchValue.trim().toLowerCase();
-
-    // Always fetch vendors — product/service cards need them to resolve state.
-    const allVendors = await fetchApprovedVendors().catch(() => []);
+    const empty = { items: [], total: 0, page: 1 };
 
     if (type === "Vendor") {
-      let vendors = allVendors;
-      if (query) {
-        vendors = vendors.filter((vendor) =>
-          [
-            vendor.companyName,
-            vendor.description,
-            vendor.category,
-            vendor.city,
-            vendor.state,
-            vendor.country,
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase()
-            .includes(query),
-        );
-      }
-      return { type, categories, selectedCategory, products: [], vendors };
+      const result = await fetchApprovedVendorsPage({
+        page,
+        pageSize: BROWSE_PAGE_SIZE,
+        search: searchValue,
+        badge,
+        location: loc,
+        sort,
+      }).catch(() => empty);
+      return {
+        type,
+        categories,
+        selectedCategory,
+        products: [] as PublicProduct[],
+        vendors: result.items as PublicVendor[],
+        total: result.total,
+        page: result.page,
+        vendorSummaries: [],
+      };
     }
 
-    let products = await fetchApprovedProducts({
+    const result = await fetchApprovedProductsPage({
+      page,
+      pageSize: BROWSE_PAGE_SIZE,
       listingType: type,
       categoryId,
-      // Every approved product must fit, or the overflow has no crawlable
-      // link anywhere on the site (BrowseClient paginates this list locally).
-      limit: 1000,
-    }).catch(() => []);
+      search: searchValue,
+      ecoVerifiedOnly: badge === "eco_verified",
+      sort,
+    }).catch(() => empty);
+    const products = result.items as PublicProduct[];
+    // Vendor name + state for just the cards on this page.
+    const vendorSummaries = await fetchVendorSummaries(products.map((product) => product.vendorId)).catch(() => []);
 
-    if (query) {
-      products = products.filter((product) =>
-        [product.title, product.description, ...product.tagNames]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-          .includes(query),
-      );
-    }
-
-    // Return vendors so the client can resolve vendor → state for product cards.
     return {
       type,
       categories,
       selectedCategory,
       products,
-      vendors: allVendors,
+      vendors: [] as PublicVendor[],
+      total: result.total,
+      page: result.page,
+      vendorSummaries,
     };
   },
 );
+
+function loadBrowseData(query: BrowseQuery) {
+  return getBrowseData(query.type, query.category, query.q, query.page, query.badge, query.loc, query.sort);
+}
 
 function pageNumber(value: string) {
   const page = Number.parseInt(value, 10);
@@ -115,21 +142,18 @@ function browseCanonical(
 export async function generateMetadata({
   searchParams,
 }: BrowsePageProps): Promise<Metadata> {
-  const values = await searchParams;
-  const type = first(values.type) || "product";
-  const category = first(values.category);
-  const query = first(values.q);
-  const page = pageNumber(first(values.page));
-  const data = await getBrowseData(type, category, query);
-  const resultCount = data.products.length + data.vendors.length;
+  const query = readQuery(await searchParams);
+  const data = await loadBrowseData(query);
+  const filtered = Boolean(query.q || query.badge || query.loc || query.sort);
   // ?category=<uuid> and ?category=<slug> render the same page; both declare
   // the slug form canonical, matching the sitemap and internal links.
   const canonical = browseCanonical(
-    type,
-    data.selectedCategory?.slug || category,
-    query,
-    page,
+    query.type,
+    data.selectedCategory?.slug || query.category,
+    query.q,
+    data.page,
   );
+  const page = data.page;
   const categoryName = data.selectedCategory?.name;
   const baseTitle = categoryName
     ? `Verified ${categoryName} Suppliers in India`
@@ -147,7 +171,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    robots: { index: resultCount > 0 && !query, follow: true },
+    robots: { index: data.total > 0 && !filtered, follow: true },
     openGraph: {
       type: "website",
       title,
@@ -166,17 +190,17 @@ export async function generateMetadata({
 }
 
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
-  const values = await searchParams;
-  const type = first(values.type) || "product";
-  const category = first(values.category);
-  const query = first(values.q);
-  const data = await getBrowseData(type, category, query);
+  const data = await loadBrowseData(readQuery(await searchParams));
 
   return (
     <BrowseClient
       initialProducts={data.products}
       initialVendors={data.vendors}
       initialCategories={data.categories}
+      totalCount={data.total}
+      page={data.page}
+      pageSize={BROWSE_PAGE_SIZE}
+      vendorSummaries={data.vendorSummaries}
     />
   );
 }

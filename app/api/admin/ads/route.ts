@@ -1,7 +1,7 @@
 import { apiError, apiOk } from "@/lib/apiResponse";
 import {
   requireRole,
-  supabaseServiceFetch,
+  supabaseServiceFetchAll,
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
@@ -43,13 +43,12 @@ export async function GET(request: Request) {
   try {
     await requireRole(request, ["ADMIN"]);
 
-    const rows = await supabaseServiceFetch<AdProductRow[]>(
+    const rows = await supabaseServiceFetchAll<AdProductRow>(
       `/rest/v1/products?${new URLSearchParams({
         select:
           "id,title,vendor_id,is_ad,ad_status,ad_active,impressions,clicks,budget,product_images(url,sort_order)",
         is_ad: "eq.true",
-        order: "created_at.desc",
-        limit: "10000",
+        order: "created_at.desc,id.desc",
       })}`,
     );
 

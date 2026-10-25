@@ -1,4 +1,4 @@
-import { supabaseServiceFetch } from "@/lib/supabaseServer";
+import { supabaseServiceFetch, supabaseServiceFetchAll } from "@/lib/supabaseServer";
 import {
   PRODUCT_SELECT,
   mapProduct,
@@ -123,7 +123,7 @@ export async function getAdminCategoryMap() {
 
 export async function getAdminProductMasters() {
   const [vendors, categories, subcategories, tags] = await Promise.all([
-    supabaseServiceFetch<VendorRow[]>("/rest/v1/vendors?select=id,company_name&order=company_name.asc&limit=10000"),
+    supabaseServiceFetchAll<VendorRow>("/rest/v1/vendors?select=id,company_name&order=company_name.asc,id.asc"),
     supabaseServiceFetch<CategoryRow[]>("/rest/v1/categories?select=id,name&order=name.asc&limit=10000"),
     supabaseServiceFetch<SubcategoryRow[]>("/rest/v1/subcategories?select=id,name,category_id&order=name.asc&limit=10000"),
     supabaseServiceFetch<TagRow[]>("/rest/v1/sustainability_tags?select=id,name&order=name.asc&limit=10000"),

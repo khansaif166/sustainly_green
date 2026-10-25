@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { type PublicVendor } from "@/lib/supabasePublic";
 import Header from "../components/Header";
 import Footer from "../components/layouts/Footer";
@@ -14,25 +15,56 @@ type Vendor = PublicVendor & { name?: string };
 /* ================= PAGE ================= */
 export default function FindVendorsClient({
   vendors,
+  total,
+  page,
+  pageSize,
 }: {
   vendors: Vendor[];
+  total: number;
+  page: number;
+  pageSize: number;
 }) {
-  const [search, setSearch] = useState("");
+  const router = useRouter();
+  const params = useSearchParams();
+  const query = params.get("q") || "";
+  const [search, setSearch] = useState(query);
+  const [loading, startNavigation] = useTransition();
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filtered = vendors.filter((v) => {
-  const query = search.toLowerCase();
+  // Follow the URL (back button) unless a typed value is still pending.
+  useEffect(() => { if (!debounce.current) setSearch(query); }, [query]);
 
-  const companyName = (v.companyName || "").toLowerCase();
-  const description = (v.description || "").toLowerCase();
-  const name = (v.name || "").toLowerCase();
+  // The search runs in the database; typing updates ?q= and starts at page 1.
+  function handleSearch(value: string) {
+    setSearch(value);
+    if (debounce.current) clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => {
+      debounce.current = null;
+      const url = new URLSearchParams();
+      if (value.trim()) url.set("q", value.trim());
+      // replace, not push: Back shouldn't step through every letter typed.
+      startNavigation(() => router.replace(`/find-vendors${url.size ? `?${url}` : ""}`, { scroll: false }));
+    }, 350);
+  }
 
-  return (
-    companyName.includes(query) ||
-    description.includes(query) ||
-    name.includes(query)
+  // Real <a href> page links so crawlers can reach every vendor.
+  function pageHref(target: number) {
+    const url = new URLSearchParams();
+    if (query) url.set("q", query);
+    if (target > 1) url.set("page", String(target));
+    return `/find-vendors${url.size ? `?${url}` : ""}`;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const windowStart = Math.max(1, Math.min(page - 2, totalPages - 4));
+  const pageNumbers = Array.from(
+    { length: Math.min(5, totalPages) },
+    (_, index) => windowStart + index,
   );
-});
-
+  const pageLinkClass = (active: boolean) =>
+    `min-w-9 px-3 py-1.5 rounded-full text-sm text-center ${active
+      ? "bg-[var(--color-primary-green)] text-white font-semibold"
+      : "bg-[var(--color-bg-white)] text-[var(--color-text-secondary)] shadow-[0_2px_10px_rgba(0,0,0,0.06)] hover:text-[var(--color-primary-green)]"}`;
 
   return (
     <>
@@ -55,19 +87,23 @@ export default function FindVendorsClient({
           <input
             placeholder="Search vendors by name"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 rounded-full border border-[var(--color-border)] text-sm focus:outline-none focus:border-[var(--color-primary-green)]"
           />
         </div>
 
         {/* ================= RESULTS ================= */}
-        {filtered.length === 0 ? (
+        <p className="text-xs text-center text-[var(--color-text-muted)]">
+          {loading ? "Loading…" : `${total} vendor${total === 1 ? "" : "s"} found`}
+        </p>
+
+        {vendors.length === 0 ? (
           <p className="text-sm text-center text-[var(--color-text-muted)]">
             No vendors found.
           </p>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filtered.map((v) => (
+            {vendors.map((v) => (
               <Link
                 key={v.id}
                 href={`/find-vendors/${v.id}`}
@@ -137,6 +173,35 @@ export default function FindVendorsClient({
               </Link>
             ))}
           </div>
+        )}
+
+        {totalPages > 1 && (
+          <nav aria-label="Vendor pages" className="flex flex-wrap items-center justify-center gap-2">
+            {page > 1 && <Link href={pageHref(page - 1)} rel="prev" className={pageLinkClass(false)}>Previous</Link>}
+            {pageNumbers[0] > 1 && (
+              <>
+                <Link href={pageHref(1)} className={pageLinkClass(false)}>1</Link>
+                {pageNumbers[0] > 2 && <span className="text-sm text-[var(--color-text-muted)]">…</span>}
+              </>
+            )}
+            {pageNumbers.map((number) => (
+              <Link
+                key={number}
+                href={pageHref(number)}
+                aria-current={number === page ? "page" : undefined}
+                className={pageLinkClass(number === page)}
+              >
+                {number}
+              </Link>
+            ))}
+            {pageNumbers[pageNumbers.length - 1] < totalPages && (
+              <>
+                {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && <span className="text-sm text-[var(--color-text-muted)]">…</span>}
+                <Link href={pageHref(totalPages)} className={pageLinkClass(false)}>{totalPages}</Link>
+              </>
+            )}
+            {page < totalPages && <Link href={pageHref(page + 1)} rel="next" className={pageLinkClass(false)}>Next</Link>}
+          </nav>
         )}
       </main>
 
