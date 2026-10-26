@@ -54,6 +54,7 @@ export default function Footer() {
           <Link href="/browse?type=vendor">Browse Vendors</Link>
           <Link href="/contact">Supplier Verification</Link>
           <Link href="/help/vendors">Vendor FAQs</Link>
+          <Link href="/vvs">Vendor Verification Standards</Link>
         </div>
 
         {/* Platform */}
