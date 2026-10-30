@@ -1010,7 +1010,7 @@ export default function HomeClient({
         </section>
 
         <section className="section-block featured-products-section">
-          <div className="product-cards">
+          <div className="card-grid best-seller-grid">
             <h2>Featured Products</h2>
             <Link href="/browse">View all products</Link>
           </div>
