@@ -986,7 +986,7 @@ export default function HomeClient({
         </section>
 
         <section className="trust-band">
-          <div className="trust-head" style="color: #ffffff">
+          <div className="trust-head" style={{ color: "#ffffff" }}>
             <h2>Trusted, Verified &amp; Certified</h2>
           </div>
           <div className="trust-points">
