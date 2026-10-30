@@ -986,7 +986,7 @@ export default function HomeClient({
         </section>
 
         <section className="trust-band">
-          <div className="trust-head">
+          <div className="trust-head" style="color: #ffffff">
             <h2>Trusted, Verified &amp; Certified</h2>
           </div>
           <div className="trust-points">
@@ -3053,7 +3053,7 @@ export default function HomeClient({
           grid-template-columns: auto 1fr auto;
           gap: 28px;
           align-items: center;
-          background: linear-gradient(90deg, #eef8ef 0%, #f9fcf9 50%, #eff7f2 100%);
+          background: #000000;
           transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
         }
 
@@ -3074,14 +3074,14 @@ export default function HomeClient({
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          color: #2a493b;
+          color: #ffffff;
           font-size: 14px;
           font-weight: 500;
           transition: color 170ms ease, transform 170ms ease;
         }
 
         .trust-point:hover {
-          color: #1f7b3a;
+          color: #cccecc;
           transform: translateY(-2px);
         }
 
@@ -3096,7 +3096,7 @@ export default function HomeClient({
         .trust-certifications p {
           margin: 0 0 10px;
           font-size: 13px;
-          color: #5c7568;
+          color: #ffffff;
           text-align: right;
         }
 
