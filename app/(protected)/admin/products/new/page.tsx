@@ -4,16 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Package, IndianRupee, Leaf, Truck, Building2 } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
-import { uploadFileToSupabaseStorage } from "@/lib/storage";
+import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
+import { useProductImages } from "@/app/components/product-images/useProductImages";
 
 const LISTING_TYPES = ["Product", "Service"];
 const AVAILABILITY   = ["B2B", "B2C"];
 const PRICE_TYPES    = ["Fixed Price", "Starts From", "Price on Request"];
 const SHIP_REGIONS   = ["Local Only", "Countrywide", "Regional", "Worldwide"];
-const MAX_PRODUCT_IMAGES = 5;
-const MAX_PRODUCT_IMAGE_BYTES = 10 * 1024 * 1024;
-const PRODUCT_IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
-const PRODUCT_IMAGE_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
 
 export default function AdminAddProductPage() {
   const router = useRouter();
@@ -29,8 +26,7 @@ export default function AdminAddProductPage() {
   const [categoryId,        setCategoryId]        = useState("");
   const [subCategoryId,     setSubCategoryId]     = useState("");
   const [description,       setDescription]       = useState("");
-  const [images,            setImages]            = useState<File[]>([]);
-  const [coverIndex,        setCoverIndex]        = useState(0);
+  const productImages = useProductImages();
 
   const [availableFor,      setAvailableFor]      = useState<string[]>([]);
   const [priceType,         setPriceType]         = useState("");
@@ -47,7 +43,6 @@ export default function AdminAddProductPage() {
 
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
-  const [imageError, setImageError] = useState("");
 
   useEffect(() => {
     const session = getStoredSession();
@@ -80,52 +75,16 @@ export default function AdminAddProductPage() {
 
   const filteredSubCats = subCategories.filter(s => s.categoryId === categoryId);
 
-  function selectImages(fileList: FileList | null) {
-    if (!fileList?.length) return;
-    setImageError("");
-
-    const selected = Array.from(fileList);
-    const invalidType = selected.find(file =>
-      !(PRODUCT_IMAGE_TYPES.has(file.type.toLowerCase()) || (!file.type && PRODUCT_IMAGE_EXTENSIONS.test(file.name))),
-    );
-    if (invalidType) {
-      setImageError(`${invalidType.name} is not supported. Choose JPG, PNG, or WebP images.`);
-      return;
-    }
-    const oversized = selected.find(file => file.size > MAX_PRODUCT_IMAGE_BYTES);
-    if (oversized) {
-      setImageError(`${oversized.name} is larger than 10 MB.`);
-      return;
-    }
-
-    const remaining = MAX_PRODUCT_IMAGES - images.length;
-    if (remaining <= 0) {
-      setImageError("A product can have a maximum of 5 images. Remove one before adding another.");
-      return;
-    }
-    setImages(previous => [...previous, ...selected.slice(0, remaining)]);
-    if (selected.length > remaining) {
-      setImageError(`Only ${remaining} more image${remaining === 1 ? "" : "s"} can be added. The extra files were not selected.`);
-    }
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (productImages.busy) return;
     if (!selectedVendorId) { alert("Please select a vendor."); return; }
     setLoading(true);
     setError("");
     try {
       const session = getStoredSession();
       if (!session) { router.push("/login"); return; }
-      const uploadedImages = await Promise.all(
-        images.map(file => uploadFileToSupabaseStorage(file, { bucket: "marketplace", folder: "products", accessToken: session.accessToken })),
-      ).catch(uploadError => {
-        const message = uploadError instanceof Error ? uploadError.message : "Unknown storage error";
-        setImageError(`Image upload failed: ${message}`);
-        throw uploadError;
-      });
-      const imageUrls    = uploadedImages.map(img => img.url);
-      const orderedImages = [imageUrls[coverIndex], ...imageUrls.filter((_, i) => i !== coverIndex)].filter(Boolean);
+      const orderedImages = await productImages.uploadImages(session.accessToken);
       const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
@@ -150,7 +109,6 @@ export default function AdminAddProductPage() {
     } finally { setLoading(false); }
   }
 
-  const uploadLabel = images.length === 0 ? "Click to upload images" : images.map(f => f.name).join(", ");
 
   return (
     <>
@@ -178,22 +136,11 @@ export default function AdminAddProductPage() {
         .apn-select{width:100%;padding:10px 12px;border:1.5px solid rgba(0,0,0,.1);border-radius:12px;font-size:13px;outline:none;font-family:inherit;background:#fff;appearance:none;cursor:pointer;color:#111;box-sizing:border-box;transition:border .15s}
         .apn-select:focus{border-color:#16a34a}
         .apn-help{font-size:11.5px;color:#9ca3af;margin:4px 0 0}
-        .apn-image-error{font-size:11.5px;color:#dc2626;margin:6px 0 0}
 
         .apn-chips{display:flex;gap:8px;flex-wrap:wrap}
         .apn-chip{padding:7px 14px;border-radius:50px;font-size:12.5px;font-weight:600;border:1.5px solid rgba(0,0,0,.1);background:#fff;color:#374151;cursor:pointer;font-family:inherit;transition:all .15s}
         .apn-chip.on{background:#f0fdf4;color:#15803d;border-color:#16a34a}
 
-        .apn-upload{display:flex;justify-content:center;align-items:center;border:2px dashed rgba(0,0,0,.12);border-radius:14px;padding:24px 16px;font-size:13px;color:#9ca3af;cursor:pointer;transition:all .15s;text-align:center}
-        .apn-upload:hover{border-color:#16a34a;background:#f0fdf4;color:#16a34a}
-        .apn-preview{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:4px}
-        .apn-preview-item{position:relative;border-radius:12px;overflow:hidden;border:2px solid rgba(0,0,0,.08)}
-        .apn-preview-item.cover{border-color:#16a34a}
-        .apn-preview-img{width:100%;height:90px;object-fit:cover;display:block}
-        .apn-cover-badge{position:absolute;top:5px;left:5px;font-size:9px;font-weight:800;background:#16a34a;color:#fff;padding:2px 7px;border-radius:50px}
-        .apn-preview-bar{position:absolute;inset-x:0;bottom:0;background:rgba(0,0,0,.6);display:flex;justify-content:space-between;padding:4px 6px}
-        .apn-set-cover{font-size:10px;color:#fff;background:transparent;border:none;cursor:pointer;font-family:inherit;padding:0}
-        .apn-remove{font-size:10px;color:#fca5a5;background:transparent;border:none;cursor:pointer;font-family:inherit;padding:0}
 
         .apn-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
         .apn-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
@@ -286,35 +233,7 @@ export default function AdminAddProductPage() {
                 <p className="apn-label">Short Description *</p>
                 <textarea className="apn-textarea" rows={4} maxLength={500} placeholder="What is this product, how does it help buyers, what makes it sustainable…" value={description} onChange={e => setDescription(e.target.value)} />
               </div>
-              <div>
-                <p className="apn-label">Images</p>
-                <label className="apn-upload">
-                  <input type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={e => {
-                    selectImages(e.target.files);
-                    e.target.value = "";
-                  }} />
-                  {uploadLabel}
-                </label>
-                <p className="apn-help">JPG, PNG, or WebP; maximum 10 MB each and 5 images. Selected images upload when you save the product.</p>
-                {imageError && <p className="apn-image-error" role="alert">{imageError}</p>}
-              </div>
-              {images.length > 0 && (
-                <div className="apn-preview">
-                  {images.map((file, i) => {
-                    const url = URL.createObjectURL(file);
-                    return (
-                      <div key={i} className={`apn-preview-item${coverIndex === i ? " cover" : ""}`}>
-                        <img src={url} alt={`preview-${i}`} className="apn-preview-img" />
-                        {coverIndex === i && <span className="apn-cover-badge">COVER</span>}
-                        <div className="apn-preview-bar">
-                          <button type="button" className="apn-set-cover" onClick={() => setCoverIndex(i)}>Set Cover</button>
-                          <button type="button" className="apn-remove" onClick={() => { setImages(prev => prev.filter((_, j) => j !== i)); if (coverIndex === i) setCoverIndex(0); }}>✕</button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <ProductImagePicker controller={productImages} disabled={loading} />
             </div>
           </div>
 
@@ -410,7 +329,7 @@ export default function AdminAddProductPage() {
           {/* Submit */}
           <div className="apn-submit-row">
             <button type="button" className="apn-cancel" onClick={() => router.push("/admin/products")}>Cancel</button>
-            <button type="submit" className="apn-submit" disabled={loading}>
+            <button type="submit" className="apn-submit" disabled={loading || productImages.busy}>
               {loading && <span className="apn-spinner" />}
               {loading ? "Saving…" : "Create Listing"}
             </button>

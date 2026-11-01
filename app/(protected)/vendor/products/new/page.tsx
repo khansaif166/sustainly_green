@@ -4,12 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getValidSession } from "@/lib/supabaseAuth";
-import { uploadFileToSupabaseStorage } from "@/lib/storage";
+import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
+import { useProductImages } from "@/app/components/product-images/useProductImages";
 import {
-  IMAGE_HINT, MAX_PRODUCT_IMAGES, processProductImages,
-} from "@/lib/productImages";
-import {
-  ArrowLeft, Package, IndianRupee, Leaf, Truck, ImagePlus,
+  ArrowLeft, Package, IndianRupee, Leaf, Truck,
   X, CheckCircle2, Star,
 } from "lucide-react";
 
@@ -30,11 +28,7 @@ export default function AddProductPage() {
   const [categoryId,         setCategoryId]         = useState("");
   const [subCategoryId,      setSubCategoryId]      = useState("");
   const [description,        setDescription]        = useState("");
-  const [images,             setImages]             = useState<File[]>([]);
-  const [imageErrors,        setImageErrors]        = useState<string[]>([]);
-  const [imageNotes,         setImageNotes]         = useState<string[]>([]);
-  const [preparing,          setPreparing]          = useState(false);
-  const [coverIndex,         setCoverIndex]         = useState(0);
+  const productImages = useProductImages();
   const [availableFor,       setAvailableFor]       = useState<string[]>([]);
   const [priceType,          setPriceType]          = useState("");
   const [price,              setPrice]              = useState("");
@@ -80,13 +74,12 @@ export default function AddProductPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (productImages.busy) return;
     const session = await getValidSession();
     if (!session) { router.push("/login"); return; }
     setLoading(true); setError("");
     try {
-      const uploaded = await Promise.all(images.map(f => uploadFileToSupabaseStorage(f, { bucket: "marketplace", folder: "products", accessToken: session.accessToken })));
-      const urls = uploaded.map(u => u.url);
-      const ordered = [urls[coverIndex], ...urls.filter((_, i) => i !== coverIndex)].filter(Boolean);
+      const ordered = await productImages.uploadImages(session.accessToken);
       const res = await fetch("/api/vendor/products", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
@@ -146,18 +139,7 @@ export default function AddProductPage() {
         .ap-chip:hover{border-color:#16a34a;color:#16a34a}
         .ap-chip.on{background:#f0fdf4;color:#15803d;border-color:#16a34a;font-weight:700}
 
-        .ap-upload{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:2px dashed rgba(0,0,0,.12);border-radius:14px;padding:24px;cursor:pointer;transition:all .15s;text-align:center}
-        .ap-upload:hover{border-color:#16a34a;background:#f0fdf4}
-        .ap-upload-label{font-size:13px;font-weight:600;color:#374151}
-        .ap-upload-sub{font-size:11.5px;color:#9ca3af}
 
-        .ap-img-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-        @media(max-width:500px){.ap-img-grid{grid-template-columns:repeat(3,1fr)}}
-        .ap-img-wrap{position:relative;border-radius:12px;overflow:hidden;border:2px solid rgba(0,0,0,.1)}
-        .ap-img-wrap.cover{border-color:#16a34a;border-width:2.5px}
-        .ap-img-thumb{height:88px;width:100%;object-fit:cover;display:block}
-        .ap-img-actions{position:absolute;inset-x:0;bottom:0;display:flex;justify-content:space-between;background:rgba(0,0,0,.6);padding:4px 6px}
-        .ap-img-btn{font-size:10px;font-weight:700;border:none;background:none;cursor:pointer;font-family:inherit;padding:0}
 
         .ap-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
         @media(max-width:500px){.ap-grid2{grid-template-columns:1fr}}
@@ -177,8 +159,6 @@ export default function AddProductPage() {
         .ap-submit:disabled{opacity:.55;cursor:not-allowed}
         .ap-spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
-        .ap-img-err{font-size:11.5px;color:#b91c1c;margin:4px 0 0;line-height:1.5}
-        .ap-img-note{font-size:11.5px;color:#b45309;margin:4px 0 0;line-height:1.5}
 
         /* ---- Mobile (phones) ----
            Form controls sit at 16px because iOS Safari zooms the whole page
@@ -197,7 +177,7 @@ export default function AddProductPage() {
           .ap-card-title{font-size:14.5px}
 
           .ap-label{font-size:13.5px}
-          .ap-help,.ap-upload-sub,.ap-img-err,.ap-img-note{font-size:12.5px}
+          .ap-help{font-size:12.5px}
           .ap-input,.ap-textarea,.ap-select{font-size:16px;padding:13px 14px;border-radius:13px}
           .ap-select{min-height:50px;background-position:right 14px center}
           .ap-input{min-height:50px}
@@ -205,16 +185,10 @@ export default function AddProductPage() {
           .ap-chips{gap:9px}
           .ap-chip{min-height:44px;padding:11px 18px;font-size:14px;flex:1 1 auto}
 
-          .ap-upload{padding:30px 16px;border-radius:16px}
-          .ap-upload-label{font-size:14.5px}
 
           /* Two larger thumbnails beat five thumbnail-sized ones on a phone,
              and the per-image controls stay permanently visible since there
              is no hover to reveal them. */
-          .ap-img-grid{grid-template-columns:repeat(2,1fr);gap:12px}
-          .ap-img-thumb{height:130px}
-          .ap-img-actions{padding:8px 10px;background:rgba(0,0,0,.66)}
-          .ap-img-btn{font-size:13px;min-height:32px;padding:0 6px}
 
           .ap-checkbox{width:24px;height:24px;border-radius:8px}
           .ap-checkbox:checked::after{left:7px;top:3px;width:6px;height:11px}
@@ -233,7 +207,6 @@ export default function AddProductPage() {
 
         @media(max-width:380px){
           .ap-chip{font-size:13.5px;padding:11px 14px}
-          .ap-img-thumb{height:112px}
         }
 
         .ap-err{background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:12px 16px;font-size:13px;color:#991b1b;font-weight:500}
@@ -300,58 +273,7 @@ export default function AddProductPage() {
                 <span className="ap-help">{description.length}/500 characters</span>
               </div>
 
-              <div className="ap-field">
-                <span className="ap-label">Images <span style={{ color: "#9ca3af", fontWeight: 500 }}>(up to 5)</span></span>
-                <label className="ap-upload">
-                  <input type="file" multiple accept="image/*" disabled={preparing} style={{ display: "none" }} onChange={async e => {
-                    if (!e.target.files) return;
-                    // Copy the FileList out synchronously. Clearing e.target.value
-                    // below empties it, and a state updater runs after this handler
-                    // returns — reading e.target.files in there yields nothing.
-                    const picked = Array.from(e.target.files);
-                    e.target.value = "";
-                    setPreparing(true);
-                    try {
-                      const { accepted, errors, notes } = await processProductImages(
-                        picked,
-                        MAX_PRODUCT_IMAGES - images.length,
-                      );
-                      setImageErrors(errors);
-                      setImageNotes(notes);
-                      if (accepted.length) {
-                        setImages(prev => [...prev, ...accepted.map(a => a.file)].slice(0, MAX_PRODUCT_IMAGES));
-                      }
-                    } finally {
-                      setPreparing(false);
-                    }
-                  }} />
-                  <ImagePlus size={24} color="#9ca3af" />
-                  <span className="ap-upload-label">{preparing ? "Optimising images…" : "Click to upload images"}</span>
-                  <span className="ap-upload-sub">{IMAGE_HINT}</span>
-                </label>
-                {imageErrors.map(msg => <span key={msg} className="ap-img-err">{msg}</span>)}
-                {imageNotes.map(msg => <span key={msg} className="ap-img-note">{msg}</span>)}
-              </div>
-
-              {images.length > 0 && (
-                <div className="ap-img-grid">
-                  {images.map((file, i) => (
-                    <div key={i} className={`ap-img-wrap${coverIndex === i ? " cover" : ""}`}>
-                      <img src={URL.createObjectURL(file)} alt="" className="ap-img-thumb" />
-                      {coverIndex === i && (
-                        <span style={{ position: "absolute", top: 4, left: 4, background: "#16a34a", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 50 }}>COVER</span>
-                      )}
-                      <div className="ap-img-actions">
-                        <button type="button" className="ap-img-btn" style={{ color: "#fff" }} onClick={() => setCoverIndex(i)}>Cover</button>
-                        <button type="button" className="ap-img-btn" style={{ color: "#fca5a5" }} onClick={() => {
-                          setImages(prev => prev.filter((_, idx) => idx !== i));
-                          if (coverIndex === i) setCoverIndex(0);
-                        }}>✕</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <ProductImagePicker controller={productImages} disabled={loading} />
             </div>
           </div>
 
@@ -455,7 +377,7 @@ export default function AddProductPage() {
           {/* Footer */}
           <div className="ap-footer">
             <Link href="/vendor/products" className="ap-cancel"><X size={14} />Cancel</Link>
-            <button type="submit" className="ap-submit" disabled={loading}>
+            <button type="submit" className="ap-submit" disabled={loading || productImages.busy}>
               {loading ? <div className="ap-spinner" /> : <Star size={14} />}
               {loading ? "Creating…" : "Create Listing"}
             </button>
