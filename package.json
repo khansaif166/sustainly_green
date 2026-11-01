@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:product-images": "node scripts/test-product-images.mjs",
+    "test:product-import": "node scripts/test-product-import.mjs",
     "cf:build": "next build --webpack && opennextjs-cloudflare build --skipNextBuild",
     "preview": "npm run cf:build && opennextjs-cloudflare preview",
     "deploy": "npm run cf:build && opennextjs-cloudflare deploy",

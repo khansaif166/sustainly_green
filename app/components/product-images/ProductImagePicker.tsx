@@ -20,9 +20,10 @@ function ImageThumbnail({ image, index }: { image: ProductImage; index: number }
   return <img ref={element} className={styles.thumbnail} src={typeof source === "string" ? source : undefined} alt={`Product photo ${index + 1}`} />;
 }
 
-export default function ProductImagePicker({ controller, disabled = false }: {
+export default function ProductImagePicker({ controller, disabled = false, allowSelection = true }: {
   controller: ProductImagesController;
   disabled?: boolean;
+  allowSelection?: boolean;
 }) {
   const inputId = useId();
   const hintId = useId();
@@ -33,7 +34,7 @@ export default function ProductImagePicker({ controller, disabled = false }: {
 
   return <div className={styles.picker}>
     <div className={styles.heading}><span>Product photos</span><span>{controller.images.length}/{MAX_PRODUCT_IMAGES}</span></div>
-    <label className={styles.upload} htmlFor={inputId} aria-disabled={locked || controller.images.length >= MAX_PRODUCT_IMAGES}>
+    {allowSelection && <label className={styles.upload} htmlFor={inputId} aria-disabled={locked || controller.images.length >= MAX_PRODUCT_IMAGES}>
       <span>{controller.preparing ? "Optimising photos…" : "+ Add photos"}</span>
       <input id={inputId} type="file" multiple accept="image/*" aria-describedby={hintId}
         disabled={locked || controller.images.length >= MAX_PRODUCT_IMAGES}
@@ -42,7 +43,7 @@ export default function ProductImagePicker({ controller, disabled = false }: {
           event.target.value = "";
           if (files.length) void controller.addImages(files);
         }} />
-    </label>
+    </label>}
     <p id={hintId} className={styles.help}>{IMAGE_HINT} Use Edit crop to choose what buyers see.</p>
     {controller.errors.length > 0 && <div className={styles.error} role="alert">{controller.errors.map(message => <p key={message}>{message}</p>)}</div>}
     {controller.notes.length > 0 && <details className={styles.notes}><summary>Photo quality notes</summary>{controller.notes.map(message => <p key={message}>{message}</p>)}</details>}
@@ -54,7 +55,7 @@ export default function ProductImagePicker({ controller, disabled = false }: {
         <div className={styles.actions}>
           <button type="button" disabled={locked} onClick={() => controller.setEditingId(image.id)} aria-label={`Edit crop for photo ${index + 1}`}>Edit crop</button>
           <button type="button" disabled={locked || controller.coverId === image.id} onClick={() => controller.setCoverId(image.id)} aria-label={`Set photo ${index + 1} as cover`}>{controller.coverId === image.id ? "Cover selected" : "Set cover"}</button>
-          <button type="button" className={styles.remove} disabled={locked} onClick={() => controller.removeImage(image.id)} aria-label={`Remove photo ${index + 1}`}>Remove</button>
+          {allowSelection && <button type="button" className={styles.remove} disabled={locked} onClick={() => controller.removeImage(image.id)} aria-label={`Remove photo ${index + 1}`}>Remove</button>}
         </div>
       </div>)}
     </div>

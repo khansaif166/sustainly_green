@@ -13,9 +13,9 @@ export type ProductImage = {
   crop?: ImageCrop;
 };
 
-export function useProductImages() {
-  const [images, setImages] = useState<ProductImage[]>([]);
-  const [coverId, setCoverId] = useState<string | null>(null);
+export function useProductImages(initialImages: ProductImage[] = [], initialCoverId: string | null = null) {
+  const [images, setImages] = useState<ProductImage[]>(initialImages);
+  const [coverId, setCoverId] = useState<string | null>(initialCoverId);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
