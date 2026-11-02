@@ -6,6 +6,8 @@ import { ArrowLeft, Package, IndianRupee, Leaf, Truck, Building2 } from "lucide-
 import { getStoredSession } from "@/lib/supabaseAuth";
 import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
 import { useProductImages } from "@/app/components/product-images/useProductImages";
+import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
+import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 
 const LISTING_TYPES = ["Product", "Service"];
 const AVAILABILITY   = ["B2B", "B2C"];
@@ -27,6 +29,7 @@ export default function AdminAddProductPage() {
   const [subCategoryId,     setSubCategoryId]     = useState("");
   const [description,       setDescription]       = useState("");
   const productImages = useProductImages();
+  const productSpecifications = useProductSpecifications();
 
   const [availableFor,      setAvailableFor]      = useState<string[]>([]);
   const [priceType,         setPriceType]         = useState("");
@@ -82,6 +85,7 @@ export default function AdminAddProductPage() {
     setLoading(true);
     setError("");
     try {
+      const specificationValues = productSpecifications.prepareForSave();
       const session = getStoredSession();
       if (!session) { router.push("/login"); return; }
       const orderedImages = await productImages.uploadImages(session.accessToken);
@@ -93,6 +97,7 @@ export default function AdminAddProductPage() {
           title, description, listingType, availableFor,
           categoryId, subCategoryId,
           images: orderedImages,
+          specifications: specificationValues,
           priceType, price, currency, moq, discount,
           shipRegions, inStock,
           sustainabilityTagIds: selectedTags,
@@ -236,6 +241,9 @@ export default function AdminAddProductPage() {
               <ProductImagePicker controller={productImages} disabled={loading} />
             </div>
           </div>
+
+          {/* Specifications */}
+          <ProductSpecificationsEditor controller={productSpecifications} disabled={loading || productImages.busy} />
 
           {/* Commercial */}
           <div className="apn-card">

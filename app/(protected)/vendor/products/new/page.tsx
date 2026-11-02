@@ -6,6 +6,8 @@ import Link from "next/link";
 import { getValidSession } from "@/lib/supabaseAuth";
 import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
 import { useProductImages } from "@/app/components/product-images/useProductImages";
+import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
+import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck,
   X, CheckCircle2, Star,
@@ -29,6 +31,7 @@ export default function AddProductPage() {
   const [subCategoryId,      setSubCategoryId]      = useState("");
   const [description,        setDescription]        = useState("");
   const productImages = useProductImages();
+  const productSpecifications = useProductSpecifications();
   const [availableFor,       setAvailableFor]       = useState<string[]>([]);
   const [priceType,          setPriceType]          = useState("");
   const [price,              setPrice]              = useState("");
@@ -79,11 +82,12 @@ export default function AddProductPage() {
     if (!session) { router.push("/login"); return; }
     setLoading(true); setError("");
     try {
+      const specificationValues = productSpecifications.prepareForSave();
       const ordered = await productImages.uploadImages(session.accessToken);
       const res = await fetch("/api/vendor/products", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, listingType, availableFor, categoryId, subCategoryId, images: ordered, priceType, price, currency, moq, discount, shipRegions, inStock, sustainabilityTagIds: selectedTags, sustainabilityClaim }),
+        body: JSON.stringify({ title, description, listingType, availableFor, categoryId, subCategoryId, images: ordered, specifications: specificationValues, priceType, price, currency, moq, discount, shipRegions, inStock, sustainabilityTagIds: selectedTags, sustainabilityClaim }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error?.message || "Failed to create listing.");
@@ -276,6 +280,9 @@ export default function AddProductPage() {
               <ProductImagePicker controller={productImages} disabled={loading} />
             </div>
           </div>
+
+          {/* Specifications */}
+          <ProductSpecificationsEditor controller={productSpecifications} disabled={loading || productImages.busy} />
 
           {/* Commercial */}
           <div className="ap-card">

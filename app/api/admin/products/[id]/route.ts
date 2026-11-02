@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { apiError, apiOk } from "@/lib/apiResponse";
+import { ProductSpecificationValidationError } from "@/lib/productSpecifications";
 import { productHref } from "@/lib/slug";
 import {
   requireRole,
@@ -161,6 +162,7 @@ export async function PUT(
     if (authError) return apiError(authError.message, authError.status);
     const configError = toConfigError(error);
     if (configError) return apiError(configError.message, configError.status);
+    if (error instanceof ProductSpecificationValidationError) return apiError(error.message, 400, { issues: error.issues });
     if (error instanceof Error && error.message === "Listing title is required.") {
       return apiError(error.message, 400);
     }

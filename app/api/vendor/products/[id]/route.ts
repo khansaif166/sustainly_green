@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { apiError, apiOk } from "@/lib/apiResponse";
+import { ProductSpecificationValidationError } from "@/lib/productSpecifications";
 import { productHref } from "@/lib/slug";
 import {
   requireRole,
@@ -11,7 +12,7 @@ import {
   buildProductPayload,
   getVendor,
   mapProduct,
-  PRODUCT_SELECT,
+  PRODUCT_DETAIL_SELECT,
   type ProductRow,
   replaceImages,
   replaceTags,
@@ -32,7 +33,7 @@ function revalidateProductSurfaces(id: string, title?: string | null) {
 
 async function loadOwnedProduct(id: string, vendorId: string) {
   const params = new URLSearchParams({
-    select: PRODUCT_SELECT,
+    select: PRODUCT_DETAIL_SELECT,
     id: `eq.${id}`,
     vendor_id: `eq.${vendorId}`,
     limit: "1",
@@ -123,6 +124,7 @@ export async function PUT(
     if (authError) return apiError(authError.message, authError.status);
     const configError = toConfigError(error);
     if (configError) return apiError(configError.message, configError.status);
+    if (error instanceof ProductSpecificationValidationError) return apiError(error.message, 400, { issues: error.issues });
     if (error instanceof Error && error.message === "Listing title is required.") {
       return apiError(error.message, 400);
     }

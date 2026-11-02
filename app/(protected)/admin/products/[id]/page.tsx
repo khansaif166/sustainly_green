@@ -6,6 +6,8 @@ import { ArrowLeft, Package, IndianRupee, Leaf, Truck, Building2 } from "lucide-
 import { getStoredSession } from "@/lib/supabaseAuth";
 import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
 import { useProductImages } from "@/app/components/product-images/useProductImages";
+import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
+import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 
 const LISTING_TYPES = ["Product", "Service"];
 const AVAILABILITY   = ["B2B", "B2C"];
@@ -32,6 +34,8 @@ export default function AdminEditProductPage() {
   const [subCategoryId,     setSubCategoryId]     = useState("");
   const [description,       setDescription]       = useState("");
   const productImages = useProductImages();
+  const productSpecifications = useProductSpecifications();
+  const { setStoredSpecifications } = productSpecifications;
   const { setStoredImages } = productImages;
 
   const [availableFor,       setAvailableFor]       = useState<string[]>([]);
@@ -62,6 +66,7 @@ export default function AdminEditProductPage() {
         setCategoryId(p.categoryId || "");
         setSubCategoryId(p.subCategoryId || "");
         setDescription(p.description || "");
+        setStoredSpecifications(p.specifications);
         setStoredImages(p.images || []);
         setAvailableFor(p.availableFor || []);
         setPriceType(p.priceType || "");
@@ -82,7 +87,7 @@ export default function AdminEditProductPage() {
       } finally { setLoading(false); }
     }
     load();
-  }, [id, router, setStoredImages]);
+  }, [id, router, setStoredImages, setStoredSpecifications]);
 
   function toggle(list: string[], value: string, setter: any, max?: number) {
     setter((prev: string[]) =>
@@ -101,6 +106,7 @@ export default function AdminEditProductPage() {
     setSaving(true);
     setError("");
     try {
+      const specificationValues = productSpecifications.prepareForSave();
       const session = getStoredSession();
       if (!session) { router.push("/login"); return; }
       const orderedImages = await productImages.uploadImages(session.accessToken);
@@ -112,6 +118,7 @@ export default function AdminEditProductPage() {
           listingType, title, description,
           categoryId, subCategoryId,
           images: orderedImages,
+          specifications: specificationValues,
           availableFor, priceType, price, currency, moq, discount,
           sustainabilityTagIds: selectedTags,
           sustainabilityClaim, shipRegions, inStock,
@@ -257,6 +264,9 @@ export default function AdminEditProductPage() {
               <ProductImagePicker controller={productImages} disabled={saving} />
             </div>
           </div>
+
+          {/* Specifications */}
+          <ProductSpecificationsEditor controller={productSpecifications} disabled={saving || productImages.busy} />
 
           {/* Commercial */}
           <div className="ape-card">

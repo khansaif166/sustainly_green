@@ -6,6 +6,8 @@ import Link from "next/link";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
 import { useProductImages } from "@/app/components/product-images/useProductImages";
+import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
+import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck,
   X, CheckCircle2, Loader2,
@@ -35,6 +37,8 @@ export default function EditProductPage() {
   const [subCategoryId,      setSubCategoryId]      = useState("");
   const [description,        setDescription]        = useState("");
   const productImages = useProductImages();
+  const productSpecifications = useProductSpecifications();
+  const { setStoredSpecifications } = productSpecifications;
   const { setStoredImages } = productImages;
   const [availableFor,       setAvailableFor]       = useState<string[]>([]);
   const [priceType,          setPriceType]          = useState("");
@@ -65,6 +69,7 @@ export default function EditProductPage() {
         setCategoryId(p.categoryId || "");
         setSubCategoryId(p.subCategoryId || "");
         setDescription(p.description || "");
+        setStoredSpecifications(p.specifications);
         setStoredImages(p.images || []);
         setAvailableFor(p.availableFor || []);
         setPriceType(p.priceType || "");
@@ -87,7 +92,7 @@ export default function EditProductPage() {
       } finally { setLoading(false); }
     }
     load();
-  }, [id, router, setStoredImages]);
+  }, [id, router, setStoredImages, setStoredSpecifications]);
 
   function toggle(list: string[], value: string, setter: any, max?: number) {
     setter((prev: string[]) =>
@@ -104,11 +109,12 @@ export default function EditProductPage() {
     if (!session) { router.push("/login"); return; }
     setSaving(true); setError("");
     try {
+      const specificationValues = productSpecifications.prepareForSave();
       const ordered = await productImages.uploadImages(session.accessToken);
       const res = await fetch(`/api/vendor/products/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ listingType, title, description, categoryId, subCategoryId, images: ordered, availableFor, priceType, price, currency, moq, discount, sustainabilityTagIds: selectedTags, sustainabilityClaim, shipRegions, inStock }),
+        body: JSON.stringify({ listingType, title, description, categoryId, subCategoryId, images: ordered, specifications: specificationValues, availableFor, priceType, price, currency, moq, discount, sustainabilityTagIds: selectedTags, sustainabilityClaim, shipRegions, inStock }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error?.message || "Update failed.");
@@ -258,6 +264,9 @@ export default function EditProductPage() {
               <ProductImagePicker controller={productImages} disabled={saving} />
             </div>
           </div>
+
+          {/* Specifications */}
+          <ProductSpecificationsEditor controller={productSpecifications} disabled={saving || productImages.busy} />
 
           {/* Commercial */}
           <div className="ep-card">
