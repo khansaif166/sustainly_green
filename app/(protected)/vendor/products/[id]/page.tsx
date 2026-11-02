@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getStoredSession } from "@/lib/supabaseAuth";
-import { uploadFileToSupabaseStorage } from "@/lib/storage";
+import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
+import { useProductImages } from "@/app/components/product-images/useProductImages";
+import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
+import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 import {
-  ArrowLeft, Package, IndianRupee, Leaf, Truck, ImagePlus,
+  ArrowLeft, Package, IndianRupee, Leaf, Truck,
   X, CheckCircle2, Loader2,
 } from "lucide-react";
 
@@ -33,9 +36,10 @@ export default function EditProductPage() {
   const [categoryId,         setCategoryId]         = useState("");
   const [subCategoryId,      setSubCategoryId]      = useState("");
   const [description,        setDescription]        = useState("");
-  const [existingImages,     setExistingImages]     = useState<string[]>([]);
-  const [newImages,          setNewImages]          = useState<File[]>([]);
-  const [coverIndex,         setCoverIndex]         = useState(0);
+  const productImages = useProductImages();
+  const productSpecifications = useProductSpecifications();
+  const { setStoredSpecifications } = productSpecifications;
+  const { setStoredImages } = productImages;
   const [availableFor,       setAvailableFor]       = useState<string[]>([]);
   const [priceType,          setPriceType]          = useState("");
   const [price,              setPrice]              = useState("");
@@ -65,7 +69,8 @@ export default function EditProductPage() {
         setCategoryId(p.categoryId || "");
         setSubCategoryId(p.subCategoryId || "");
         setDescription(p.description || "");
-        setExistingImages(p.images || []);
+        setStoredSpecifications(p.specifications);
+        setStoredImages(p.images || []);
         setAvailableFor(p.availableFor || []);
         setPriceType(p.priceType || "");
         setPrice(p.price?.toString() || "");
@@ -87,7 +92,7 @@ export default function EditProductPage() {
       } finally { setLoading(false); }
     }
     load();
-  }, [id, router]);
+  }, [id, router, setStoredImages, setStoredSpecifications]);
 
   function toggle(list: string[], value: string, setter: any, max?: number) {
     setter((prev: string[]) =>
@@ -96,22 +101,20 @@ export default function EditProductPage() {
   }
 
   const filteredSubs = subCategories.filter(s => s.categoryId === categoryId);
-  const allImages    = [...existingImages, ...newImages];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (productImages.busy) return;
     const session = getStoredSession();
     if (!session) { router.push("/login"); return; }
     setSaving(true); setError("");
     try {
-      const uploaded   = await Promise.all(newImages.map(f => uploadFileToSupabaseStorage(f, { bucket: "marketplace", folder: "products", accessToken: session.accessToken })));
-      const uploadUrls = uploaded.map(u => u.url);
-      const combined   = [...existingImages, ...uploadUrls];
-      const ordered    = [combined[coverIndex], ...combined.filter((_, i) => i !== coverIndex)].filter(Boolean);
+      const specificationValues = productSpecifications.prepareForSave();
+      const ordered = await productImages.uploadImages(session.accessToken);
       const res = await fetch(`/api/vendor/products/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ listingType, title, description, categoryId, subCategoryId, images: ordered, availableFor, priceType, price, currency, moq, discount, sustainabilityTagIds: selectedTags, sustainabilityClaim, shipRegions, inStock }),
+        body: JSON.stringify({ listingType, title, description, categoryId, subCategoryId, images: ordered, specifications: specificationValues, availableFor, priceType, price, currency, moq, discount, sustainabilityTagIds: selectedTags, sustainabilityClaim, shipRegions, inStock }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error?.message || "Update failed.");
@@ -174,18 +177,7 @@ export default function EditProductPage() {
         .ep-chip:hover{border-color:#16a34a;color:#16a34a}
         .ep-chip.on{background:#f0fdf4;color:#15803d;border-color:#16a34a;font-weight:700}
 
-        .ep-upload{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:2px dashed rgba(0,0,0,.12);border-radius:14px;padding:24px;cursor:pointer;transition:all .15s;text-align:center}
-        .ep-upload:hover{border-color:#16a34a;background:#f0fdf4}
-        .ep-upload-label{font-size:13px;font-weight:600;color:#374151}
-        .ep-upload-sub{font-size:11.5px;color:#9ca3af}
 
-        .ep-img-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-        @media(max-width:500px){.ep-img-grid{grid-template-columns:repeat(3,1fr)}}
-        .ep-img-wrap{position:relative;border-radius:12px;overflow:hidden;border:2px solid rgba(0,0,0,.1)}
-        .ep-img-wrap.cover{border-color:#16a34a;border-width:2.5px}
-        .ep-img-thumb{height:88px;width:100%;object-fit:cover;display:block}
-        .ep-img-actions{position:absolute;inset-x:0;bottom:0;display:flex;justify-content:space-between;background:rgba(0,0,0,.6);padding:4px 6px}
-        .ep-img-btn{font-size:10px;font-weight:700;border:none;background:none;cursor:pointer;font-family:inherit;padding:0}
 
         .ep-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
         @media(max-width:500px){.ep-grid2{grid-template-columns:1fr}}
@@ -206,7 +198,6 @@ export default function EditProductPage() {
         .ep-spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
         .ep-err{background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:12px 16px;font-size:13px;color:#991b1b;font-weight:500}
-        .ep-new-badge{position:absolute;top:4px;right:4px;background:#3b82f6;color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:50px}
       `}</style>
 
       <div className="ep-page">
@@ -270,150 +261,12 @@ export default function EditProductPage() {
                 <span className="ep-help">{description.length}/500 characters</span>
               </div>
 
-              <div className="ep-field">
-                <span className="ep-label">Add More Images <span style={{ color: "#9ca3af", fontWeight: 500 }}>(max 5 total)</span></span>
-                <label className="ep-upload">
-                  <input 
-  type="file" 
-  multiple 
-  accept="image/*" 
-  style={{ display: "none" }} 
-  onChange={async e => {
-    if (!e.target.files || e.target.files.length === 0) return;
-
-    const selectedFiles = Array.from(e.target.files);
-    const validProcessedFiles: File[] = [];
-    let newErrors = [];
-    
-    const remainingSlots = 5 - existingImages.length;
-
-    if (remainingSlots <= 0) {
-      setError("You already have 5 images. Please remove some before adding new ones.");
-      e.target.value = "";
-      return;
-    }
-
-    // Auto-formatting utility
-    const processAndFormatImage = (file: File): Promise<File> => {
-  return new Promise((resolve, reject) => {
-    // 1. Define your marketplace standard dimension (e.g., a perfect 800x800 square)
-    const TARGET_SIZE = 800; 
-
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      
-      const canvas = document.createElement("canvas");
-      canvas.width = TARGET_SIZE;
-      canvas.height = TARGET_SIZE;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error("Canvas not supported"));
-
-      // 2. Lay down a crisp white background so transparent PNGs or odd aspect ratios look clean
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, TARGET_SIZE, TARGET_SIZE);
-
-      // 3. The Magic Math: Calculate scale to fit entirely inside without distorting
-      const scale = Math.min(TARGET_SIZE / img.width, TARGET_SIZE / img.height);
-      const drawWidth = img.width * scale;
-      const drawHeight = img.height * scale;
-
-      // 4. Calculate coordinates to perfectly center the image
-      const dx = (TARGET_SIZE - drawWidth) / 2;
-      const dy = (TARGET_SIZE - drawHeight) / 2;
-
-      // 5. Paint the resized image onto the center of the white canvas
-      ctx.drawImage(img, dx, dy, drawWidth, drawHeight);
-
-      // 6. Export as an optimized, next-gen WebP format (saving massive storage space)
-      canvas.toBlob((blob) => {
-        if (!blob) return reject(new Error("Blob conversion failed"));
-        
-        const fileName = file.name.replace(/\.[^/.]+$/, "") + "_formatted.webp";
-        const newFile = new File([blob], fileName, { type: "image/webp" });
-        
-        // Attach the preview URL directly to the file object to prevent memory leaks
-        Object.assign(newFile, { previewUrl: URL.createObjectURL(newFile) });
-        resolve(newFile);
-        
-      }, "image/webp", 0.85); // 85% quality is visually lossless but heavily compressed
-    };
-    
-    img.onerror = () => reject(new Error(`Failed to load "${file.name}"`));
-    img.src = objectUrl;
-  });
-};
-
-    // Process all selected files sequentially
-    for (const file of selectedFiles) {
-      if (!file.type.startsWith("image/")) {
-        newErrors.push(`"${file.name}" is not a valid image file.`);
-        continue;
-      }
-      
-      try {
-        const processedFile = await processAndFormatImage(file);
-        validProcessedFiles.push(processedFile);
-      } catch (err) {
-        newErrors.push(`Could not process "${file.name}".`);
-      }
-    }
-
-    setNewImages(prev => {
-      const combined = [...prev, ...validProcessedFiles];
-      if (combined.length > remainingSlots) {
-        newErrors.push(`Maximum 5 images total. Extra uploads were discarded.`);
-        return combined.slice(0, remainingSlots);
-      }
-      return combined;
-    });
-
-    if (newErrors.length > 0) {
-      setError(newErrors.join(" "));
-    } else {
-      setError("");
-    }
-
-    e.target.value = ""; 
-  }} 
-/>
-                  <ImagePlus size={24} color="#9ca3af" />
-                  <span className="ep-upload-label">Click to upload new images</span>
-                  <span className="ep-upload-sub">Existing images are shown below</span>
-                </label>
-              </div>
-
-              {allImages.length > 0 && (
-                <div className="ep-img-grid">
-                  {allImages.map((fileOrUrl, i) => {
-                    const isExisting = i < existingImages.length;
-                    const src = isExisting ? (fileOrUrl as string) : URL.createObjectURL(fileOrUrl as File);
-                    return (
-                      <div key={i} className={`ep-img-wrap${coverIndex === i ? " cover" : ""}`}>
-                        <img src={src} alt="" className="ep-img-thumb" />
-                        {coverIndex === i && <span style={{ position: "absolute", top: 4, left: 4, background: "#16a34a", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 50 }}>COVER</span>}
-                        {!isExisting && <span className="ep-new-badge">NEW</span>}
-                        <div className="ep-img-actions">
-                          <button type="button" className="ep-img-btn" style={{ color: "#fff" }} onClick={() => setCoverIndex(i)}>Cover</button>
-                          <button type="button" className="ep-img-btn" style={{ color: "#fca5a5" }} onClick={() => {
-                            if (isExisting) {
-                              setExistingImages(prev => prev.filter((_, idx) => idx !== i));
-                            } else {
-                              setNewImages(prev => prev.filter((_, idx) => idx !== (i - existingImages.length)));
-                            }
-                            if (coverIndex === i) setCoverIndex(0);
-                            else if (coverIndex > i) setCoverIndex(coverIndex - 1);
-                          }}>✕</button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <ProductImagePicker controller={productImages} disabled={saving} />
             </div>
           </div>
+
+          {/* Specifications */}
+          <ProductSpecificationsEditor controller={productSpecifications} disabled={saving || productImages.busy} />
 
           {/* Commercial */}
           <div className="ep-card">
@@ -515,7 +368,7 @@ export default function EditProductPage() {
           {/* Footer */}
           <div className="ep-footer">
             <Link href="/vendor/products" className="ep-cancel"><X size={14} />Cancel</Link>
-            <button type="submit" className="ep-submit" disabled={saving}>
+            <button type="submit" className="ep-submit" disabled={saving || productImages.busy}>
               {saving ? <div className="ep-spinner" /> : <Loader2 size={14} style={{ display: "none" }} />}
               {saving ? "Saving…" : "Save Changes"}
             </button>

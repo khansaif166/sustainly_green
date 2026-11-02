@@ -1,6 +1,8 @@
 import { supabaseServiceFetch, supabaseServiceFetchAll } from "@/lib/supabaseServer";
+import { productSpecificationsPayload } from "@/lib/productSpecifications";
 import {
   PRODUCT_SELECT,
+  PRODUCT_DETAIL_SELECT,
   mapProduct,
   replaceImages,
   replaceTags,
@@ -159,7 +161,7 @@ export function mapMastersForList(masters: Awaited<ReturnType<typeof getAdminPro
 
 export async function loadAdminProduct(id: string) {
   const params = new URLSearchParams({
-    select: PRODUCT_SELECT,
+    select: PRODUCT_DETAIL_SELECT,
     id: `eq.${id}`,
     limit: "1",
   });
@@ -202,6 +204,7 @@ export function buildAdminProductPayload(
     vendor_id: vendor.id,
     vendor_name: vendor.company_name || "Unknown Vendor",
     title,
+    ...productSpecificationsPayload(body),
     description: stringOrNull(body.description),
     listing_type: stringOrNull(body.listingType),
     available_for: stringArray(body.availableFor),

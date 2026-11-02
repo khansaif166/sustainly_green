@@ -11,6 +11,10 @@ import {
 } from "lucide-react";
 import { fetchCurrentProfile, getCurrentUser, signOutSupabase } from "@/lib/supabaseAuth";
 import SessionTimeoutNotice from "@/app/components/SessionTimeoutNotice";
+// Attach product styles before the access guard reveals the child page.
+import "@/app/components/product-images/productImages.module.css";
+import "@/app/components/product-specifications/productSpecifications.module.css";
+import "@/app/components/product-import/productImport.module.css";
 
 const NAV_SECTIONS = [
   {

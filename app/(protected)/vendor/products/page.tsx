@@ -93,6 +93,9 @@ export default function VendorProductsPage() {
               <Link href="/vendor/products/new" className="vp-add-btn">
                 <PlusCircle size={14} />Add New Product
               </Link>
+              <Link href="/vendor/products/import" className="vp-add-btn" style={{ marginLeft: 10 }}>
+                <PlusCircle size={14} />Bulk Upload
+              </Link>
             </div>
             <div className="vp-hero-stats">
               <div style={{ textAlign: "right" }}>

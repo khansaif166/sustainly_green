@@ -1,3 +1,5 @@
+import { readProductSpecifications, type ProductSpecification } from "@/lib/productSpecifications";
+
 type SupabaseVendorRow = {
   id: string;
   slug?: string | null;
@@ -35,6 +37,7 @@ type SupabaseProductRow = {
   vendor_name: string | null;
   title: string | null;
   description: string | null;
+  specifications?: unknown;
   listing_type: string | null;
   category_id: string | null;
   available_for: string[] | null;
@@ -115,6 +118,7 @@ export type PublicProduct = {
   vendorName: string;
   title: string;
   description?: string;
+  specifications?: ProductSpecification[];
   images: string[];
   listingType?: string;
   availableFor: string[];
@@ -366,6 +370,7 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
     vendorName: stringValue(row.vendor_name) || "Listed Supplier",
     title: stringValue(row.title) || "Untitled Product",
     description: stringValue(row.description) || undefined,
+    ...(row.specifications !== undefined ? { specifications: readProductSpecifications(row.specifications) } : {}),
     images,
     listingType: stringValue(row.listing_type) || undefined,
     availableFor: stringArray(row.available_for),
@@ -715,7 +720,7 @@ export async function fetchApprovedVendorById(idOrSlug: string): Promise<PublicV
 
 export async function fetchApprovedProductById(id: string): Promise<PublicProduct | null> {
   const params = new URLSearchParams({
-    select: PRODUCT_SELECT,
+    select: `${PRODUCT_SELECT},specifications`,
     id: `eq.${id}`,
     approved: "eq.true",
     limit: "1",
