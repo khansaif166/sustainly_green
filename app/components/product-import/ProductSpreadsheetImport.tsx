@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { getValidSession } from "@/lib/supabaseAuth";
 import { readApiJson } from "@/lib/clientApiResponse";
 import { prepareProductImage } from "@/lib/productImages";
@@ -40,6 +41,7 @@ function PhotoEditor({ row, save, close }: { row: Row; save: (images: ProductIma
 
 export default function ProductSpreadsheetImport({ mode }: { mode: "vendor" | "admin" }) {
   const endpoint = `/api/${mode}/products/import`;
+  const photoPickerId = useId();
   const [masters, setMasters] = useState<Masters | null>(null);
   const [catalogAttempt, setCatalogAttempt] = useState(0);
   const [catalogError, setCatalogError] = useState("");
@@ -60,17 +62,25 @@ export default function ProductSpreadsheetImport({ mode }: { mode: "vendor" | "a
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      controller.abort();
+      if (active) setCatalogError("Loading upload options took too long. Please retry.");
+    }, 20000);
     async function load() {
       try {
         const session = await getValidSession();
+        if (!active || controller.signal.aborted) return;
         if (!session) throw new Error("Please sign in to import products.");
-        const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${session.accessToken}` } });
-        const data = await readApiJson<Masters>(response, "Unable to load the import catalog.");
-        if (active) { setMasters(data); setVendorId(data.vendorId ?? ""); setCatalogError(""); }
-      } catch (error) { if (active) setCatalogError(error instanceof Error ? error.message : "Unable to load the catalog."); }
+        const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${session.accessToken}` }, signal: controller.signal });
+        const data = await readApiJson<Masters>(response, "Unable to load upload options. Please retry.");
+        if (active && !controller.signal.aborted) { setMasters(data); setVendorId(data.vendorId ?? ""); setCatalogError(""); }
+      } catch (error) {
+        if (active && !controller.signal.aborted) setCatalogError(error instanceof Error ? error.message : "Unable to load upload options. Please retry.");
+      } finally { window.clearTimeout(timeout); }
     }
     void load();
-    return () => { active = false; };
+    return () => { active = false; window.clearTimeout(timeout); controller.abort(); };
   }, [endpoint, catalogAttempt]);
 
   const validated = useMemo(() => rows.map(row => {
@@ -231,12 +241,27 @@ export default function ProductSpreadsheetImport({ mode }: { mode: "vendor" | "a
 
   return <div className={styles.page}>
     <header className={styles.hero}>
-      <Link href={`/${mode}/products`}>← Back to products</Link>
-      <h1>Bulk product upload</h1>
-      <p>Create up to 100 products from one CSV/XLSX sheet. Match local photos, review every row, then confirm.</p>
+      <div className={styles.heroInner}>
+        <Link href={`/${mode}/products`} className={styles.backLink} aria-label="Back to products"><ArrowLeft size={16} aria-hidden="true" /></Link>
+        <div className={styles.heroCopy}>
+          <h1>Bulk product upload</h1>
+          <p>Create up to 100 products from one CSV/XLSX sheet. Match local photos, review every row, then confirm.</p>
+        </div>
+      </div>
     </header>
-    {catalogError && <div className={styles.error} role="alert">{catalogError} <button onClick={() => setCatalogAttempt(value => value + 1)}>Retry catalog</button> <Link href={`/login?next=/${mode}/products/import`}>Sign in</Link></div>}
+    {!masters && !catalogError && <section className={`${styles.card} ${styles.loadingPanel}`} role="status">
+      <span className={styles.loadingSpinner} aria-hidden="true" />
+      <p>Preparing your upload options…</p>
+    </section>}
+    {catalogError && <section className={styles.card} aria-label="Upload options unavailable">
+      <p className={styles.error} role="alert">{catalogError}</p>
+      <div className={styles.buttons}>
+        <button className={styles.secondary} onClick={() => { setCatalogError(""); setCatalogAttempt(value => value + 1); }}>Retry</button>
+        <Link href={`/login?next=/${mode}/products/import`}>Sign in</Link>
+      </div>
+    </section>}
     {error && <p className={styles.error} role="alert">{error}</p>}
+    {masters && !catalogError && <>
     <section className={styles.card} aria-label="Import setup">
       <h2>1. Prepare your spreadsheet</h2>
       <p>Use the template and its catalog reference. Replace the sample rows. Only the first worksheet is imported.</p>
@@ -263,18 +288,24 @@ export default function ProductSpreadsheetImport({ mode }: { mode: "vendor" | "a
         <label className={styles.field}>Spreadsheet (.csv or .xlsx, up to 10 MB)
           <input type="file" accept=".csv,.xlsx" disabled={!masters || locked || Boolean(editingId)} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void parse(file); }} />
         </label>
-        <label className={styles.field}>Matching local photos (select all referenced files together)
-          <input type="file" accept="image/*" multiple disabled={!masters || locked || Boolean(editingId)} onChange={event => {
-            const selected = Array.from(event.target.files ?? []);
-            if (selected.length > 500 || selected.reduce((total, file) => total + file.size, 0) > 200 * 1024 * 1024) {
-              setError("Select at most 500 photo files totaling 200 MB. Split larger uploads into smaller batches."); event.target.value = ""; setFiles([]); return;
-            }
-            setFiles(selected); setConfirming(false); setError("");
-            setRows(previous => previous.map(row => ({ ...row, photos: undefined, coverId: undefined, photoError: undefined })));
-          }} />
-        </label>
+        <div className={styles.field}>
+          <label htmlFor={photoPickerId} id={`${photoPickerId}-label`}>Matching local photos</label>
+          <div className={styles.imagePicker}>
+            <span className={styles.imagePickerButton} id={`${photoPickerId}-action`}>Choose images</span>
+            <span className={styles.imagePickerStatus} role="status">{files.length ? `${files.length} ${files.length === 1 ? "image" : "images"} selected` : "No images selected"}</span>
+            <input id={photoPickerId} className={styles.imageInput} type="file" accept="image/*" multiple aria-labelledby={`${photoPickerId}-action ${photoPickerId}-label`} aria-describedby={`${photoPickerId}-hint`} disabled={!masters || locked || Boolean(editingId)} onChange={event => {
+              const selected = Array.from(event.target.files ?? []);
+              if (selected.length > 500 || selected.reduce((total, file) => total + file.size, 0) > 200 * 1024 * 1024) {
+                setError("Select at most 500 photo files totaling 200 MB. Split larger uploads into smaller batches."); event.target.value = ""; setFiles([]); return;
+              }
+              setFiles(selected); setConfirming(false); setError("");
+              setRows(previous => previous.map(row => ({ ...row, photos: undefined, coverId: undefined, photoError: undefined })));
+            }} />
+          </div>
+          <span className={styles.imagePickerHint} id={`${photoPickerId}-hint`}>Select all images referenced in your spreadsheet.</span>
+        </div>
       </div>
-      <p className={styles.muted}>{parsing ? "Reading spreadsheet…" : sheetName || "No spreadsheet selected."} {files.length ? `${files.length} photo file(s) selected.` : ""}</p>
+      <p className={styles.muted}>{parsing ? "Reading spreadsheet…" : sheetName || "No spreadsheet selected."}</p>
     </section>
     {rows.length > 0 && <section className={styles.card} aria-label="Import preview">
       <div className={styles.sectionHeader}><div><h2>2. Review products</h2><p>{rows.length} rows · {hasStarted ? `${createdCount} created · ${retryable.length} need attention` : `${validCount} ready · ${rows.length - validCount} invalid`}</p></div>
@@ -309,5 +340,6 @@ export default function ProductSpreadsheetImport({ mode }: { mode: "vendor" | "a
         <div className={styles.buttons}><button className={styles.secondary} onClick={() => setConfirming(false)}>Cancel import</button><button className={styles.primary} onClick={() => void run()}>Confirm import ({rows.length})</button></div>
       </div>}
     </section>}
+    </>}
   </div>;
 }

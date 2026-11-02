@@ -24,7 +24,9 @@
 .dialogHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 20px; }
 .dialogHeader h2 { margin: 0; font-size: 20px; font-weight: 750; }
 .dialogHeader p { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: #6b7280; }
-.close { background: #f3f4f6; border: 0; border-radius: 50%; width: 36px; height: 36px; flex-shrink: 0; font-size: 24px; cursor: pointer; }
+.close { display: inline-flex; align-items: center; justify-content: center; background: #f3f4f6; color: #374151; border: 0; border-radius: 50%; width: 44px; height: 44px; padding: 0; flex-shrink: 0; line-height: 1; cursor: pointer; }
+.close svg { display: block; flex-shrink: 0; }
+@media (hover: hover) { .close:not(:disabled):hover { background: #e5e7eb; color: #111827; } }
 .cropViewport { position: relative; overflow: hidden; width: calc(100% - 40px); margin: 0 20px; aspect-ratio: 3/2; background: repeating-conic-gradient(#d1d5db 0% 25%, #f3f4f6 0% 50%) 0 0/20px 20px; touch-action: none; cursor: grab; user-select: none; }
 .cropViewport:active { cursor: grabbing; }
 .cropViewport img { position: absolute; left: 50%; top: 50%; max-width: none; pointer-events: none; }

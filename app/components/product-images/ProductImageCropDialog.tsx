@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import { clampPosition, cropProductImage, DEFAULT_IMAGE_CROP, getCropGeometry, loadCropImage, loadCropSource, type ImageCrop } from "@/lib/productImageCrop";
 import { prepareProductImage } from "@/lib/productImages";
 import type { ProductImage } from "./useProductImages";
@@ -103,7 +104,7 @@ export default function ProductImageCropDialog({ image, onApply, onClose }: {
           <h2 id={titleId}>Crop product photo</h2>
           <p id={hintId}>Drag or use arrow keys to position. Your crop will be 3:2.</p>
         </div>
-        <button type="button" className={styles.close} aria-label="Close crop editor" disabled={saving} onClick={onClose}>×</button>
+        <button type="button" className={styles.close} aria-label="Close crop editor" disabled={saving} onClick={onClose}><X size={20} aria-hidden="true" /></button>
       </div>
 
       {!loaded && !loadError && <p className={styles.status} role="status">Loading photo…</p>}
