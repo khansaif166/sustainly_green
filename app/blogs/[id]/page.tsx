@@ -11,6 +11,7 @@ import BlogToc, { type Heading } from "./_components/BlogToc";
 import ReadingProgress from "./_components/ReadingProgress";
 import ShareButtons from "./_components/ShareButtons";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
+import { fitTitle } from "@/lib/seoTitle";
 
 export const revalidate = 3600;
 
@@ -50,7 +51,8 @@ export async function generateMetadata({
     };
   }
 
-  const title = compact(`${blog.title} | ${SITE_NAME}`, 60);
+  // Brand suffix only when it fits; long titles are never cut mid-word.
+  const title = fitTitle([`${blog.title} | ${SITE_NAME}`, blog.title]);
   const description = compact(
     blog.excerpt ||
       blog.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() ||

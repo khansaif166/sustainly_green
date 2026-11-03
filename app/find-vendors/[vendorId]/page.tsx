@@ -6,6 +6,7 @@ import {
   fetchApprovedVendorById,
 } from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
+import { fitTitle } from "@/lib/seoTitle";
 import { vendorHref } from "@/lib/slug";
 import VendorProfileClient from "./VendorProfileClient";
 
@@ -64,10 +65,14 @@ export async function generateMetadata({
   const { vendor } = data;
   const category = vendor.category || "Sustainable Products";
   const city = vendor.city || vendor.state || "India";
-  const title = compact(
+  const title = fitTitle([
     `${vendor.companyName} - ${category} Supplier in ${city} | ${SITE_NAME}`,
-    60,
-  );
+    `${vendor.companyName} - ${category} Supplier in ${city}`,
+    `${vendor.companyName} - ${category} Supplier | ${SITE_NAME}`,
+    `${vendor.companyName} - ${category} Supplier`,
+    `${vendor.companyName} | ${SITE_NAME}`,
+    vendor.companyName,
+  ]);
   const description = compact(
     vendor.description ||
       `Explore products and sustainability information from ${vendor.companyName}, a ${category} supplier serving ${city}.`,

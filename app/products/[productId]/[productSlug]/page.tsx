@@ -6,6 +6,7 @@ import {
   fetchApprovedProducts,
 } from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
+import { fitTitle } from "@/lib/seoTitle";
 import { productHref } from "@/lib/slug";
 import ProductDetailClient from "../ProductDetailClient";
 
@@ -64,10 +65,13 @@ export async function generateMetadata({
     product.sustainabilityTags?.[0] ||
     product.listingType ||
     "Sustainable Product";
-  const title = compact(
+  const title = fitTitle([
     `${product.title} - ${keySpec} | ${product.vendorName} | ${SITE_NAME}`,
-    60,
-  );
+    `${product.title} - ${keySpec} | ${SITE_NAME}`,
+    `${product.title} - ${keySpec}`,
+    `${product.title} | ${SITE_NAME}`,
+    product.title,
+  ]);
   const description = compact(
     product.description ||
       `Discover ${product.title} from ${product.vendorName} on ${SITE_NAME}, India's B2B sustainability marketplace.`,
