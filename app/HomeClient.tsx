@@ -367,6 +367,7 @@ export default function HomeClient({
   const [authLoading, setAuthLoading] = useState(true);
   const [profile, setProfile] = useState<SupabaseProfile | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryItem[]>(initialCategories);
+  const previewCategories = categoryOptions.slice(0, 10);
 
   function scrollCities(direction: -1 | 1) {
     const strip = cityStripRef.current;
@@ -660,7 +661,7 @@ export default function HomeClient({
         <section className="hero-composition">
           <aside className="sidebar-card">
             <div className="sidebar-list">
-              {categoryOptions.map((category) => (
+              {previewCategories.map((category) => (
                 <Link key={category.id} href={categoryHref(category.id, category.slug)} className="sidebar-link">
                   <span className="sidebar-icon">{iconForCategory(category.icon)}</span>
                   <span className="sidebar-label">{category.name}</span>
@@ -837,13 +838,13 @@ export default function HomeClient({
           </div>
         </section>
 
-        <section className="section-block">
+        <section className="section-block shop-category-section">
           <div className="section-head">
             <h2>Shop by Category</h2>
             <Link href="/categories">View all categories</Link>
           </div>
           <div className="category-strip">
-            {categoryOptions.map((category) => (
+            {previewCategories.map((category) => (
               <Link key={category.id} href={categoryHref(category.id, category.slug)} className="category-pill-card">
                 <span className="category-pill-icon">{iconForCategory(category.icon)}</span>
                 <span>{category.name}</span>
@@ -1099,7 +1100,7 @@ export default function HomeClient({
         .home-blog-more { margin-top: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #059669; }
         @media (max-width: 900px) { .home-blog-grid { grid-template-columns: 1fr; } }
         .market-home {
-          background: #fcfdfb;
+          background: #ffffff;
           color: #10241b;
           width: 100%;
           max-width: 100%;
@@ -1392,6 +1393,7 @@ export default function HomeClient({
           align-items: center;
           gap: 8px;
           padding: 10px 12px;
+          border: 1px solid transparent;
           border-radius: 10px;
           color: #183426;
           font-weight: 500;
@@ -1407,6 +1409,12 @@ export default function HomeClient({
         }
 
         .sign-in-link,
+        .join-button {
+          font-size: 14px;
+          line-height: 1.4;
+        }
+
+        .sign-in-link:not(.account-user),
         .join-button,
         .primary-hero-button,
         .secondary-hero-button,
@@ -1423,21 +1431,15 @@ export default function HomeClient({
             filter 170ms ease;
         }
 
-        .sign-in-link:hover {
+        .sign-in-link:not(.account-user):hover,
+        .join-button:hover {
           color: #176d35;
           background: #eef7f0;
+          border-color: #abc0b1;
           transform: translateY(-1px);
         }
 
-        .join-button:hover {
-          color: #fff;
-          background: #247d3c;
-          border-color: #247d3c;
-          box-shadow: 0 8px 18px rgba(31, 111, 53, 0.2);
-          transform: translateY(-2px);
-        }
-
-        .sign-in-link:focus-visible,
+        .sign-in-link:not(.account-user):focus-visible,
         .join-button:focus-visible,
         .primary-hero-button:focus-visible,
         .secondary-hero-button:focus-visible,
@@ -1448,7 +1450,7 @@ export default function HomeClient({
           outline-offset: 3px;
         }
 
-        .sign-in-link:active,
+        .sign-in-link:not(.account-user):active,
         .join-button:active,
         .primary-hero-button:active,
         .secondary-hero-button:active,
@@ -2381,6 +2383,10 @@ export default function HomeClient({
           min-width: 0;
         }
 
+        .shop-category-section {
+          margin-top: 48px;
+        }
+
         .section-head {
           display: flex;
           justify-content: space-between;
@@ -2785,12 +2791,6 @@ export default function HomeClient({
         }
 
         .product-info h3 {
-          font-size: 16px;
-          line-height: 1.32;
-          margin-bottom: 8px;
-        }
-
-        .split-section .product-info h3 {
           display: -webkit-box;
           min-height: 2.7em;
           margin-bottom: 10px;
@@ -2810,15 +2810,9 @@ export default function HomeClient({
           margin-bottom: 8px;
         }
 
-        .split-section .product-price {
-          margin: 0;
-          font-size: 14px;
-          line-height: 1.3;
-        }
-
         .product-unit,
-        .split-section .product-vendor,
-        .split-section .verified-label {
+        .product-vendor,
+        .product-info .verified-label {
           font-size: 12px;
         }
 
@@ -2845,10 +2839,11 @@ export default function HomeClient({
         }
 
         .product-price {
-          font-size: 18px;
+          font-size: 14px;
           font-weight: 700;
           color: #173326;
-          margin: 0 0 4px;
+          line-height: 1.3;
+          margin: 0;
         }
 
         .product-price span,
@@ -3202,16 +3197,6 @@ export default function HomeClient({
           min-height: 134px;
         }
 
-        .compact-product-card .product-info h3 {
-          display: -webkit-box;
-          min-height: 2.7em;
-          overflow: hidden;
-          font-size: 15px;
-          line-height: 1.35;
-          -webkit-box-orient: vertical;
-          -webkit-line-clamp: 2;
-        }
-
         @media (max-width: 1220px) {
           .menu-categories-button {
             width: 220px;
@@ -3265,6 +3250,10 @@ export default function HomeClient({
         }
 
         @media (max-width: 980px) {
+          .shop-category-section {
+            margin-top: 32px;
+          }
+
           .market-shell {
             padding: 0 0 40px;
           }
