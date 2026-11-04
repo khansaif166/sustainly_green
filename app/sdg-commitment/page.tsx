@@ -56,7 +56,7 @@ const hubRoles = [
 
 export default function SdgCommitmentPage() {
   return (
-    <><Header /><main className="sdg-page">
+    <><Header /><main className="sdg-page app-page-surface">
       <section className="sdg-hero">
         <div className="sdg-hero-copy">
           <p className="sdg-eyebrow">The Hub of Sustainability</p>

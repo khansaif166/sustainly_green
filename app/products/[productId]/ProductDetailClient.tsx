@@ -51,7 +51,7 @@ export default function ProductDetailClient({
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-[#f7f9f8] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <main className="min-h-screen bg-[#f7f9f8] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 app-page-surface">
         <div className="mx-auto max-w-7xl">
           <Link
             href="/"

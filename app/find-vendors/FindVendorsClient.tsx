@@ -72,7 +72,7 @@ export default function FindVendorsClient({
     <>
       <Header />
 
-      <main className="max-w-full mx-auto px-6 py-12 space-y-8">
+      <main className="max-w-full mx-auto px-6 py-12 space-y-8 app-page-surface">
         {/* ================= HEADER ================= */}
         <section className="text-center space-y-3">
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">

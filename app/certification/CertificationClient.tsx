@@ -8,7 +8,7 @@ export default function CertificationClient() {
   return (
     <>
     <Header/>
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 app-page-surface">
 
       {/* ================= HERO ================= */}
       <section className="text-center py-16 px-6">

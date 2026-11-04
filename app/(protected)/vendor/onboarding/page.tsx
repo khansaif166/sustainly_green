@@ -4,7 +4,7 @@ import { OnboardingForm } from "./OnboardingForm";
 
 export default function VendorOnboardingPage() {
   return (
-    <main className="min-h-screen bg-[#fafbfc] py-12 px-4 md:py-20">
+    <main className="min-h-screen bg-[#fafbfc] py-12 px-4 md:py-20 app-page-surface">
       {/* Background Decor */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
         <div className="absolute -top-[10%] -right-[10%] w-[40%] h-[40%] bg-green-50 rounded-full blur-3xl opacity-50" />

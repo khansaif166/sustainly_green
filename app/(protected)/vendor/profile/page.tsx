@@ -380,7 +380,7 @@ export default function VendorProfilePage() {
   const companyInitial = (data.companyName || "V").slice(0, 1).toUpperCase();
 
   return (
-    <main className="max-w-full space-y-6 pb-16">
+    <main className="max-w-full space-y-6 pb-16 app-page-surface">
       <style>{`
         .vpf-hero{background:linear-gradient(135deg,#0a1a10 0%,#0f2318 60%,#0c1e13 100%);border-radius:22px;padding:24px 28px;position:relative;overflow:hidden}
         .vpf-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 400px 280px at 90% 50%,rgba(22,163,74,.18) 0%,transparent 65%);pointer-events:none}

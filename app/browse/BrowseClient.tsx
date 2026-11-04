@@ -1096,7 +1096,7 @@ export default function BrowsePage({
         }
       `}</style>
 
-      <div className={`bs-page${type === "Vendor" ? " bs-page-vendor" : ""}`}>
+      <div className={`app-page-surface bs-page${type === "Vendor" ? " bs-page-vendor" : ""}`}>
         <Header />
 
         {/* ── REDESIGNED HERO ── */}
@@ -1174,7 +1174,7 @@ export default function BrowsePage({
         <div className="bs-wrap">
           <Sidebar />
 
-          <main className="bs-main">
+          <main className="bs-main app-page-surface">
             <div ref={resultsTopRef} className="bs-results-anchor" />
 
             {/* Toolbar */}

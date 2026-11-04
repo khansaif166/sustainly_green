@@ -143,13 +143,13 @@ export default function VendorProfileClient({
 
   /* ── loading / not found ── */
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center app-page-surface">
       <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
     </div>
   );
 
   if (!vendor) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-gray-500">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-gray-500 app-page-surface">
       <FiPackage size={40} style={{ opacity: .3 }} />
       <p className="font-medium">Vendor not found</p>
       <Link href="/browse?type=vendor" className="text-green-600 text-sm font-semibold hover:underline">← Back to vendors</Link>
@@ -609,7 +609,7 @@ export default function VendorProfileClient({
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
-      <div className="vp-page">
+      <div className="vp-page app-page-surface">
         <Header />
 
         {/* ── HERO ── */}
@@ -777,7 +777,7 @@ export default function VendorProfileClient({
           </aside>
 
           {/* Main */}
-          <main className="vp-main">
+          <main className="vp-main app-page-surface">
 
             {(listing.productOfferings || listing.sustainability) && (
               <div className="vp-card">

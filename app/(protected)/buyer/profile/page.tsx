@@ -224,7 +224,7 @@ export default function BuyerProfilePage() {
   ];
 
   return (
-    <main className="max-w-full space-y-5 pb-16">
+    <main className="max-w-full space-y-5 pb-16 app-page-surface">
       <style>{`
         .prof-hero {
           background: linear-gradient(135deg, #0a1a10 0%, #0f2318 60%, #0c1e13 100%);

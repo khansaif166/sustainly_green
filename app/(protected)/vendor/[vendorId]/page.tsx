@@ -82,7 +82,7 @@ export default function VendorProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
+      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500 app-page-surface">
         Loading vendor profile…
       </div>
     );
@@ -90,14 +90,14 @@ export default function VendorProfilePage() {
 
   if (!vendor) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
+      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500 app-page-surface">
         Vendor not found
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-10">
+    <main className="min-h-screen bg-gray-50 px-4 py-10 app-page-surface">
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Header */}

@@ -11,7 +11,7 @@ export default function TermsClient() {
     <>
       <Header />
 
-      <main className="mx-auto w-full max-w-[100vw] overflow-x-hidden px-4 py-16 space-y-10">
+      <main className="mx-auto w-full max-w-[100vw] overflow-x-hidden px-4 py-16 space-y-10 app-page-surface">
        <Link
           href="/"
           className="

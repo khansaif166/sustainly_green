@@ -87,7 +87,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   if (checking) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="app-page-surface" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ width: 32, height: 32, border: "4px solid #dcfce7", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
@@ -149,14 +149,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         ))}
 
         <div className="al-divider" />
-        <button className="al-logout" onClick={logout}><LogOut size={15} />Logout</button>
+        <button className="al-logout app-account-control" onClick={logout}><LogOut size={15} />Logout</button>
       </nav>
 
       {/* User */}
       <div className="al-user">
         <div className="al-avatar">{initials}</div>
         <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{adminName}</p>
+          <p className="app-account-label" style={{ fontWeight: 700, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{adminName}</p>
           <p style={{ fontSize: 10.5, color: "rgba(255,255,255,.3)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{adminEmail}</p>
         </div>
       </div>
@@ -213,7 +213,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main */}
-      <main className="al-main">{children}</main>
+      <main className="al-main app-page-surface">{children}</main>
     </>
   );
 }

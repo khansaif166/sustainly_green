@@ -79,7 +79,7 @@ export function AuthShell({
   return (
     // Full-bleed: no outer frame or rounded card, the two panels fill the viewport.
     <div className="h-dvh w-full font-sans overflow-hidden selection:bg-[#059669] selection:text-white">
-      <main className="w-full h-full flex flex-col lg:flex-row bg-white overflow-hidden relative">
+      <main className="w-full h-full flex flex-col lg:flex-row bg-white overflow-hidden relative app-page-surface">
         {/* ================= LEFT BRAND PANEL ================= */}
         <div className="relative w-full lg:w-[50%] flex-shrink-0 bg-[#022c22] text-white overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-[#022c22] via-[#059669] to-[#a3e635] opacity-95 z-0" />

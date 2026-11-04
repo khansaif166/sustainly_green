@@ -127,7 +127,7 @@ export default function CertificationRequestClient() {
   return (
     <>
     <Header/>
-    <main className="max-w-3xl mx-auto py-14 px-6">
+    <main className="max-w-3xl mx-auto py-14 px-6 app-page-surface">
 
       <h1 className="text-3xl font-semibold text-[var(--color-text-primary)] mb-2">
         Certification Request

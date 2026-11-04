@@ -192,7 +192,7 @@ export default function EsgDeliveryDeskPage() {
       </Head>
 
       <Header />
-      <main className="esg-page">
+      <main className="esg-page app-page-surface">
 
         {/* ===== ANIMATED HERO ===== */}
         <section className="esg-hero">

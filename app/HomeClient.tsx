@@ -512,7 +512,7 @@ export default function HomeClient({
   }
 
   return (
-    <main className="market-home">
+    <main className="market-home app-page-surface">
       <div className="market-shell">
         <header className="market-header">
           <div className="utility-bar">
@@ -532,11 +532,11 @@ export default function HomeClient({
 
             <div className="mobile-menu-slot">
               {!authLoading && profile ? (
-                <Link href={dashboardLink} className="mobile-auth-link mobile-auth-link-strong">
+                <Link href={dashboardLink} className="mobile-auth-link mobile-auth-link-strong app-account-control">
                   Dashboard
                 </Link>
               ) : (
-                <Link href="/login" className="mobile-auth-link">
+                <Link href="/login" className="mobile-auth-link app-account-control">
                   <UserRound size={15} />
                   Sign In
                 </Link>
@@ -583,24 +583,24 @@ export default function HomeClient({
             <div className="account-actions">
               {!authLoading && profile ? (
                 <>
-                  <span className="sign-in-link account-user">
+                  <span className="sign-in-link account-user app-account-label">
                     <UserRound size={18} />
                     Hi, {profile.name || "User"}
                   </span>
-                  <Link href={dashboardLink} className="join-button">
+                  <Link href={dashboardLink} className="join-button app-account-control">
                     Dashboard
                   </Link>
-                  <button type="button" className="sign-in-link" onClick={handleLogout}>
+                  <button type="button" className="sign-in-link app-account-control" onClick={handleLogout}>
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="sign-in-link">
+                  <Link href="/login" className="sign-in-link app-account-control">
                     <UserRound size={18} />
                     Sign In
                   </Link>
-                  <Link href="/register?role=BUYER" className="join-button">
+                  <Link href="/register?role=BUYER" className="join-button app-account-control">
                     Join Free
                   </Link>
                 </>
@@ -627,12 +627,12 @@ export default function HomeClient({
             <div className="mobile-menu-auth">
               {!authLoading && profile ? (
                 <>
-                  <Link href={dashboardLink} className="mobile-menu-auth-primary" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href={dashboardLink} className="mobile-menu-auth-primary app-account-control" onClick={() => setMobileMenuOpen(false)}>
                     Dashboard
                   </Link>
                   <button
                     type="button"
-                    className="mobile-menu-auth-secondary"
+                    className="mobile-menu-auth-secondary app-account-control"
                     onClick={() => {
                       void handleLogout();
                       setMobileMenuOpen(false);
@@ -643,13 +643,13 @@ export default function HomeClient({
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="mobile-menu-auth-secondary" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/login" className="mobile-menu-auth-secondary app-account-control" onClick={() => setMobileMenuOpen(false)}>
                     Login
                   </Link>
-                  <Link href="/register?role=BUYER" className="mobile-menu-auth-primary" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/register?role=BUYER" className="mobile-menu-auth-primary app-account-control" onClick={() => setMobileMenuOpen(false)}>
                     Sign up
                   </Link>
-                  <Link href="/register?role=VENDOR" className="mobile-menu-auth-secondary" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/register?role=VENDOR" className="mobile-menu-auth-secondary app-account-control" onClick={() => setMobileMenuOpen(false)}>
                     List Business
                   </Link>
                 </>
@@ -679,7 +679,7 @@ export default function HomeClient({
             <div className="sidebar-cta">
               <p className="sidebar-cta-label">New to SustainlyGreen?</p>
               <p>Join our network of sustainable businesses worldwide.</p>
-              <Link href="/register?role=VENDOR" className="sidebar-cta-button">
+              <Link href="/register?role=VENDOR" className="sidebar-cta-button app-account-control">
                 Join Free
               </Link>
             </div>
@@ -1408,14 +1408,6 @@ export default function HomeClient({
           background: #fff;
         }
 
-        .sign-in-link,
-        .join-button {
-          font-size: 14px;
-          line-height: 1.4;
-        }
-
-        .sign-in-link:not(.account-user),
-        .join-button,
         .primary-hero-button,
         .secondary-hero-button,
         .sidebar-cta-button,
@@ -1431,16 +1423,6 @@ export default function HomeClient({
             filter 170ms ease;
         }
 
-        .sign-in-link:not(.account-user):hover,
-        .join-button:hover {
-          color: #176d35;
-          background: #eef7f0;
-          border-color: #abc0b1;
-          transform: translateY(-1px);
-        }
-
-        .sign-in-link:not(.account-user):focus-visible,
-        .join-button:focus-visible,
         .primary-hero-button:focus-visible,
         .secondary-hero-button:focus-visible,
         .sidebar-cta-button:focus-visible,
@@ -1450,8 +1432,6 @@ export default function HomeClient({
           outline-offset: 3px;
         }
 
-        .sign-in-link:not(.account-user):active,
-        .join-button:active,
         .primary-hero-button:active,
         .secondary-hero-button:active,
         .sidebar-cta-button:active,
@@ -1815,14 +1795,7 @@ export default function HomeClient({
           border-radius: 6px;
           background: linear-gradient(180deg, #2a8a43, #1f6f35);
           color: #fff;
-          font-size: 13px;
           font-weight: 700;
-        }
-
-        .sidebar-cta .sidebar-cta-button:hover {
-          filter: brightness(0.9);
-          box-shadow: 0 8px 16px rgba(31, 111, 53, 0.24);
-          transform: translateY(-2px);
         }
 
         .hero-stack {
