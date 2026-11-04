@@ -81,7 +81,7 @@ export default function VendorProductsPage() {
         .vp-err{background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:12px 16px;font-size:13px;color:#991b1b;font-weight:500}
       `}</style>
 
-      <div className="vp-page">
+      <div className="vp-page app-page-surface">
         {error && <div className="vp-err">{error}</div>}
 
         {/* Hero */}

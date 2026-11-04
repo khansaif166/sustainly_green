@@ -648,14 +648,21 @@ export async function searchSuggestions(
   };
 }
 
-export async function fetchActiveCategories(limit = 100): Promise<PublicCategory[]> {
+export async function fetchActiveCategories(limit: number | "all" = 100): Promise<PublicCategory[]> {
   const params = new URLSearchParams({
     select: "id,name,slug,image_url,active,sort_order",
     active: "eq.true",
-    order: "sort_order.asc.nullslast,name.asc",
-    limit: String(limit),
+    order: "sort_order.asc.nullslast,name.asc,id.asc",
+    limit: String(limit === "all" ? 1000 : limit),
   });
-  const rows = await supabaseGet<SupabaseCategoryRow[]>(`categories?${params}`);
+  const rows: SupabaseCategoryRow[] = [];
+  do {
+    if (limit === "all") params.set("offset", String(rows.length));
+    const page = await supabaseGet<SupabaseCategoryRow[]>(`categories?${params}`);
+    rows.push(...page);
+    // Continue until empty so a server-side response cap cannot truncate the list.
+    if (limit !== "all" || page.length === 0) break;
+  } while (true);
   return rows.map(mapCategory);
 }
 

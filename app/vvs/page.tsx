@@ -93,7 +93,7 @@ export default function VendorVerificationPage() {
       </Head>
 
       <Header />
-      <main className="vvs-page">
+      <main className="vvs-page app-page-surface">
 
         {/* ===== REDESIGNED HERO (LIGHT THEME) ===== */}
         <section className="vvs-custom-hero">

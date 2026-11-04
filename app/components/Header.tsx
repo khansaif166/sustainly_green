@@ -285,27 +285,27 @@ export default function Header() {
               <span className="nbtn nbtn-ghost hidden md:flex">Checking...</span>
             ) : !authUser ? (
               <>
-                <Link href="/login" className="nbtn nbtn-ghost">
+                <Link href="/login" className="nbtn nbtn-ghost app-account-control">
                   Login
                 </Link>
                 <Link
                   href="/register?role=VENDOR"
-                  className="nbtn nbtn-outline"
+                  className="nbtn nbtn-outline app-account-control"
                 >
                   List Business
                 </Link>
-                <Link href="/register?role=BUYER" className="nbtn nbtn-green">
+                <Link href="/register?role=BUYER" className="nbtn nbtn-green app-account-control">
                   Start Sourcing
                 </Link>
               </>
             ) : (
               <>
-                <span className="nbtn nbtn-ghost hidden md:flex">
+                <span className="nbtn hidden md:flex app-account-label">
                   Hi, {profile?.name || "User"}
                 </span>
                 <button
                   onClick={() => router.push(dashboardLink)}
-                  className="nbtn nbtn-outline"
+                  className="nbtn nbtn-outline app-account-control"
                 >
                   Dashboard
                 </button>
@@ -316,7 +316,7 @@ export default function Header() {
                     setProfile(null);
                     router.push("/");
                   }}
-                  className="nbtn nbtn-ghost text-red-600 border-none  hidden md:flex"
+                  className="nbtn nbtn-ghost text-red-600 border-none hidden md:flex app-account-control"
                 >
                   Logout
                 </button>
@@ -342,21 +342,21 @@ export default function Header() {
                   <Link
                     href="/login"
                     onClick={() => setOpenMobile(false)}
-                    className="py-2.5 rounded-xl border text-center font-medium"
+                    className="py-2.5 rounded-xl border text-center font-medium app-account-control"
                   >
                     Login
                   </Link>
                   <Link
                     href="/register?role=VENDOR"
                     onClick={() => setOpenMobile(false)}
-                    className="py-2.5 rounded-xl border border-[var(--g)] text-[var(--g2)] text-center font-medium"
+                    className="py-2.5 rounded-xl border border-[var(--g)] text-[var(--g2)] text-center font-medium app-account-control"
                   >
                     List Business
                   </Link>
                   <Link
                     href="/register?role=BUYER"
                     onClick={() => setOpenMobile(false)}
-                    className="py-2.5 rounded-xl bg-[var(--g)] text-white text-center font-medium"
+                    className="py-2.5 rounded-xl bg-[var(--g)] text-white text-center font-medium app-account-control"
                   >
                     Start Sourcing
                   </Link>
@@ -369,11 +369,11 @@ export default function Header() {
 
               {!loadingUser && authUser && (
                 <>
-                  <p className="font-semibold text-gray-800">
+                  <p className="font-semibold text-gray-800 app-account-label">
                     Hi, {profile?.name || "User"}
                   </p>
                   <button
-                    className="text-left font-medium text-gray-700"
+                    className="text-left font-medium text-gray-700 app-account-control"
                     onClick={() => {
                       setOpenMobile(false);
                       router.push(dashboardLink);
@@ -389,7 +389,7 @@ export default function Header() {
                       setOpenMobile(false);
                       router.push("/");
                     }}
-                    className="text-red-600 font-medium text-left"
+                    className="text-red-600 font-medium text-left app-account-control"
                   >
                     Logout
                   </button>

@@ -436,7 +436,7 @@ export default function CategoriesClient({
         .cats-empty p { font-size: 14px; margin: 0; }
       `}</style>
 
-      <div className="cats-page">
+      <div className="cats-page app-page-surface">
         <Header />
 
         {/* ── HERO ── */}
@@ -487,7 +487,8 @@ export default function CategoriesClient({
                 textDecoration: "none",
               }}
             >
-              <FiGrid size={13} /> Browse All Products &amp; Vendors
+              <FiGrid size={13} />
+              <span>Browse All Products &amp; Vendors</span>
             </Link>
           </div>
 

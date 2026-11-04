@@ -15,7 +15,7 @@ export default function PrivacyPolicyPage() {
   return (
     <>
     <Header />
-    <main className="bg-[var(--color-bg-soft)] py-16 px-4">
+    <main className="bg-[var(--color-bg-soft)] py-16 px-4 app-page-surface">
          <Link
           href="/"
           className="

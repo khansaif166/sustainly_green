@@ -34,7 +34,7 @@ export default function ContactClient() {
   return (
     <>
       <Header />
-      <main className="max-w-full mx-auto px-6 py-20 space-y-14">
+      <main className="max-w-full mx-auto px-6 py-20 space-y-14 app-page-surface">
         {/* ================= HERO ================= */}
 
         <section

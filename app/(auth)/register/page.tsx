@@ -78,7 +78,7 @@ function isExistingAccountError(err: unknown) {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-gray-50" />}>
+    <Suspense fallback={<main className="min-h-screen bg-gray-50 app-page-surface" />}>
       <RegisterForm />
     </Suspense>
   );

@@ -30,7 +30,7 @@ export default function HelpClient() {
     <>
       <Header />
 
-      <main className="max-w-full mx-auto px-6 py-14 space-y-16">
+      <main className="max-w-full mx-auto px-6 py-14 space-y-16 app-page-surface">
         {/* ================= HERO ================= */}
         <section className="text-center space-y-4 max-w-3xl mx-auto">
           <h1 className="text-3xl md:text-4xl font-semibold text-[var(--color-text-primary)]">

@@ -10,7 +10,7 @@ export default function AboutClient() {
     <>
       <Header />
 
-      <main className="max-w-full mx-auto px-6 py-16 space-y-16">
+      <main className="max-w-full mx-auto px-6 py-16 space-y-16 app-page-surface">
         {/* ================= HERO ================= */}
         <section
           className="relative text-center max-w-full mx-auto space-y-4 py-16 px-4 rounded-3xl overflow-hidden"

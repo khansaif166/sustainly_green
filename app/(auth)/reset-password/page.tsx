@@ -100,9 +100,9 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-6 py-10">
+    <main className="min-h-screen bg-gray-50 px-6 py-10 app-page-surface">
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md flex-col justify-center">
-        <Link href="/login" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-black">
+        <Link href="/login" className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-black app-account-control">
           <ArrowLeft size={16} />
           Back to login
         </Link>

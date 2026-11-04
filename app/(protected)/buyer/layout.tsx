@@ -50,7 +50,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
 
   if (checkingAuth) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center app-page-surface">
         <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
       </div>
     );
@@ -59,7 +59,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
   const avatarLetter = (userName[0] || "B").toUpperCase();
 
   const Sidebar = ({ onNav }: { onNav?: () => void }) => (
-    <div className="flex flex-col h-full">
+    <div className="bl-sidebar-body flex flex-col h-full">
       {/* Brand */}
       <div className="px-5 pt-6 pb-5">
         <Link href="/" aria-label="Go to Sustainly Green homepage" className="inline-flex flex-col items-start gap-2 no-underline">
@@ -102,11 +102,11 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
             {avatarLetter}
           </div>
           <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: 12.5, fontWeight: 700, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</p>
+            <p className="app-account-label" style={{ fontWeight: 700, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</p>
             <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userEmail}</p>
           </div>
         </div>
-        <button onClick={logout} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, border: "none", background: "rgba(248,113,113,0.1)", color: "#fca5a5", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "background .15s" }}>
+        <button className="bl-logout app-account-control" onClick={logout} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, border: "none", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
           <LogOut size={14} />Logout
         </button>
       </div>
@@ -124,6 +124,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
           display: flex; flex-direction: column;
         }
         @media (max-width: 767px) { .bl-sidebar { display: none; } }
+        .bl-logout { background: rgba(248,113,113,0.1); color: #fca5a5; }
         .bl-content { flex: 1; overflow-y: auto; background: #f3f5f4; }
         .bl-content input,
         .bl-content select,
@@ -149,8 +150,10 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         .bl-mobile-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
         .bl-mobile-drawer {
           width: 240px; height: 100%; position: relative; z-index: 1;
+          display: flex; flex-direction: column; overflow-y: auto;
           background: linear-gradient(170deg, #0a1a10 0%, #0d2218 55%, #0b1e14 100%);
         }
+        .bl-mobile-drawer .bl-sidebar-body { height: auto; flex: 1; min-height: 0; }
       `}</style>
 
       <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
@@ -188,7 +191,7 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
             </div>
           </header>
 
-          <div className="bl-content">
+          <div className="bl-content app-page-surface">
             <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 24px 60px" }}>
               {children}
             </div>

@@ -4,6 +4,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --app-page-background: #ffffff;
+  --app-account-font-size: 14px;
+  --app-account-hover-background: #eef7f0;
+  --app-account-hover-color: #176d35;
 
   /* ================= BRAND CORE ================= */
   --color-primary-green: #0b6e4f;
@@ -252,6 +256,43 @@ html, body {
 .nbtn-green:hover { background: var(--g2); }
 .nbtn-outline { background: transparent; color: var(--g2); border: 1.5px solid var(--g); }
 .nbtn-outline:hover { background: #EBF9F0; }
+
+/* Explicit opt-ins preserve coloured sections, form buttons, and local sizing.
+   Repeated classes take precedence over component styles without !important. */
+.app-page-surface.app-page-surface {
+  background-color: var(--app-page-background);
+  background-image: none;
+}
+.app-account-control.app-account-control,
+.app-account-label.app-account-label {
+  font-size: var(--app-account-font-size);
+  line-height: 1.4;
+}
+.app-account-control.app-account-control {
+  cursor: pointer;
+  transition: color 170ms ease, background-color 170ms ease,
+    border-color 170ms ease, box-shadow 170ms ease, transform 170ms ease;
+}
+.app-account-control.app-account-control:hover {
+  color: var(--app-account-hover-color);
+  background-color: var(--app-account-hover-background);
+  background-image: none;
+  border-color: #abc0b1;
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+.app-account-control.app-account-control:focus-visible {
+  outline: 3px solid rgba(45, 135, 70, 0.28);
+  outline-offset: 3px;
+}
+.app-account-control.app-account-control:active {
+  transform: translateY(0) scale(0.98);
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-account-control.app-account-control { transition: none; }
+  .app-account-control.app-account-control:hover,
+  .app-account-control.app-account-control:active { transform: none; }
+}
 
 /* ═══════════════════════════════════════
    HERO — Full bleed dark, Apple cinematic

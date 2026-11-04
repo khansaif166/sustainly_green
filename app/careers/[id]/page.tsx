@@ -148,7 +148,7 @@ export default async function JobDetailPage({ params }: JobPageProps) {
         }}
       />
       <Header />
-      <main className="max-w-7xl mx-auto px-6 py-14 space-y-10">
+      <main className="max-w-7xl mx-auto px-6 py-14 space-y-10 app-page-surface">
         <Link
           href="/careers"
           className="

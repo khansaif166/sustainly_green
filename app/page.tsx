@@ -154,14 +154,12 @@ function categoryIcon(category: { id: string; name: string }, index: number) {
   return sidebarCategories[index % sidebarCategories.length]?.icon || "sun";
 }
 
-// Same three fetch calls, same args, same error handling (empty catch) as
-// the original client-side loadHomepageData effect — only relocated to
-// run server-side, and using "fallback when empty" instead of
-// "static-default-then-maybe-overwritten".
+// Load homepage data on the server, retaining fallback content on empty/error.
+// The search dropdown needs every active category; visual previews stay limited.
 const getHomepageData = cache(async () => {
   let initialCategories: CategoryItem[] = sidebarCategories;
   try {
-    const categories = await fetchActiveCategories(10);
+    const categories = await fetchActiveCategories("all");
 
     if (categories.length > 0) {
       initialCategories = categories.map((item, index) => ({

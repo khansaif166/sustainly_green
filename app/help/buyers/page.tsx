@@ -20,7 +20,7 @@ const faqs = [
 ];
 
 export default function BuyerFaqPage() {
-  return <><Header /><main className="faq-page"><div className="faq-shell">
+  return <><Header /><main className="faq-page app-page-surface"><div className="faq-shell">
     <Link href="/resources" className="faq-back"><ArrowLeft size={15} />Resources</Link>
     <p className="faq-kicker">Buyer support</p><h1>Buyer FAQs</h1>
     <p className="faq-intro">Answers about sourcing, vendors, quotations and buyer marketplace workflows.</p>
