@@ -22,6 +22,7 @@ import {
 } from "@/lib/supabaseAuth";
 import { getVendorBadgeMeta } from "@/lib/vendorBadges";
 import Footer from "./components/layouts/Footer";
+import CategorySelect from "./components/CategorySelect";
 import {
   ArrowRight,
   BadgeCheck,
@@ -563,18 +564,13 @@ export default function HomeClient({
                 }}
                 placeholder="Search eco-friendly products, suppliers, categories..."
               />
-              <select
-                value={selectedCategory}
-                onChange={(event) => setSelectedCategory(event.target.value)}
-                aria-label="Search category"
-              >
-                <option value="">All Categories</option>
-                {categoryOptions.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+              <div className="search-category-control">
+                <CategorySelect
+                  value={selectedCategory}
+                  onChange={setSelectedCategory}
+                  options={categoryOptions.map((category) => ({ value: category.id, label: category.name }))}
+                />
+              </div>
               <button type="button" className="search-button" onClick={runSearch}>
                 <Search size={18} />
               </button>
@@ -1339,12 +1335,12 @@ export default function HomeClient({
           color: #6e8578;
         }
 
-        .search-bar input,
-        .search-bar select {
+        .search-bar input {
           border: 0;
-          background: transparent;
+          background-color: transparent;
           outline: 0;
           font: inherit;
+          font-size: 14px;
           color: #1a3427;
           min-width: 0;
         }
@@ -1353,12 +1349,13 @@ export default function HomeClient({
           padding: 0 14px;
         }
 
-        .search-bar select {
+        .search-category-control {
           display: none;
+          width: 160px;
           border-left: 1px solid #e1e8e3;
-          padding: 0 16px;
-          min-height: 48px;
+          height: 48px;
           color: #2e4a3b;
+          --category-select-padding-left: 16px;
         }
 
         .search-button {
@@ -1606,10 +1603,10 @@ export default function HomeClient({
             flex: initial;
             width: auto;
             max-width: 100%;
-            grid-template-columns: auto minmax(0, 1fr) auto auto;
+            grid-template-columns: auto minmax(0, 1fr) 160px 52px;
           }
 
-          .search-bar select {
+          .search-category-control {
             display: block;
           }
 
@@ -1623,6 +1620,17 @@ export default function HomeClient({
 
           .mobile-menu-toggle {
             display: none;
+          }
+        }
+
+        @media (min-width: 981px) and (max-width: 1279px) {
+          .header-main {
+            grid-template-columns: minmax(0, 1fr) auto;
+          }
+
+          .search-bar {
+            grid-column: 1 / -1;
+            grid-row: 2;
           }
         }
 
@@ -2357,7 +2365,7 @@ export default function HomeClient({
         }
 
         .shop-category-section {
-          margin-top: 48px;
+          margin-top: 64px;
         }
 
         .section-head {
@@ -3224,7 +3232,7 @@ export default function HomeClient({
 
         @media (max-width: 980px) {
           .shop-category-section {
-            margin-top: 32px;
+            margin-top: 40px;
           }
 
           .market-shell {
@@ -3267,7 +3275,7 @@ export default function HomeClient({
             min-height: 44px;
           }
 
-          .search-bar select {
+          .search-category-control {
             display: none;
           }
 
@@ -3500,7 +3508,7 @@ export default function HomeClient({
             transform-origin: center top;
           }
 
-          .search-bar select {
+          .search-category-control {
             display: none;
           }
 

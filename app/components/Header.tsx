@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import CategorySelect from "./CategorySelect";
 import { productHref, vendorHref } from "@/lib/slug";
 import {
   Bell,
@@ -205,18 +206,13 @@ export default function Header() {
           </Link>
 
           <div className="nav-search relative hidden xl:flex">
-            <select
-              className="hs-cat bg-transparent border-none outline-none cursor-pointer"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-            >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
+            <div className="nav-category-control">
+              <CategorySelect
+                value={selectedCategory}
+                onChange={setSelectedCategory}
+                options={categories.map((category) => ({ value: category.id, label: category.title }))}
+              />
+            </div>
             <input
               type="text"
               value={queryText}
