@@ -19,6 +19,7 @@ type SupabaseVendorRow = {
   claim_status: "UNCLAIMED" | "CLAIM_REQUESTED" | "CLAIMED" | "REJECTED" | null;
   listing_verified: boolean | null;
   public_contact: Record<string, unknown> | null;
+  products?: Array<{ count: number }> | null; // <-- ADD THIS
 };
 
 type SupabaseCategoryRow = {
@@ -100,6 +101,7 @@ export type PublicVendor = {
   isClaimRequested: boolean;
   publicContact?: Record<string, unknown>;
   logoText: string;
+  productCount?: number;
 };
 
 export type PublicCategory = {
@@ -194,6 +196,7 @@ const VENDOR_SELECT = [
   "claim_status",
   "listing_verified",
   "public_contact",
+  "products(count)",
 ].join(",");
 
 const PRODUCT_SELECT = [
@@ -330,6 +333,7 @@ function mapVendor(row: SupabaseVendorRow): PublicVendor {
     isClaimRequested: claimStatus === "CLAIM_REQUESTED",
     publicContact: row.public_contact || undefined,
     logoText: initials(companyName),
+    productCount: row.products?.[0]?.count || 0,
   };
 }
 
@@ -449,6 +453,7 @@ export type VendorPageQuery = {
   badge?: string;
   location?: string;
   sort?: string;
+  claimStatus?: string;
 };
 
 export type ProductPageQuery = {
@@ -550,7 +555,13 @@ export async function fetchApprovedVendorsPage(
       ? "eco_score.desc.nullslast,company_name.asc,id.asc"
       : "company_name.asc,id.asc",
   });
+  
   if (conditions.length) params.set("and", `(${conditions.join(",")})`);
+  
+  // <-- ADD THIS BLOCK -->
+  if (query.claimStatus && query.claimStatus !== "ALL") {
+    params.set("claim_status", `eq.${query.claimStatus}`);
+  }
 
   const result = await fetchClampedPage<SupabaseVendorRow>(`vendors?${params}`, page, pageSize);
   return { ...result, items: result.items.map(mapVendor) };

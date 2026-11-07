@@ -18,9 +18,11 @@ import {
   FiSearch, FiX, FiArrowLeft, FiGrid, FiList, FiPackage, FiAward,
   FiTool, FiUsers, FiMapPin, FiFilter, FiChevronDown,
   FiChevronUp, FiRefreshCw, FiExternalLink, FiSliders,
-  FiHeart, FiCheckCircle, FiGlobe
+  FiHeart, FiCheckCircle, FiGlobe, FiMessageSquare, FiBookmark,
+  FiAlertTriangle, FiUser, FiLock, FiArrowUpRight // <-- Added these 4
 } from "react-icons/fi";
 import { HiOutlineSparkles, HiOutlineShieldCheck } from "react-icons/hi2";
+import { getValidSession } from "@/lib/supabaseAuth";
 
 /* ---------------- TYPES ---------------- */
 type Product = PublicProduct & {
@@ -29,7 +31,14 @@ type Product = PublicProduct & {
   certifications?: string[];
   tags?: string[];
 };
-type Vendor = PublicVendor & { GreenLensScore?: number };
+type Vendor = PublicVendor & { 
+  GreenLensScore?: number;
+  productCount?: number; 
+  yearOfIncorporation?: string;
+  city?: string;
+  country?: string;
+  profileCompleteness?: number;
+};
 type Category = { id: string; name: string; slug?: string; imageUrl?: string };
 interface FilterState { badge: string; location: string; sortBy: string; }
 const DEFAULT_SORT = "newest";
@@ -112,6 +121,7 @@ export default function BrowsePage({
     )?.id || category;
   const [loading, startNavigation] = useTransition();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const claimFilter = params.get("claim_status") || "ALL";
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState(search);
   const [localLocation, setLocalLocation] = useState(filters.location);
@@ -123,6 +133,23 @@ export default function BrowsePage({
   const currentPage = page;
   const [expanded, setExpanded] = useState({ type: true, category: true, eco: true, location: false, sort: true });
   const [rfqProduct, setRfqProduct] = useState<Product | null>(null);
+  // NEW: State for the Claim Login modal
+  const [claimLoginVendor, setClaimLoginVendor] = useState<Vendor | null>(null);
+
+  // NEW: Handler for the claim button
+  async function handleClaimClick(e: React.MouseEvent, v: Vendor) {
+    e.preventDefault();
+    e.stopPropagation();
+    const session = await getValidSession().catch(() => null);
+    
+    if (!session?.accessToken) {
+      // Not logged in -> Show Modal
+      setClaimLoginVendor(v);
+    } else {
+      // Logged in -> Go straight to the claim form on the profile page
+      router.push(vendorHref(v.id, v.slug) + "?claim=true");
+    }
+  }
 
   const vendorById = useMemo(
     () => new Map(vendorSummaries.map((vendor) => [vendor.id, vendor])),
@@ -375,6 +402,7 @@ export default function BrowsePage({
                 <HiOutlineSparkles size={11} /> {p.tags?.[0] || (p as any).tagNames?.[0] || "Reclaimed-material options"}
               </span>
             )}
+            
             {(p.approved || p.ecoVerified) && (
               <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 600, color: "#111" }}>
                 <FiCheckCircle color="#15803d" size={12} /> Verified supplier
@@ -387,7 +415,6 @@ export default function BrowsePage({
               </span>
             )}
           </div>
-
           {/* Certifications */}
           {(p.certifications || []).length > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #f3f4f6" }}>
@@ -485,96 +512,241 @@ export default function BrowsePage({
     );
   };
 
-  /* ---- Vendor Card ---- */
+/* ---- Vendor Card ---- */
   const logoInitials = (v: Vendor) => (typeof v.logoText === "string" && v.logoText.trim() ? v.logoText : (vt(v.companyName, "V").slice(0, 2) || "V")).toUpperCase();
 
-  const VendorCard = ({ v }: { v: Vendor }) => viewMode === "grid" ? (
-    <Link href={vendorHref(v.id, v.slug)} className="bs-card bs-vendor-card">
-      <div className="bs-vc-head">
-        <div className="bs-vc-logo">
-          {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 10 }} /> : logoInitials(v)}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 className="bs-vc-name">{vt(v.companyName, "Unnamed Vendor")}</h3>
-          {v.category && <p className="bs-vc-cat">{vt(v.category)}</p>}
-          {getVendorBadgeMeta(v) && (
-            <span className="bs-verified-pill">
-              <img src={getVendorBadgeMeta(v)?.src} alt="" />
-              {getVendorBadgeMeta(v)?.label}
+  const VendorCard = ({ v }: { v: Vendor }) => {
+    const isUnclaimed = v.claimStatus === 'UNCLAIMED' || v.isUnclaimed;
+    
+    // Calculate Years in Business
+    const currentYear = new Date().getFullYear();
+    const yib = v.yearOfIncorporation ? currentYear - parseInt(v.yearOfIncorporation) : null;
+
+    // Formatting Location
+    const locationParts = [v.city, v.state, v.country].filter(Boolean);
+    const locationString = locationParts.length > 0 ? locationParts.join(", ") : v.location || "Location not specified";
+
+    if (viewMode !== "grid") {
+      return (
+        /* --- LIST MODE --- */
+        <Link 
+          href={vendorHref(v.id, v.slug)} 
+          className="bs-row"
+          style={{
+            borderColor: isUnclaimed ? "#fcd34d" : "#bbf7d0",
+            background: "#fff",
+            padding: 0,
+            overflow: "hidden"
+          }}
+        >
+          {/* Vertical left color bar indicating status */}
+          <div style={{ width: "6px", background: isUnclaimed ? "#fcd34d" : "#10b981", flexShrink: 0 }} />
+          
+          <div style={{ display: "flex", gap: "16px", padding: "16px", width: "100%" }}>
+            <div className="bs-vc-logo" style={{ 
+              width: 64, height: 64, fontSize: 18, flexShrink: 0, borderRadius: 12, 
+              background: isUnclaimed ? "#fffbeb" : "#f0fdf4",
+              color: isUnclaimed ? "#b45309" : "#15803d",
+              border: `1px solid ${isUnclaimed ? "#fcd34d" : "#bbf7d0"}`
+            }}>
+              {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} /> : logoInitials(v)}
+            </div>
+            
+            <div className="bs-row-body" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <h3 className="bs-row-title" style={{ margin: 0 }}>{vt(v.companyName, "Unnamed Vendor")}</h3>
+                {isUnclaimed ? (
+                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#b45309", background: "#fef3c7", padding: "2px 6px", borderRadius: "4px", border: "1px solid #fcd34d" }}>
+                    <FiAlertTriangle size={10} style={{ marginRight: 3, verticalAlign: "middle" }}/>UNCLAIMED
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#065f46", background: "#a7f3d0", padding: "2px 6px", borderRadius: "4px" }}>
+                    <FiCheckCircle size={10} style={{ marginRight: 3, verticalAlign: "middle" }} />
+                    VERIFIED
+                  </span>
+                )}
+              </div>
+              
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
+                {v.category && <span><FiGrid size={11} style={{ marginRight: 4, verticalAlign: "middle" }}/>{vt(v.category)}</span>}
+                {locationString && <span><FiMapPin size={11} style={{ marginRight: 4, verticalAlign: "middle" }}/>{locationString}</span>}
+              </div>
+              
+              {v.description && <p className="bs-card-desc" style={{ margin: 0, color: "#4b5563" }}>{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 120)}…</p>}
+              
+              {(v.subCategories || []).length > 0 && (
+                <div className="bs-card-tags" style={{ marginTop: 8 }}>
+                  {v.subCategories!.slice(0, 3).map((item, i) => (
+                    <span key={i} className="bs-tag" style={isUnclaimed ? { background: "#fff", border: "1px solid #e5e7eb" } : {}}>{vt(item)}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="bs-row-right" style={{ justifyContent: "center", width: "160px" }}>
+              {isUnclaimed ? (
+                <button 
+                  onClick={(e) => { e.preventDefault(); handleClaimClick(e, v); }} 
+                  style={{ width: "100%", background: "#f59e0b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", marginBottom: "8px" }}
+                >
+                  Claim Profile
+                </button>
+              ) : (
+                <span className="bs-vc-trust" style={{ fontSize: "11px", marginBottom: "12px", textAlign: "right" }}>
+                  <FiCheckCircle size={12} /> Identity Checked
+                </span>
+              )}
+              <span style={{ width: "100%", display: "block", textAlign: "center", background: "#fff", color: "#374151", border: "1px solid #d1d5db", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700 }}>
+                View Profile
+              </span>
+            </div>
+          </div>
+        </Link>
+      );
+    }
+
+    // --- GRID MODE: UNCLAIMED CARD ---
+    if (isUnclaimed) {
+      return (
+        <div className="bs-vendor-card bs-vendor-card-unclaimed">
+          <div className="bs-vc-topbar bs-vc-topbar-unclaimed">
+            {/* <span className="bs-vc-topbar-left bs-vc-topbar-left-unclaimed">UNCLAIMED BUSINESS</span> */}
+            <span className="bs-vc-topbar-right bs-vc-topbar-right-unclaimed">
+              <FiAlertTriangle size={10} /> UNCLAIMED LISTING
             </span>
+          </div>
+
+          <div className="bs-vc-main">
+            <div className="bs-vc-header-row" style={{ alignItems: 'center' }}>
+              <div className="bs-vc-logo-box bs-vc-logo-box-unclaimed">
+                {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} /> : logoInitials(v)}
+              </div>
+              <div className="bs-vc-info">
+                <h3 style={{ fontSize: '18px' }}>{vt(v.companyName, "Unnamed Vendor")}</h3>
+                <div className="bs-vc-location">
+                  <FiMapPin size={12} /> {locationString}
+                </div>
+              </div>
+            </div>
+
+            <div className="bs-vc-unclaimed-trust">
+              <FiUser size={14} /> Unclaimed profile
+            </div>
+
+            {v.description && (
+              <p className="bs-vc-desc">{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 100)}…</p>
+            )}
+
+            {(v.subCategories || []).length > 0 && (
+              <div className="bs-vc-tags-row">
+                {v.subCategories!.slice(0, 3).map((item, i) => (
+                  <span key={`sub-${i}`} className="bs-vc-tag-pill bs-vc-tag-pill-unclaimed">{vt(item)}</span>
+                ))}
+              </div>
+            )}
+
+            <div className="bs-vc-locked-stats">
+              <span>Products: -- <span className="bs-vc-locked-hint">(Claim to edit)</span> <FiLock size={13} color="#9ca3af" /></span>
+              <span>Certifications: -- <FiLock size={13} color="#9ca3af" /></span>
+            </div>
+
+            <div style={{ marginTop: 'auto' }}>
+            <button onClick={(e) => handleClaimClick(e, v)} className="bs-btn-claim">
+    <u>Claim this business</u> <FiArrowUpRight size={16} />
+  </button>
+              <Link href={vendorHref(v.id, v.slug)} className="bs-btn-secondary-full">
+                View Profile
+              </Link>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- GRID MODE: VERIFIED CARD ---
+    return (
+      <div className="bs-vendor-card">
+       <div className="bs-vc-topbar">
+          <span className="bs-vc-topbar-left">VERIFIED BUSINESS</span>
+         
+        </div>
+
+        <div className="bs-vc-main">
+          <div className="bs-vc-header-row">
+            <div className="bs-vc-logo-box">
+              {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} /> : logoInitials(v)}
+            </div>
+            <div className="bs-vc-info">
+              <h3>{vt(v.companyName, "Unnamed Vendor")}</h3>
+              
+              <div className="bs-vc-location" style={{ marginBottom: "6px" }}>
+                <FiMapPin size={12} /> {locationString}
+              </div>
+              
+              {v.category && <span className="bs-vc-pill-cat">{vt(v.category)}</span>}
+            </div>
+          </div>
+
+          {v.approved && (
+            <div className="bs-vc-trust">
+              <FiCheckCircle size={14} /> GST & Address Verified
+            </div>
           )}
-        </div>
-        <span className="bs-vc-tier" style={badgeStyle(vendorBadge(v))}>{vendorBadgeLabel(v)}</span>
-      </div>
 
-      {v.description && <p className="bs-card-desc">{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 100)}…</p>}
+          {v.description && (
+            <p className="bs-vc-desc">{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 100)}…</p>
+          )}
 
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginTop: 8 }}>
-        {(typeof v.GreenLensScore === "number" || typeof v.GreenLensScore === "string") && (
-          <span className="bs-tag bs-tag-green"><HiOutlineShieldCheck size={10} />BL {vt(v.GreenLensScore)}/5</span>
-        )}
-        {(v.subCategories || []).slice(0, 3).map((item, i) => <span key={`sub-${i}`} className="bs-tag">{vt(item)}</span>)}
-        {(v.certifications || []).slice(0, 2).map((c, i) => <span key={i} className="bs-tag">{vt(c)}</span>)}
-      </div>
+          {(v.subCategories || []).length > 0 && (
+            <div className="bs-vc-tags-row">
+              {v.subCategories!.slice(0, 3).map((item, i) => (
+                <span key={`sub-${i}`} className="bs-vc-tag-pill">{vt(item)}</span>
+              ))}
+            </div>
+          )}
 
-      {typeof v.ecoScore === "number" && (
-        <div className="bs-vc-score">
-          <div className="bs-vc-score-row">
-            <span>Eco Score</span><span style={{ fontWeight: 700, color: "#16a34a" }}>{v.ecoScore}/100</span>
+          <div className="bs-vc-stats-grid">
+            <div className="bs-vc-stat-item">
+              <span className="bs-vc-stat-val">{v.productCount ? `${v.productCount}+` : '0'}</span>
+              <span className="bs-vc-stat-label">Active Products</span>
+            </div>
+            <div className="bs-vc-stat-item">
+              <span className="bs-vc-stat-val">{(v.certifications || []).length}</span>
+              <span className="bs-vc-stat-label">
+                Certifications 
+                {(v.certifications || []).length > 0 && ` (${v.certifications![0]})`}
+              </span>
+            </div>
+            <div className="bs-vc-stat-item">
+              <span className="bs-vc-stat-val">{yib ? `${yib}+` : '-'}</span>
+              <span className="bs-vc-stat-label">Yrs in Business</span>
+            </div>
           </div>
-          <div className="bs-vc-track"><div className="bs-vc-fill" style={{ width: `${v.ecoScore}%` }} /></div>
-        </div>
-      )}
 
-      {vendorWebsite(v.publicContact) && (
-        <p className="bs-vc-web"><FiGlobe size={11} /><span>{vendorWebsite(v.publicContact)?.label}</span></p>
-      )}
-
-      <div className="bs-vc-foot">
-        {(v.state || v.location) && <span className="bs-vc-loc"><FiMapPin size={11} />{vt(v.state || v.location)}</span>}
-        <span className="bs-view-cta">{v.isUnclaimed ? "View Listing" : "View Profile"} <FiExternalLink size={10} /></span>
-      </div>
-    </Link>
-  ) : (
-    <Link href={vendorHref(v.id, v.slug)} className="bs-row">
-      <div className="bs-vc-logo" style={{ width: 52, height: 52, fontSize: 16, flexShrink: 0, borderRadius: 12 }}>
-        {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} /> : logoInitials(v)}
-      </div>
-      <div className="bs-row-body">
-        <h3 className="bs-row-title">{vt(v.companyName, "Unnamed Vendor")}</h3>
-        {v.category && <p className="bs-card-vendor" style={{ marginBottom: 4 }}>{vt(v.category)}</p>}
-        {getVendorBadgeMeta(v) && (
-          <span className="bs-verified-pill bs-verified-pill-row">
-            <img src={getVendorBadgeMeta(v)?.src} alt="" />
-            {getVendorBadgeMeta(v)?.label}
-          </span>
-        )}
-        {(v.subCategories || []).length > 0 && (
-          <div className="bs-card-tags" style={{ marginTop: 6 }}>
-            {v.subCategories!.slice(0, 3).map((item, i) => <span key={i} className="bs-tag">{vt(item)}</span>)}
+          <div className="bs-vc-actions">
+            <button className="bs-btn-primary" onClick={(e) => { e.preventDefault(); }}>
+              <FiMessageSquare size={14} /> Send Inquiry
+            </button>
+            <Link href={vendorHref(v.id, v.slug)} className="bs-btn-secondary">
+              View Profile
+            </Link>
+            {/* <button className="bs-btn-icon" title="Save Vendor">
+              <FiBookmark size={14} />
+            </button> */}
           </div>
-        )}
-        {v.description && <p className="bs-card-desc">{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 110)}…</p>}
-        {vendorWebsite(v.publicContact) && (
-          <p className="bs-vc-web"><FiGlobe size={11} /><span>{vendorWebsite(v.publicContact)?.label}</span></p>
-        )}
+        </div>
       </div>
-      <div className="bs-row-right">
-        <span className="bs-vc-tier" style={badgeStyle(vendorBadge(v))}>{vendorBadgeLabel(v)}</span>
-        {(v.state || v.location) && <span className="bs-vc-loc"><FiMapPin size={11} />{vt(v.state || v.location)}</span>}
-        <span className="bs-view-cta">{v.isUnclaimed ? "View Listing" : "View Profile"} <FiExternalLink size={10} /></span>
-      </div>
-    </Link>
-  );
-
+    );
+  };
   const items = type === "Vendor" ? vendors : products;
   const isEmpty = !loading && items.length === 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(currentPage, totalPages);
-  const pageStart = (safePage - 1) * pageSize;
+ const pageStart = (safePage - 1) * pageSize;
   const pageEnd = pageStart + items.length;
   const visibleVendors = vendors;
   const visibleProducts = products;
+  
   const pageNumbers = useMemo(() => {
     const windowSize = 5;
     const halfWindow = Math.floor(windowSize / 2);
@@ -606,7 +778,7 @@ export default function BrowsePage({
   /* ============================================================ RENDER */
   return (
     <>
-      <style>{`
+<style>{`
         /* ── BASE ── */
         .bs-page { min-height: 100vh; background: #f6f7f5; max-width: 100%; overflow-x: hidden; }
 
@@ -649,7 +821,7 @@ export default function BrowsePage({
           flex-wrap: wrap; justify-content: flex-end;
           flex: 1 1 auto;
         }
-
+        
         .bs-back {
           display: inline-flex; align-items: center; gap: 6px;
           color: #6b7280; font-size: 13px; font-weight: 600;
@@ -747,17 +919,10 @@ export default function BrowsePage({
         }
         
         .promo-icon-bg {
-  position: absolute; 
-  bottom: 75px; 
-  right: 10px;
-  font-size: 58px; 
-  /* Increase opacity and set color to white to stand out against the gradients */
-  color: #ffffff;
-  z-index: 1;
-  transform: rotate(-10deg);
-  /* Optional: Add a soft drop shadow to make them pop even more */
-  filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.2)); 
-}
+          position: absolute; bottom: 75px; right: 10px;
+          font-size: 58px; color: #ffffff; z-index: 1; transform: rotate(-10deg);
+          filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.2)); 
+        }
         
         .promo-btn {
           margin-top: auto; position: relative; z-index: 2;
@@ -778,14 +943,10 @@ export default function BrowsePage({
 
         /* ── SIDEBAR ── */
         .bs-sidebar {
-          width: 228px; flex-shrink: 0;
-          background: #fff;
-          border: 1px solid rgba(0,0,0,0.08);
-          border-radius: 20px; padding: 18px;
-          position: sticky; top: 84px;
-          max-height: calc(100vh - 104px);
-          overflow-y: auto;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+          width: 228px; flex-shrink: 0; background: #fff;
+          border: 1px solid rgba(0,0,0,0.08); border-radius: 20px; padding: 18px;
+          position: sticky; top: 84px; max-height: calc(100vh - 104px);
+          overflow-y: auto; box-shadow: 0 2px 12px rgba(0,0,0,0.05);
         }
         @media (max-width:900px) {
           .bs-wrap > .bs-sidebar { display: none; }
@@ -796,8 +957,7 @@ export default function BrowsePage({
         }
         .bs-sb-head {
           display: flex; align-items: center; justify-content: space-between;
-          margin-bottom: 14px; padding-bottom: 12px;
-          border-bottom: 1px solid rgba(0,0,0,0.07);
+          margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.07);
         }
         .bs-badge {
           background: #16a34a; color: #fff; font-size: 10px;
@@ -852,8 +1012,7 @@ export default function BrowsePage({
         }
         @media (max-width:900px) { .bs-mobile-filter { display: flex; } }
         .bs-view-toggle {
-          display: flex; gap: 3px;
-          background: rgba(0,0,0,0.06); border-radius: 10px; padding: 3px;
+          display: flex; gap: 3px; background: rgba(0,0,0,0.06); border-radius: 10px; padding: 3px;
         }
         .bs-view-btn {
           width: 32px; height: 32px; border-radius: 7px; border: none;
@@ -937,10 +1096,8 @@ export default function BrowsePage({
 
         /* ── ROW ── */
         .bs-row {
-          position: relative;
-          background: #fff; border: 1px solid rgba(0,0,0,0.07);
-          border-radius: 16px; padding: 14px 16px;
-          display: flex; align-items: flex-start; gap: 14px;
+          position: relative; background: #fff; border: 1px solid rgba(0,0,0,0.07);
+          border-radius: 16px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 14px;
           text-decoration: none; transition: box-shadow .18s;
         }
         .bs-row:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
@@ -954,59 +1111,339 @@ export default function BrowsePage({
         .bs-row-title { font-size: 14px; font-weight: 700; color: #111; margin: 0 0 3px; }
         .bs-row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
 
-        /* ── VENDOR CARD ── */
-        .bs-vendor-card { gap: 0; min-height: 218px; position: relative; }
-        .bs-vc-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 16px 0; }
-        .bs-verified-pill {
+        /* ── VERIFIED VENDOR CARD REDESIGN ── */
+        .bs-vendor-card { 
+          gap: 0; 
+          position: relative; 
+          border: 1px solid #bbf7d0; /* Light green border */
+          border-radius: 12px;
+          background: #ffffff;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        .bs-vc-topbar {
+          background: #ecfdf5; /* Light green background */
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 6px 12px;
+          border-bottom: 1px solid #d1fae5;
+        }
+        .bs-vc-topbar-left {
+          font-size: 10px;
+          font-weight: 700;
+          color: #065f46;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .bs-vc-topbar-right {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: #a7f3d0;
+          color: #065f46;
+          font-size: 10px;
+          font-weight: 800;
+          padding: 4px 8px;
+          border-radius: 50px;
+          text-transform: uppercase;
+        }
+        .bs-vc-main {
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+        }
+        .bs-vc-header-row {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+        .bs-vc-logo-box {
+          width: 52px;
+          height: 52px;
+          border-radius: 8px;
+          background: #f0fdf4;
+          color: #15803d;
+          font-size: 18px;
+          font-weight: 800;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          border: 1px solid #bbf7d0;
+        }
+        .bs-vc-info h3 {
+          font-size: 16px;
+          font-weight: 800;
+          color: #111;
+          margin: 0 0 4px;
+          line-height: 1.2;
+        }
+        .bs-vc-pill-cat {
+          display: inline-block;
+          background: #ecfdf5;
+          color: #065f46;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 3px 8px;
+          border-radius: 6px;
+          margin-bottom: 4px;
+        }
+        .bs-vc-location {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: #4b5563;
+        }
+        .bs-vc-trust {
           display: inline-flex;
           align-items: center;
           gap: 5px;
-          width: fit-content;
-          margin-top: 7px;
-          padding: 3px 8px 3px 4px;
-          border-radius: 999px;
-          background: #ecfdf5;
-          color: #047857;
-          border: 1px solid rgba(4,120,87,.16);
-          font-size: 10px;
-          font-weight: 800;
-          line-height: 1;
+          font-size: 12px;
+          color: #15803d;
+          font-weight: 600;
+          margin-bottom: 8px;
         }
-        .bs-verified-pill img {
-          width: 16px;
-          height: 20px;
-          object-fit: cover;
-          border-radius: 3px;
-          flex-shrink: 0;
-        }
-        .bs-verified-pill-row { margin: 4px 0 2px; }
-        .bs-vendor-card .bs-card-desc { padding: 8px 16px 0; }
-        .bs-vendor-card .bs-card-tags { padding: 0 16px; margin-top: 10px; }
-        .bs-vc-logo {
-          width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
-          background: linear-gradient(135deg, #16a34a, #15803d);
-          color: #fff; font-size: 14px; font-weight: 800;
-          display: flex; align-items: center; justify-content: center;
+        .bs-vc-desc {
+          font-size: 12px;
+          color: #374151;
+          line-height: 1.5;
+          margin: 0 0 12px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        .bs-vc-name { font-size: 14px; font-weight: 700; color: #111; margin: 0 0 2px; }
-        .bs-vc-cat { font-size: 11px; color: #9ca3af; margin: 0; }
-        .bs-vc-tier {
-          font-size: 9.5px; font-weight: 800; letter-spacing: .06em;
-          padding: 3px 9px; border-radius: 50px; white-space: nowrap; flex-shrink: 0;
+        .bs-vc-tags-row {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-bottom: 16px;
         }
-        .bs-vc-score { padding: 10px 16px 0; }
-        .bs-vc-score-row { display: flex; justify-content: space-between; font-size: 11px; color: #9ca3af; margin-bottom: 5px; }
-        .bs-vc-track { height: 5px; background: #f3f4f6; border-radius: 50px; overflow: hidden; }
-        .bs-vc-fill { height: 100%; background: linear-gradient(90deg, #1db954, #16a34a); border-radius: 50px; transition: width .6s ease; }
-        .bs-vc-foot {
-          display: flex; align-items: center; justify-content: space-between;
-          margin: auto 16px 14px;
-          border-top: 1px solid rgba(0,0,0,0.06); padding-top: 10px;
+        .bs-vc-tag-pill {
+          background: #ecfdf5;
+          border: 1px solid #a7f3d0;
+          color: #065f46;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 50px;
         }
-        .bs-vc-loc { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #9ca3af; font-weight: 500; }
-        .bs-vc-web { display: flex; align-items: center; gap: 5px; margin: 8px 0 0; font-size: 12px; color: #15803d; font-weight: 600; min-width: 0; }
-        .bs-vc-web span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bs-vc-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+          text-align: center;
+          border-top: 1px solid #f3f4f6;
+          border-bottom: 1px solid #f3f4f6;
+          padding: 12px 0;
+          margin-bottom: 12px;
+        }
+        .bs-vc-stat-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          border-right: 1px solid #f3f4f6;
+        }
+        .bs-vc-stat-item:last-child {
+          border-right: none;
+        }
+        .bs-vc-stat-val {
+          font-size: 16px;
+          font-weight: 800;
+          color: #111;
+        }
+        .bs-vc-stat-label {
+          font-size: 10px;
+          color: #6b7280;
+          font-weight: 500;
+          margin-top: 2px;
+        }
+        .bs-vc-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: auto;
+        }
+        .bs-btn-primary {
+          flex: 1;
+          background: #14532d;
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          padding: 10px;
+          font-size: 12px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          cursor: pointer;
+          text-decoration: none;
+        }
+        .bs-btn-secondary {
+          flex: 1;
+          background: #ff9932;
+          color: #fff;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          padding: 10px;
+          font-size: 12px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          text-decoration: none;
+        }
+        .bs-btn-icon {
+          background: #fff;
+          color: #374151;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          width: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        /* ── UNCLAIMED VENDOR CARD COLORS ── */
+        .bs-vendor-card-unclaimed {
+          border-color: #fcd34d; /* Amber border */
+          background: #ffffff;
+        }
+        .bs-vc-topbar-unclaimed {
+          background: #fffbeb; /* Light amber background */
+          border-bottom: 1px solid #fcd34d;
+        }
+        .bs-vc-topbar-left-unclaimed {
+          color: #b45309; /* Amber text */
+        }
+        .bs-vc-topbar-right-unclaimed {
+          background: #fef3c7; /* Amber pill background */
+          color: #b45309; /* Amber text */
+          border: 1px solid #FFC7CE;
+        }
+        .bs-vc-logo-box-unclaimed {
+          background: #fffbeb;
+          color: #b45309;
+          border-color: #FFC7CE;
+        }
+        .bs-vc-unclaimed-trust {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          color: #b45309; /* Amber text */
+          background: #ffffff;
+          padding: 6px 12px;
+          border-radius: 50px;
+          font-weight: 600;
+          margin-bottom: 12px;
+          width: fit-content;
+          border: 1px solid #fcd34d; /* Amber border */
+        }
+        .bs-vc-tag-pill-unclaimed {
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          color: #374151;
+        }
+        .bs-vc-locked-stats {
+          font-size: 13px;
+          color: #111;
+          font-weight: 700;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        .bs-vc-locked-stats span {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .bs-vc-locked-hint {
+          color: #d97706; /* Amber text for (Claim to edit) */
+          font-weight: 600;
+        }
+        
+        /* ── BUTTON STYLES (Unclaimed) ── */
+        .bs-btn-claim {
+          background: #f59e0b; /* Bright amber/orange */
+          color: #ffffff;
+          border: none;
+          border-radius: 8px;
+          padding: 12px 10px;
+          font-size: 12px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          cursor: pointer;
+          text-decoration: none;
+          width: 100%;
+          margin-bottom: 8px;
+          transition: background 0.2s, transform 0.15s;
+        }
+        .bs-btn-claim:hover { 
+          background: #d97706; 
+          transform: translateY(-1px);
+        }
+        .bs-btn-secondary-full {
+          width: 100%;
+          background: #fff;
+          color: #374151; /* Default dark gray text */
+          border: 1px solid #d1d5db; /* Default gray border */
+          border-radius: 8px;
+          padding: 10px;
+          font-size: 12px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          text-decoration: none;
+          transition: background 0.2s;
+        }
+        .bs-btn-secondary-full:hover { background: #f9fafb; }
+
+        /* ── CLAIM LOGIN MODAL (BROWSE PAGE) ── */
+        .bs-modal-overlay {
+          position: fixed; inset: 0; z-index: 200;
+          background: rgba(5,15,10,0.7); backdrop-filter: blur(6px);
+          display: flex; align-items: center; justify-content: center; padding: 16px;
+        }
+        .bs-login-modal {
+          width: 100%; max-width: 440px; background: #fff; border-radius: 20px;
+          padding: 26px; gap: 18px; position: relative;
+          box-shadow: 0 32px 100px rgba(0,0,0,0.35); display: flex; flex-direction: column;
+        }
+        .bs-login-head { display: flex; gap: 14px; align-items: flex-start; }
+        .bs-login-icon {
+          width: 46px; height: 46px; border-radius: 14px; background: #f0fdf4;
+          color: #15803d; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .bs-login-title { margin: 0 0 6px; color: #111; font-size: 20px; font-weight: 800; line-height: 1.2; }
+        .bs-login-copy { margin: 0; color: #6b7280; font-size: 13.5px; line-height: 1.6; }
+        .bs-login-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+        .bs-login-btn {
+          display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+          min-height: 42px; padding: 0 18px; border-radius: 50px; font-size: 13px; font-weight: 800;
+          text-decoration: none; border: 1px solid rgba(0,0,0,0.1); cursor: pointer;
+        }
+        .bs-login-btn-primary { background: #16a34a; color: #fff; border-color: #16a34a; }
+        .bs-login-btn-secondary { background: #fff; color: #374151; }
+        .bs-login-close {
+          position: absolute; top: 14px; right: 14px; width: 32px; height: 32px;
+          border-radius: 50%; border: none; background: #f3f4f6; color: #6b7280;
+          display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .bs-login-close:hover { background: #e5e7eb; color: #111; }
 
         /* ── SKELETON ── */
         .bs-skel {
@@ -1094,7 +1531,7 @@ export default function BrowsePage({
           .bs-page-meta { text-align: center; }
           .bs-hero-right { margin: 0 -16px; padding: 0 16px 12px; }
         }
-      `}</style>
+      `}</style>        
 
       <div className={`app-page-surface bs-page${type === "Vendor" ? " bs-page-vendor" : ""}`}>
         <Header />
@@ -1205,6 +1642,32 @@ export default function BrowsePage({
               </div>
             )}
 
+            {/* --- MOVED CLAIM FILTER BAR HERE --- */}
+            {type === "Vendor" && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {['ALL', 'CLAIMED', 'UNCLAIMED'].map(status => (
+                  <button
+                    key={status}
+                    onClick={() => updateUrl("claim_status", status === "ALL" ? "" : status)}
+                    style={{
+                      padding: '6px 16px',
+                      borderRadius: '50px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      border: '1px solid ' + (claimFilter === status ? '#16a34a' : '#d1d5db'),
+                      background: claimFilter === status ? '#f0fdf4' : '#fff',
+                      color: claimFilter === status ? '#15803d' : '#4b5563',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {status === 'ALL' ? 'All Statuses' : status.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Skeleton */}
             {loading && (
               <div className={type === "Vendor" ? "bs-vendor-grid" : "bs-grid"}>
@@ -1234,6 +1697,7 @@ export default function BrowsePage({
               )
             )}
 
+            {/* Pagination */}
             {!loading && !isEmpty && totalPages > 1 && (
               <div className="bs-pagination" aria-label={`${type} pagination`}>
                 <p className="bs-page-meta">
@@ -1290,7 +1754,35 @@ export default function BrowsePage({
           vendorName={rfqProduct?.vendorName || ""}
           listingType={Array.isArray(rfqProduct?.listingType) ? rfqProduct.listingType[0] : rfqProduct?.listingType || ""}
         />
-
+{/* NEW CLAIM LOGIN MODAL */}
+        {claimLoginVendor && (
+          <div className="bs-modal-overlay" onClick={e => e.target === e.currentTarget && setClaimLoginVendor(null)}>
+            <div className="bs-login-modal" role="dialog" aria-modal="true" aria-label="Login required">
+              <button className="bs-login-close" onClick={() => setClaimLoginVendor(null)} aria-label="Close login prompt">
+                <FiX size={14} />
+              </button>
+              <div className="bs-login-head">
+                <div className="bs-login-icon">
+                  <FiLock size={20} />
+                </div>
+                <div>
+                  <h2 className="bs-login-title">Login required</h2>
+                  <p className="bs-login-copy">
+                    Please sign in to claim this business. We need an account so Sustainly can verify ownership and track the claim request.
+                  </p>
+                </div>
+              </div>
+              <div className="bs-login-actions">
+                <Link href={`/login?next=${encodeURIComponent(vendorHref(claimLoginVendor.id, claimLoginVendor.slug) + "?claim=true")}`} className="bs-login-btn bs-login-btn-primary">
+                  <FiUser size={14} />Login
+                </Link>
+                <Link href={`/register?next=${encodeURIComponent(vendorHref(claimLoginVendor.id, claimLoginVendor.slug) + "?claim=true")}`} className="bs-login-btn bs-login-btn-secondary">
+                  Create an account
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
         <Footer />
       </div>
     </>

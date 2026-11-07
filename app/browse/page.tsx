@@ -31,6 +31,7 @@ type BrowseQuery = {
   badge: string;
   loc: string;
   sort: string;
+  claimStatus: string;
 };
 
 function readQuery(values: Record<string, string | string[] | undefined>): BrowseQuery {
@@ -42,13 +43,14 @@ function readQuery(values: Record<string, string | string[] | undefined>): Brows
     badge: first(values.badge),
     loc: first(values.loc),
     sort: first(values.sort),
+    claimStatus: first(values.claim_status),
   };
 }
 
 // Only the rows on the requested page come back from the database, along
 // with the total count used to build the page links.
 const getBrowseData = cache(
-  async (typeValue: string, categoryValue: string, searchValue: string, page: number, badge: string, loc: string, sort: string) => {
+  async (typeValue: string, categoryValue: string, searchValue: string, page: number, badge: string, loc: string, sort: string, claimStatus: string) => {
     const type =
       typeValue.toLowerCase() === "vendor"
         ? "Vendor"
@@ -72,6 +74,7 @@ const getBrowseData = cache(
         badge,
         location: loc,
         sort,
+        claimStatus,
       }).catch(() => empty);
       return {
         type,
@@ -112,7 +115,7 @@ const getBrowseData = cache(
 );
 
 function loadBrowseData(query: BrowseQuery) {
-  return getBrowseData(query.type, query.category, query.q, query.page, query.badge, query.loc, query.sort);
+  return getBrowseData(query.type, query.category, query.q, query.page, query.badge, query.loc, query.sort, query.claimStatus);
 }
 
 function pageNumber(value: string) {
