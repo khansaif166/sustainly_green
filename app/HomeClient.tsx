@@ -687,10 +687,14 @@ export default function HomeClient({
                 <div
                   className="hero-ad-slide"
                   style={{
-                    backgroundImage: `url(${homepageAds[heroSlide - 1].imageUrl})`,
                     opacity: heroVisible ? 1 : 0,
                   }}
                 >
+                  <img
+                    src={homepageAds[heroSlide - 1].imageUrl}
+                    alt={homepageAds[heroSlide - 1].title || "Featured banner"}
+                    className="hero-ad-image"
+                  />
                   <Link
                     href={homepageAds[heroSlide - 1].linkUrl}
                     className="hero-ad-main-link"
@@ -1842,11 +1846,19 @@ export default function HomeClient({
           flex-direction: column;
           justify-content: flex-end;
           padding: 34px;
-          background-position: center;
-          background-size: cover;
           color: #fff;
           isolation: isolate;
           transition: opacity 260ms ease;
+        }
+
+        .hero-ad-image {
+          position: absolute;
+          z-index: -2;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          object-position: center;
         }
 
         .hero-ad-main-link {

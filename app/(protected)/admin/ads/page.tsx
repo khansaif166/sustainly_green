@@ -195,7 +195,7 @@ export default function AdminAdsPage() {
         .aad-banner-toggle{padding:9px 18px;border-radius:50px;font-size:13px;font-weight:700;background:#111;color:#fff;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
         .aad-banner-toggle:hover{background:#374151}
         .aad-banner-del{padding:9px 18px;border-radius:50px;font-size:13px;font-weight:700;background:#dc2626;color:#fff;border:none;cursor:pointer;font-family:inherit}
-        .aad-banner-img{width:100%;max-height:260px;object-fit:cover;border-radius:14px;border:1px solid rgba(0,0,0,.07);display:block}
+        .aad-banner-img{width:100%;height:auto;max-height:260px;object-fit:contain;object-position:center;background:#e9f3ec;border-radius:14px;border:1px solid rgba(0,0,0,.07);display:block}
         .aad-banner-ph{height:120px;background:#f0fdf4;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#9ca3af}
         .aad-banner-label{font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
         .aad-banner-input{width:100%;padding:10px 14px;border:1.5px solid rgba(0,0,0,.1);border-radius:12px;font-size:13px;outline:none;font-family:inherit;background:#fff;box-sizing:border-box;color:#111;transition:border .15s}
@@ -378,7 +378,7 @@ export default function AdminAdsPage() {
               Or upload from device
             </label>
             {bannerPreview && (
-              <img src={bannerPreview} alt="banner preview" style={{ width: "100%", maxHeight: 220, objectFit: "cover", borderRadius: 12, border: "1px solid rgba(0,0,0,.08)" }} />
+              <img src={bannerPreview} alt="banner preview" style={{ width: "100%", height: "auto", maxHeight: 220, objectFit: "contain", objectPosition: "center", background: "#e9f3ec", borderRadius: 12, border: "1px solid rgba(0,0,0,.08)" }} />
             )}
             <div>
               <button onClick={uploadBanner} className="aad-banner-save">
