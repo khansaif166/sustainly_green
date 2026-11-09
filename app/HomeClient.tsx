@@ -708,10 +708,6 @@ export default function HomeClient({
                   {homepageAds[heroSlide - 1].title && (
                     <span className="hero-ad-title">{homepageAds[heroSlide - 1].title}</span>
                   )}
-                  <div className="hero-buttons hero-ad-buttons">
-                    <Link href="/browse" className="primary-hero-button">Explore Products</Link>
-                    <Link href="/browse?type=vendor" className="secondary-hero-button">Find Suppliers</Link>
-                  </div>
                 </div>
               ) : (
                 <>
@@ -1876,10 +1872,11 @@ export default function HomeClient({
         }
 
         .hero-ad-label {
-          position: relative;
+          position: absolute;
+          top: 16px;
+          left: 16px;
           z-index: 2;
           width: fit-content;
-          margin-bottom: 8px;
           border: 1px solid rgba(255, 255, 255, 0.55);
           border-radius: 999px;
           padding: 5px 10px;
@@ -1898,17 +1895,6 @@ export default function HomeClient({
           font-weight: 750;
           line-height: 1.1;
           text-shadow: 0 2px 18px rgba(0, 0, 0, 0.36);
-        }
-
-        .hero-ad-buttons {
-          position: relative;
-          z-index: 3;
-          margin-top: 18px;
-        }
-
-        .hero-ad-buttons .secondary-hero-button {
-          border-color: rgba(255, 255, 255, 0.72);
-          background: rgba(255, 255, 255, 0.94);
         }
 
         .hero-slide-controls {
