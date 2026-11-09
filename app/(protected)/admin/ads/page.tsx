@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Megaphone, CheckCircle, XCircle, Trash2, Search, Eye, MousePointerClick, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Megaphone, CheckCircle, XCircle, Trash2, Search, Eye, MousePointerClick, ChevronLeft, ChevronRight, ShoppingBag, Loader2 } from "lucide-react";
+import { Toaster, toast } from "sonner";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
 
@@ -35,6 +36,10 @@ export default function AdminAdsPage() {
   const [bannerUrl,     setBannerUrl]     = useState("");
   const [bannerImage,   setBannerImage]   = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState("");
+  const [bannerSavePhase, setBannerSavePhase] = useState<"idle" | "uploading" | "saving">("idle");
+  const bannerSaveInFlight = useRef(false);
+  const savingBanner = bannerSavePhase !== "idle";
+  const bannerBusy = loadingBanner || savingBanner;
   const PAGE_SIZE = 6;
 
   function getAuthHeaders() {
@@ -68,18 +73,36 @@ export default function AdminAdsPage() {
   }
 
   async function uploadBanner() {
-    if (!bannerUrl.trim() && !bannerImage) return alert("Add a banner image");
-    const authHeaders = getAuthHeaders();
-    const uploaded = bannerImage
-      ? await uploadFileToSupabaseStorage(bannerImage, { bucket: "marketplace", folder: "banners", accessToken: authHeaders.Authorization.replace(/^Bearer\s+/i, "") })
-      : null;
-    const finalUrl = uploaded?.url || bannerUrl;
-    const res = await fetch("/api/admin/ads/banner", { method: "PUT", headers: authHeaders, body: JSON.stringify({ imageUrl: finalUrl, linkUrl: currentBanner?.linkUrl || "/browse", active: true }) });
-    const payload = await res.json();
-    if (!res.ok) { alert(payload?.error?.message || "Unable to update banner."); return; }
-    setCurrentBanner({ imageUrl: finalUrl, linkUrl: "/browse", active: true });
-    setBannerUrl(finalUrl); setBannerImage(null); setBannerPreview(finalUrl);
-    alert("Banner updated successfully");
+    if (bannerSaveInFlight.current || loadingBanner) return;
+    if (!bannerUrl.trim() && !bannerImage) {
+      toast.error("Add a banner image.");
+      return;
+    }
+
+    bannerSaveInFlight.current = true;
+    setBannerSavePhase(bannerImage ? "uploading" : "saving");
+    try {
+      const authHeaders = getAuthHeaders();
+      const uploaded = bannerImage
+        ? await uploadFileToSupabaseStorage(bannerImage, { bucket: "marketplace", folder: "banners", accessToken: authHeaders.Authorization.replace(/^Bearer\s+/i, "") })
+        : null;
+      const finalUrl = uploaded?.url || bannerUrl.trim();
+      const linkUrl = currentBanner?.linkUrl || "/browse";
+      setBannerSavePhase("saving");
+      const res = await fetch("/api/admin/ads/banner", { method: "PUT", headers: authHeaders, body: JSON.stringify({ imageUrl: finalUrl, linkUrl, active: true }) });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || payload?.ok !== true) {
+        throw new Error(payload?.error?.message || "Unable to update banner. Please try again.");
+      }
+      setCurrentBanner({ imageUrl: finalUrl, linkUrl, active: true });
+      setBannerUrl(finalUrl); setBannerImage(null); setBannerPreview(finalUrl);
+      toast.success("Banner updated successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update banner. Please try again.");
+    } finally {
+      bannerSaveInFlight.current = false;
+      setBannerSavePhase("idle");
+    }
   }
 
   async function toggleBanner() {
@@ -139,6 +162,7 @@ export default function AdminAdsPage() {
 
   return (
     <>
+      <Toaster position="top-right" richColors closeButton duration={4000} />
       <style>{`
         .aad-page{display:flex;flex-direction:column;gap:18px;padding-bottom:40px}
         .aad-hero{background:linear-gradient(135deg,#0a1a10 0%,#0f2318 60%,#0c1e13 100%);border-radius:22px;padding:22px 26px;position:relative;overflow:hidden}
@@ -202,7 +226,11 @@ export default function AdminAdsPage() {
         .aad-banner-input:focus{border-color:#16a34a}
         .aad-upload-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed rgba(0,0,0,.1);border-radius:12px;padding:20px;cursor:pointer;transition:all .15s;font-size:13px;color:#9ca3af;text-align:center}
         .aad-upload-zone:hover{border-color:#16a34a;background:#f0fdf4;color:#16a34a}
-        .aad-banner-save{display:inline-flex;align-items:center;padding:10px 22px;border-radius:50px;font-size:13px;font-weight:700;background:#16a34a;color:#fff;border:none;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(22,163,74,.2)}
+        .aad-banner-save{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:50px;font-size:13px;font-weight:700;background:#16a34a;color:#fff;border:none;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(22,163,74,.2)}
+        .aad-banner-card button:disabled,.aad-banner-input:disabled,.aad-upload-zone[aria-disabled="true"]{opacity:.6;cursor:not-allowed}
+        .aad-upload-zone[aria-disabled="true"]{pointer-events:none}
+        .aad-banner-spinner{flex-shrink:0;animation:aad-banner-spin .8s linear infinite}
+        @keyframes aad-banner-spin{to{transform:rotate(360deg)}}
         .aad-active-badge{display:inline-block;padding:3px 10px;border-radius:50px;font-size:11.5px;font-weight:700;background:#f0fdf4;color:#15803d}
         .aad-stopped-badge{display:inline-block;padding:3px 10px;border-radius:50px;font-size:11.5px;font-weight:700;background:#f3f4f6;color:#6b7280}
         .aad-empty{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:16px;padding:32px;text-align:center;font-size:13.5px;color:#9ca3af}
@@ -346,8 +374,8 @@ export default function AdminAdsPage() {
             </div>
             {currentBanner && (
               <div className="aad-banner-btns">
-                <button onClick={toggleBanner} className="aad-banner-toggle">{currentBanner.active ? "Pause Banner" : "Activate Banner"}</button>
-                <button onClick={deleteBanner} className="aad-banner-del">Delete Banner</button>
+                <button onClick={toggleBanner} className="aad-banner-toggle" disabled={bannerBusy}>{currentBanner.active ? "Pause Banner" : "Activate Banner"}</button>
+                <button onClick={deleteBanner} className="aad-banner-del" disabled={bannerBusy}>Delete Banner</button>
               </div>
             )}
           </div>
@@ -366,10 +394,10 @@ export default function AdminAdsPage() {
             <div>
               <p className="aad-banner-label">Upload New Banner</p>
               <p style={{ fontSize: 12, color: "#9ca3af", margin: "0 0 10px" }}>Recommended: 1920×850px · Max 500KB · WebP preferred</p>
-              <input className="aad-banner-input" placeholder="https://example.com/banner.webp" value={bannerUrl} onChange={e => { setBannerUrl(e.target.value); setBannerPreview(e.target.value); }} />
+              <input className="aad-banner-input" placeholder="https://example.com/banner.webp" value={bannerUrl} disabled={bannerBusy} onChange={e => { setBannerUrl(e.target.value); setBannerPreview(e.target.value); }} />
             </div>
-            <label className="aad-upload-zone">
-              <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+            <label className="aad-upload-zone" aria-disabled={bannerBusy}>
+              <input type="file" accept="image/*" disabled={bannerBusy} style={{ display: "none" }} onChange={e => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 setBannerImage(file);
@@ -381,8 +409,9 @@ export default function AdminAdsPage() {
               <img src={bannerPreview} alt="banner preview" style={{ width: "100%", height: "auto", maxHeight: 220, objectFit: "contain", objectPosition: "center", background: "#e9f3ec", borderRadius: 12, border: "1px solid rgba(0,0,0,.08)" }} />
             )}
             <div>
-              <button onClick={uploadBanner} className="aad-banner-save">
-                {currentBanner ? "Update Banner" : "Upload Banner"}
+              <button onClick={uploadBanner} className="aad-banner-save" disabled={bannerBusy} aria-busy={savingBanner}>
+                {savingBanner && <Loader2 size={16} className="aad-banner-spinner" aria-hidden="true" />}
+                {bannerSavePhase === "uploading" ? "Uploading…" : bannerSavePhase === "saving" ? "Saving…" : currentBanner ? "Update Banner" : "Upload Banner"}
               </button>
             </div>
           </div>
