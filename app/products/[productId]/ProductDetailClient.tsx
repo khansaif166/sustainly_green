@@ -143,7 +143,7 @@ export default function ProductDetailClient({
                 </p>
 
                 {product.description && (
-                  <p className="mt-4 text-[15px] leading-7 text-gray-600">
+                  <p className="mt-4 whitespace-pre-line text-[15px] leading-7 text-gray-600">
                     {product.description}
                   </p>
                 )}

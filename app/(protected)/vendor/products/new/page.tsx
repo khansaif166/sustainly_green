@@ -8,6 +8,8 @@ import ProductImagePicker from "@/app/components/product-images/ProductImagePick
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
 import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
+import { DESCRIPTION_MAX_CHARS, MIN_DESCRIPTION_WORDS, descriptionError } from "@/lib/productSeo";
+import DescriptionWordHint from "@/app/components/DescriptionWordHint";
 import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck,
   X, CheckCircle2, Star,
@@ -80,6 +82,9 @@ export default function AddProductPage() {
     if (productImages.busy) return;
     const session = await getValidSession();
     if (!session) { router.push("/login"); return; }
+    // Checked before uploading images so a short description doesn't cost an upload round-trip.
+    const descriptionProblem = descriptionError(description);
+    if (descriptionProblem) { setError(descriptionProblem); return; }
     setLoading(true); setError("");
     try {
       const specificationValues = productSpecifications.prepareForSave();
@@ -272,9 +277,9 @@ export default function AddProductPage() {
               </div>
 
               <div className="ap-field">
-                <span className="ap-label">Short Description *</span>
-                <textarea className="ap-textarea" rows={4} maxLength={500} placeholder="Explain what your product/service is, how it helps buyers, and what makes it sustainable…" value={description} onChange={e => setDescription(e.target.value)} />
-                <span className="ap-help">{description.length}/500 characters</span>
+                <span className="ap-label">Description * (min {MIN_DESCRIPTION_WORDS} words)</span>
+                <textarea className="ap-textarea" rows={10} maxLength={DESCRIPTION_MAX_CHARS} placeholder={"What it is and what it's made of, sizes/variants, uses and who buys it, certifications, why it's sustainable, delivery areas and lead time.\n\nTip: end with 2–3 FAQs, e.g. \"Do you ship pan-India?\""} value={description} onChange={e => setDescription(e.target.value)} />
+                <DescriptionWordHint value={description} />
               </div>
 
               <ProductImagePicker controller={productImages} disabled={loading} />

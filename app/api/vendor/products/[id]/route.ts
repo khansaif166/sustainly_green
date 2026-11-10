@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { apiError, apiOk } from "@/lib/apiResponse";
 import { ProductSpecificationValidationError } from "@/lib/productSpecifications";
 import { productHref } from "@/lib/slug";
+import { descriptionError } from "@/lib/productSeo";
 import {
   requireRole,
   supabaseServiceFetch,
@@ -98,6 +99,13 @@ export async function PUT(
 
     const body = await request.json();
     const payload = buildProductPayload(body, vendor);
+
+    // Untouched legacy descriptions may stay so vendors can still update stock
+    // or price; any rewritten description has to meet the minimum length.
+    const descriptionChanged =
+      (payload.description || "").trim() !== (existing.description || "").trim();
+    const descriptionProblem = descriptionChanged ? descriptionError(payload.description) : null;
+    if (descriptionProblem) return apiError(descriptionProblem, 400);
 
     await supabaseServiceFetch<void>(
       `/rest/v1/products?${new URLSearchParams({ id: `eq.${id}`, vendor_id: `eq.${actor.vendorId}` })}`,

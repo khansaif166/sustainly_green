@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Package, IndianRupee, Leaf, Truck, Building2 } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
+import { DESCRIPTION_MAX_CHARS, RECOMMENDED_DESCRIPTION_WORDS } from "@/lib/productSeo";
+import DescriptionWordHint from "@/app/components/DescriptionWordHint";
 import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
@@ -235,8 +237,9 @@ export default function AdminAddProductPage() {
                 </div>
               </div>
               <div>
-                <p className="apn-label">Short Description *</p>
-                <textarea className="apn-textarea" rows={4} maxLength={500} placeholder="What is this product, how does it help buyers, what makes it sustainable…" value={description} onChange={e => setDescription(e.target.value)} />
+                <p className="apn-label">Description * (aim for {RECOMMENDED_DESCRIPTION_WORDS}+ words)</p>
+                <textarea className="apn-textarea" rows={10} maxLength={DESCRIPTION_MAX_CHARS} placeholder="What it is and what it's made of, sizes/variants, uses and who buys it, certifications, why it's sustainable, delivery areas, 2–3 FAQs…" value={description} onChange={e => setDescription(e.target.value)} />
+                <DescriptionWordHint value={description} />
               </div>
               <ProductImagePicker controller={productImages} disabled={loading} />
             </div>

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getStoredSession } from "@/lib/supabaseAuth";
+import { DESCRIPTION_MAX_CHARS, MIN_DESCRIPTION_WORDS, descriptionError } from "@/lib/productSeo";
+import DescriptionWordHint from "@/app/components/DescriptionWordHint";
 import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
@@ -36,6 +38,7 @@ export default function EditProductPage() {
   const [categoryId,         setCategoryId]         = useState("");
   const [subCategoryId,      setSubCategoryId]      = useState("");
   const [description,        setDescription]        = useState("");
+  const [originalDescription,setOriginalDescription]= useState("");
   const productImages = useProductImages();
   const productSpecifications = useProductSpecifications();
   const { setStoredSpecifications } = productSpecifications;
@@ -69,6 +72,7 @@ export default function EditProductPage() {
         setCategoryId(p.categoryId || "");
         setSubCategoryId(p.subCategoryId || "");
         setDescription(p.description || "");
+        setOriginalDescription(p.description || "");
         setStoredSpecifications(p.specifications);
         setStoredImages(p.images || []);
         setAvailableFor(p.availableFor || []);
@@ -107,6 +111,11 @@ export default function EditProductPage() {
     if (productImages.busy) return;
     const session = getStoredSession();
     if (!session) { router.push("/login"); return; }
+    // Mirrors the API: an untouched legacy description may stay as-is, but any
+    // rewrite has to meet the minimum length.
+    const descriptionProblem =
+      description.trim() !== originalDescription.trim() ? descriptionError(description) : null;
+    if (descriptionProblem) { setError(descriptionProblem); return; }
     setSaving(true); setError("");
     try {
       const specificationValues = productSpecifications.prepareForSave();
@@ -256,9 +265,9 @@ export default function EditProductPage() {
               </div>
 
               <div className="ep-field">
-                <span className="ep-label">Short Description *</span>
-                <textarea className="ep-textarea" rows={4} maxLength={500} value={description} onChange={e => setDescription(e.target.value)} />
-                <span className="ep-help">{description.length}/500 characters</span>
+                <span className="ep-label">Description * (min {MIN_DESCRIPTION_WORDS} words)</span>
+                <textarea className="ep-textarea" rows={10} maxLength={DESCRIPTION_MAX_CHARS} placeholder={"What it is and what it's made of, sizes/variants, uses and who buys it, certifications, why it's sustainable, delivery areas and lead time.\n\nTip: end with 2–3 FAQs, e.g. \"Do you ship pan-India?\""} value={description} onChange={e => setDescription(e.target.value)} />
+                <DescriptionWordHint value={description} />
               </div>
 
               <ProductImagePicker controller={productImages} disabled={saving} />

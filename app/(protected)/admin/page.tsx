@@ -7,7 +7,7 @@ import { getStoredSession } from "@/lib/supabaseAuth";
 import { readApiJson } from "@/lib/clientApiResponse";
 import {
   Users, Building2, Package, ClipboardList, Clock, CheckCircle2,
-  AlertTriangle, TrendingUp, ArrowRight,
+  AlertTriangle, TrendingUp, ArrowRight, SearchCheck,
 } from "lucide-react";
 const AdminCharts = dynamic(() => import("./_components/AdminCharts"), {
   ssr: false,
@@ -61,6 +61,17 @@ export default function AdminDashboard() {
   const [recentRFQs,     setRecentRFQs]     = useState<RecentRfq[]>([]);
   const [recentProducts, setRecentProducts] = useState<RecentProduct[]>([]);
   const [productsByCategory, setProductsByCategory] = useState<Array<{ name: string; value: number }>>([]);
+  const [seo, setSeo] = useState<{ averageScore: number; poor: number; needsWork: number; healthy: number; total: number } | null>(null);
+
+  // Separate, non-blocking request: the dashboard renders without it.
+  useEffect(() => {
+    const session = getStoredSession();
+    if (!session) return;
+    fetch("/api/admin/products/seo-health", { headers: { Authorization: `Bearer ${session.accessToken}` } })
+      .then((res) => readApiJson<{ summary?: typeof seo }>(res, "Unable to load SEO health."))
+      .then((payload) => setSeo(payload.summary || null))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -241,6 +252,37 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* SEO health */}
+        {seo && (
+          <Link href="/admin/seo-health" className="ad-card" style={{ textDecoration: "none", display: "block" }}>
+            <div className="ad-card-head">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div className="ad-kpi-icon" style={{ background: "#f0fdf4" }}><SearchCheck size={17} color="#16a34a" /></div>
+                <div>
+                  <p className="ad-card-title">Product SEO Health</p>
+                  <p className="ad-card-sub">How ready your {seo.total} live products are for Google</p>
+                </div>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#16a34a", display: "flex", alignItems: "center", gap: 4 }}>
+                Fix issues <ArrowRight size={12} />
+              </span>
+            </div>
+            <div className="ad-card-body" style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
+              {[
+                { label: "Avg score", val: `${seo.averageScore}/100`, color: seo.averageScore >= 80 ? "#15803d" : seo.averageScore >= 50 ? "#92400e" : "#b91c1c" },
+                { label: "Poor", val: seo.poor, color: "#b91c1c" },
+                { label: "Needs work", val: seo.needsWork, color: "#92400e" },
+                { label: "Healthy", val: seo.healthy, color: "#15803d" },
+              ].map(({ label, val, color }) => (
+                <div key={label}>
+                  <p className="ad-kpi-val" style={{ color, fontVariantNumeric: "tabular-nums" }}>{val}</p>
+                  <p className="ad-kpi-label">{label}</p>
+                </div>
+              ))}
+            </div>
+          </Link>
+        )}
 
         {/* Charts */}
         <AdminCharts barData={barData} productsByCategory={productsByCategory} />

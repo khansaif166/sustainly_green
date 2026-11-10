@@ -7,7 +7,7 @@ import {
 } from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
 import { fitTitle } from "@/lib/seoTitle";
-import { productHref } from "@/lib/slug";
+import { categoryHref, productHref } from "@/lib/slug";
 import ProductDetailClient from "../ProductDetailClient";
 
 export const revalidate = 900;
@@ -108,17 +108,23 @@ function productStructuredData(
   // aggregateRating. "Price on Request" listings have none of these, and
   // inventing a rating would breach Google's guidelines, so they get no
   // Product markup at all rather than an invalid one.
-  const hasPrice = typeof product.price === "number" && product.price > 0;
+  // Must match hasPublicPrice in ProductDetailClient: if the page hides the
+  // price, the markup must not advertise one (Google flags the mismatch).
+  const hasPrice =
+    typeof product.price === "number" &&
+    product.price > 0 &&
+    product.priceType !== "Price on Request";
   if (!hasPrice) return null;
 
   return {
-    "@context": "https://schema.org",
     "@type": "Product",
     name: product.title,
     description: product.description || undefined,
     image: product.images?.length ? product.images : undefined,
     sku: product.id,
-    category: product.tagNames?.[0] || product.listingType || undefined,
+    // Only the real catalogue category. listingType ("Product") and the
+    // sustainability claim are not categories.
+    category: product.categoryName || undefined,
     brand: {
       "@type": "Brand",
       name: product.vendorName,
@@ -139,6 +145,33 @@ function productStructuredData(
   };
 }
 
+function breadcrumbStructuredData(
+  product: NonNullable<Awaited<ReturnType<typeof getProduct>>>,
+  canonical: string,
+) {
+  const siteUrl = getSiteUrl();
+  const items: Array<{ name: string; item: string }> = [
+    { name: "Home", item: siteUrl },
+    { name: "Browse", item: `${siteUrl}/browse` },
+  ];
+  if (product.categoryName && product.categorySlug) {
+    items.push({
+      name: product.categoryName,
+      item: `${siteUrl}${categoryHref(product.categoryId || "", product.categorySlug)}`,
+    });
+  }
+  items.push({ name: product.title, item: canonical });
+
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((entry, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      ...entry,
+    })),
+  };
+}
+
 export default async function ProductPage({ params }: ProductPageProps) {
   const { productId } = await params;
   const product = await getProduct(productId);
@@ -148,18 +181,24 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const otherProducts = await getOtherProducts(product.vendorId, product.id);
 
   const canonical = `${getSiteUrl()}${productHref(productId, product.title)}`;
-  const structuredData = productStructuredData(product, canonical);
+  const productData = productStructuredData(product, canonical);
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      ...(productData ? [productData] : []),
+      breadcrumbStructuredData(product, canonical),
+    ],
+  };
 
   return (
     <>
-      {structuredData && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
-          }}
-        />
-      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+        }}
+      />
+
       <ProductDetailClient product={product} otherProducts={otherProducts} />
     </>
   );
