@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Megaphone, CheckCircle, XCircle, Trash2, Search, Eye, MousePointerClick, ChevronLeft, ChevronRight, ShoppingBag, Loader2 } from "lucide-react";
+import { Megaphone, CheckCircle, XCircle, Trash2, Search, Eye, MousePointerClick, Percent, Pause, Play, ChevronLeft, ChevronRight, ShoppingBag, Loader2 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
@@ -196,7 +196,12 @@ export default function AdminAdsPage() {
         .aad-card-body{padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:6px}
         .aad-card-title{font-size:13.5px;font-weight:800;color:#111;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .aad-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:50px}
-        .aad-stats-row{display:flex;gap:12px;font-size:12px;color:#6b7280}
+        .aad-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+        .aad-stat{background:#f8faf9;border:1px solid rgba(0,0,0,.05);border-radius:10px;padding:7px 9px;display:flex;flex-direction:column;gap:2px;min-width:0}
+        .aad-stat-label{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+        .aad-stat-val{font-size:16px;font-weight:800;color:#111;font-variant-numeric:tabular-nums;line-height:1.2}
+        .aad-budget{font-size:12px;color:#6b7280;margin:2px 0 0}
+        .aad-budget b{color:#111}
         .aad-card-foot{padding:10px 12px;border-top:1px solid #f3f4f6;display:flex;gap:7px;flex-wrap:wrap}
         .aad-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 12px;border-radius:50px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;border:none}
         .aad-btn-run{background:#f0fdf4;color:#15803d}
@@ -311,21 +316,51 @@ export default function AdminAdsPage() {
                   }
                   <div className="aad-card-body">
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                      <p className="aad-card-title">{a.title}</p>
-                      <span className="aad-badge" style={{ background: sm.bg, color: sm.color, flexShrink: 0 }}>
-                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: sm.dot }} />{sm.label}
-                      </span>
+                      <p className="aad-card-title" title={a.title}>{a.title}</p>
+                      {(() => {
+                        // An approved ad is either live on the homepage or paused;
+                        // say which, instead of a separate "Approved" + "Running".
+                        const badge = a.adStatus === "APPROVED"
+                          ? (a.adActive
+                              ? { bg: "#f0fdf4", color: "#15803d", dot: "#22c55e", label: "Live" }
+                              : { bg: "#f3f4f6", color: "#4b5563", dot: "#9ca3af", label: "Paused" })
+                          : sm;
+                        return (
+                          <span className="aad-badge" style={{ background: badge.bg, color: badge.color, flexShrink: 0 }}>
+                            <span style={{ width: 5, height: 5, borderRadius: "50%", background: badge.dot }} />{badge.label}
+                          </span>
+                        );
+                      })()}
                     </div>
-                    <div className="aad-stats-row">
-                      <span><Eye size={11} style={{ display: "inline", marginRight: 3 }} />{a.impressions || 0}</span>
-                      <span><MousePointerClick size={11} style={{ display: "inline", marginRight: 3 }} />{a.clicks || 0}</span>
-                      {a.budget && <span>₹{a.budget}</span>}
+                    <div className="aad-stats" aria-label="Ad performance">
+                      <div className="aad-stat" title="Times this ad was shown on the homepage">
+                        <span className="aad-stat-label"><Eye size={12} />Views</span>
+                        <span className="aad-stat-val">{(a.impressions || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="aad-stat" title="Times someone clicked this ad">
+                        <span className="aad-stat-label"><MousePointerClick size={12} />Clicks</span>
+                        <span className="aad-stat-val">{(a.clicks || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="aad-stat" title="Clicks ÷ views">
+                        <span className="aad-stat-label"><Percent size={12} />Click rate</span>
+                        <span className="aad-stat-val">
+                          {a.impressions ? `${(((a.clicks || 0) / a.impressions) * 100).toFixed(1)}%` : "–"}
+                        </span>
+                      </div>
                     </div>
+                    {/* `budget > 0` rather than `budget &&`: a 0 budget used to render a stray "0". */}
+                    {(a.budget ?? 0) > 0 && (
+                      <p className="aad-budget">Budget <b>₹{a.budget!.toLocaleString("en-IN")}</b></p>
+                    )}
                   </div>
                   <div className="aad-card-foot">
                     {a.adStatus === "APPROVED" && (
-                      <button onClick={() => toggleActive(a.id, !!a.adActive)} className={`aad-btn ${a.adActive ? "aad-btn-run" : "aad-btn-paused"}`}>
-                        {a.adActive ? "Running" : "Paused"}
+                      <button
+                        onClick={() => toggleActive(a.id, !!a.adActive)}
+                        className={`aad-btn ${a.adActive ? "aad-btn-paused" : "aad-btn-run"}`}
+                        title={a.adActive ? "Stop showing this ad on the homepage" : "Show this ad on the homepage again"}
+                      >
+                        {a.adActive ? <><Pause size={11} />Pause ad</> : <><Play size={11} />Resume ad</>}
                       </button>
                     )}
                     {a.adStatus !== "APPROVED" && (

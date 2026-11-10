@@ -106,6 +106,32 @@ const defaultHomepageAds: HomepageAdSlide[] = [
   },
 ];
 
+const PRODUCT_AD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Product ads carry the product's uuid; banner and house slides don't. */
+function isProductAd(id: string) {
+  return PRODUCT_AD_ID.test(id);
+}
+
+/**
+ * Fire-and-forget ad tracking. sendBeacon survives the navigation a click
+ * starts; keepalive fetch is the fallback. Failures are ignored on purpose.
+ */
+function trackAdEvent(productId: string, event: "impression" | "click") {
+  const body = JSON.stringify({ productId, event });
+  try {
+    if (navigator.sendBeacon?.("/api/ads/track", new Blob([body], { type: "application/json" }))) return;
+  } catch {
+    // fall through to fetch
+  }
+  fetch("/api/ads/track", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: true,
+  }).catch(() => {});
+}
+
 const sideAdSlides = [
   {
     title: "Advertise Here",
@@ -463,6 +489,19 @@ export default function HomeClient({
       .catch(() => setHomepageAds(defaultHomepageAds));
   }, []);
 
+  // Count an impression the first time each product ad is actually on screen
+  // during this page view (the carousel loops, so later rotations don't
+  // re-count). The default "advertise with us" and banner slides aren't
+  // product ads and are skipped.
+  const countedAdImpressions = useRef(new Set<string>());
+  useEffect(() => {
+    const ad = heroSlide > 0 ? homepageAds[heroSlide - 1] : undefined;
+    if (!ad || !isProductAd(ad.id) || countedAdImpressions.current.has(ad.id)) return;
+    if (document.visibilityState !== "visible") return;
+    countedAdImpressions.current.add(ad.id);
+    trackAdEvent(ad.id, "impression");
+  }, [heroSlide, homepageAds]);
+
   useEffect(() => {
     if (homepageAds.length === 0) {
       setHeroSlide(0);
@@ -697,6 +736,10 @@ export default function HomeClient({
                   />
                   <Link
                     href={homepageAds[heroSlide - 1].linkUrl}
+                    onClick={() => {
+                      const id = homepageAds[heroSlide - 1]?.id;
+                      if (id && isProductAd(id)) trackAdEvent(id, "click");
+                    }}
                     className="hero-ad-main-link"
                     aria-label={
                       homepageAds[heroSlide - 1].id === "homepage-banner"
@@ -1871,7 +1914,11 @@ export default function HomeClient({
           background: linear-gradient(180deg, transparent 35%, rgba(4, 22, 11, 0.74));
         }
 
+        /* The label and title sit above the full-slide link for legibility;
+           pointer-events: none lets clicks on them reach the link, otherwise
+           clicking the ad's title did nothing (and wasn't counted). */
         .hero-ad-label {
+          pointer-events: none;
           position: absolute;
           top: 16px;
           left: 16px;
@@ -1888,6 +1935,7 @@ export default function HomeClient({
         }
 
         .hero-ad-title {
+          pointer-events: none;
           position: relative;
           z-index: 2;
           max-width: 70%;
