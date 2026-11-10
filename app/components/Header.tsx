@@ -359,7 +359,7 @@ export default function Header() {
                 </div>
               )}
 
-              <Link href="esg" onClick={() => setOpenMobile(false)} className="font-medium text-gray-700">
+              <Link href="/esg" onClick={() => setOpenMobile(false)} className="font-medium text-gray-700">
                 ESG
               </Link>
 

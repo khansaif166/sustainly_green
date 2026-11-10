@@ -381,6 +381,10 @@ export default function EsgDeliveryDeskPage() {
               <Link href="/contact?subject=esg-audit" className="esg-btn-primary esg-btn-large mt-4">
                 Book a Free 20-Minute ESG Data Audit <ArrowRight size={18} strokeWidth={2.5} />
               </Link>
+              <p className="esg-cta-sdg">
+                See how the marketplace supports UN SDG 12 and SDG 13:{" "}
+                <Link href="/sdg-commitment">Our SDG Commitment</Link>
+              </p>
             </div>
           </div>
         </section>
@@ -923,6 +927,16 @@ export default function EsgDeliveryDeskPage() {
           font-size: 1.25rem;
           color: var(--esg-text-muted);
           margin-bottom: 3rem;
+        }
+        .esg-cta-section p.esg-cta-sdg {
+          font-size: 0.95rem;
+          margin: 2rem 0 0;
+        }
+        .esg-cta-sdg a {
+          color: var(--esg-primary);
+          font-weight: 700;
+          text-decoration: underline;
+          text-underline-offset: 3px;
         }
 
         /* ----- Responsive Adjustments ----- */
