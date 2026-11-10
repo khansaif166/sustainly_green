@@ -54,6 +54,60 @@ export function descriptionHint(text: string): DescriptionHint {
   return { words, tone: "good", text: `${words} words · great length for search` };
 }
 
+/**
+ * What a strong product description covers. Shown as a checklist under the
+ * description box; each topic is ticked when the text looks like it covers it.
+ * The patterns are deliberately loose: they guide the writer, they don't grade.
+ */
+export const DESCRIPTION_TOPICS: Array<{ key: string; label: string; example: string; pattern: RegExp }> = [
+  {
+    key: "material",
+    label: "What it's made of",
+    example: "e.g. made from 100% recycled HDPE plastic",
+    pattern: /\bmade (from|of|with|using)\b|\bmaterials?\b|\b(recycled|bamboo|cotton|jute|organic|wood(en)?|steel|coir|cane|rattan|hdpe|glass|clay|kraft|paper)\b/i,
+  },
+  {
+    key: "sizes",
+    label: "Sizes, variants or capacity",
+    example: "e.g. available in 30 L, 60 L and 120 L",
+    pattern: /\b\d+(\.\d+)?\s?(ml|l|ltr|litres?|liters?|kg|g|gms?|grams?|cm|mm|inch(es)?|ft|feet|m|pcs|pieces|pack|units?|watts?|w|kw)\b|\b(sizes?|dimensions?|capacity|variants?|colou?rs?)\b/i,
+  },
+  {
+    key: "uses",
+    label: "Uses and who buys it",
+    example: "e.g. ideal for offices, schools and housing societies",
+    pattern: /\b(used? (for|in)|ideal for|suitable for|perfect for|designed for|great for|buyers?|customers?|hotels?|offices?|restaurants?|households?|homes?|schools?|hospitals?|factories|businesses)\b/i,
+  },
+  {
+    key: "sustainability",
+    label: "Why it's sustainable",
+    example: "e.g. diverts 2 kg of plastic from landfill per bin",
+    pattern: /\b(sustainab\w*|eco[- ]?friendly|biodegrad\w*|compost\w*|recycl\w*|carbon|circular|renewable|plastic[- ]free|zero[- ]waste|landfill|emissions?)\b/i,
+  },
+  {
+    key: "certifications",
+    label: "Certifications or quality",
+    example: "e.g. ISO 9001 certified, BIS approved",
+    pattern: /\b(certifi\w*|iso|fssai|bis|gots|fsc|ecolabel|lab[- ]tested|tested|compliant|approved|standards?|warranty|guarantee)\b/i,
+  },
+  {
+    key: "delivery",
+    label: "Delivery, MOQ and lead time",
+    example: "e.g. MOQ 50 units, ships pan-India in 5–7 days",
+    pattern: /\b(deliver\w*|ship\w*|dispatch\w*|lead time|moq|minimum order|pan[- ]india|bulk orders?|courier)\b/i,
+  },
+  {
+    key: "faq",
+    label: "2–3 FAQs",
+    example: "e.g. Q: Is it UV resistant? A: Yes…",
+    pattern: /\?|\bfaqs?\b/i,
+  },
+];
+
+export function descriptionTopicCoverage(text: string) {
+  return DESCRIPTION_TOPICS.map((topic) => ({ ...topic, covered: topic.pattern.test(text) }));
+}
+
 // ── Catalogue health ────────────────────────────────────────────────────────
 
 export type SeoIssueCode =
