@@ -8,6 +8,8 @@ import { uploadFileToSupabaseStorage } from "@/lib/storage";
 import {
   IMAGE_HINT, MAX_PRODUCT_IMAGES, processProductImages,
 } from "@/lib/productImages";
+import { DESCRIPTION_MAX_CHARS, MIN_DESCRIPTION_WORDS, descriptionError } from "@/lib/productSeo";
+import DescriptionWordHint from "@/app/components/DescriptionWordHint";
 import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck, ImagePlus,
   X, CheckCircle2, Star,
@@ -82,6 +84,9 @@ export default function AddProductPage() {
     e.preventDefault();
     const session = await getValidSession();
     if (!session) { router.push("/login"); return; }
+    // Checked before uploading images so a short description doesn't cost an upload round-trip.
+    const descriptionProblem = descriptionError(description);
+    if (descriptionProblem) { setError(descriptionProblem); return; }
     setLoading(true); setError("");
     try {
       const uploaded = await Promise.all(images.map(f => uploadFileToSupabaseStorage(f, { bucket: "marketplace", folder: "products", accessToken: session.accessToken })));
@@ -295,9 +300,9 @@ export default function AddProductPage() {
               </div>
 
               <div className="ap-field">
-                <span className="ap-label">Short Description *</span>
-                <textarea className="ap-textarea" rows={4} maxLength={500} placeholder="Explain what your product/service is, how it helps buyers, and what makes it sustainable…" value={description} onChange={e => setDescription(e.target.value)} />
-                <span className="ap-help">{description.length}/500 characters</span>
+                <span className="ap-label">Description * (min {MIN_DESCRIPTION_WORDS} words)</span>
+                <textarea className="ap-textarea" rows={10} maxLength={DESCRIPTION_MAX_CHARS} placeholder={"What it is and what it's made of, sizes/variants, uses and who buys it, certifications, why it's sustainable, delivery areas and lead time.\n\nTip: end with 2–3 FAQs, e.g. \"Do you ship pan-India?\""} value={description} onChange={e => setDescription(e.target.value)} />
+                <DescriptionWordHint value={description} />
               </div>
 
               <div className="ap-field">

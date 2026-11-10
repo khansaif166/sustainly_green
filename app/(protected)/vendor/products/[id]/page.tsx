@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
+import { DESCRIPTION_MAX_CHARS, MIN_DESCRIPTION_WORDS, descriptionError } from "@/lib/productSeo";
+import DescriptionWordHint from "@/app/components/DescriptionWordHint";
 import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck, ImagePlus,
   X, CheckCircle2, Loader2,
@@ -33,7 +35,8 @@ export default function EditProductPage() {
   const [categoryId,         setCategoryId]         = useState("");
   const [subCategoryId,      setSubCategoryId]      = useState("");
   const [description,        setDescription]        = useState("");
-  const [existingImages,     setExistingImages]     = useState<string[]>([]);
+  const [originalDescription,setOriginalDescription]= useState("");
+  const [existingImages,    setExistingImages]     = useState<string[]>([]);
   const [newImages,          setNewImages]          = useState<File[]>([]);
   const [coverIndex,         setCoverIndex]         = useState(0);
   const [availableFor,       setAvailableFor]       = useState<string[]>([]);
@@ -65,6 +68,7 @@ export default function EditProductPage() {
         setCategoryId(p.categoryId || "");
         setSubCategoryId(p.subCategoryId || "");
         setDescription(p.description || "");
+        setOriginalDescription(p.description || "");
         setExistingImages(p.images || []);
         setAvailableFor(p.availableFor || []);
         setPriceType(p.priceType || "");
@@ -102,6 +106,11 @@ export default function EditProductPage() {
     e.preventDefault();
     const session = getStoredSession();
     if (!session) { router.push("/login"); return; }
+    // Mirrors the API: an untouched legacy description may stay as-is, but any
+    // rewrite has to meet the minimum length.
+    const descriptionProblem =
+      description.trim() !== originalDescription.trim() ? descriptionError(description) : null;
+    if (descriptionProblem) { setError(descriptionProblem); return; }
     setSaving(true); setError("");
     try {
       const uploaded   = await Promise.all(newImages.map(f => uploadFileToSupabaseStorage(f, { bucket: "marketplace", folder: "products", accessToken: session.accessToken })));
@@ -265,9 +274,9 @@ export default function EditProductPage() {
               </div>
 
               <div className="ep-field">
-                <span className="ep-label">Short Description *</span>
-                <textarea className="ep-textarea" rows={4} maxLength={500} value={description} onChange={e => setDescription(e.target.value)} />
-                <span className="ep-help">{description.length}/500 characters</span>
+                <span className="ep-label">Description * (min {MIN_DESCRIPTION_WORDS} words)</span>
+                <textarea className="ep-textarea" rows={10} maxLength={DESCRIPTION_MAX_CHARS} placeholder={"What it is and what it's made of, sizes/variants, uses and who buys it, certifications, why it's sustainable, delivery areas and lead time.\n\nTip: end with 2–3 FAQs, e.g. \"Do you ship pan-India?\""} value={description} onChange={e => setDescription(e.target.value)} />
+                <DescriptionWordHint value={description} />
               </div>
 
               <div className="ep-field">

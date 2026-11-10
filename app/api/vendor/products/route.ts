@@ -1,4 +1,5 @@
 import { apiError, apiOk } from "@/lib/apiResponse";
+import { descriptionError } from "@/lib/productSeo";
 import {
   requireRole,
   supabaseServiceFetch,
@@ -62,6 +63,9 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const payload = buildProductPayload(body, vendor);
+
+    const descriptionProblem = descriptionError(payload.description);
+    if (descriptionProblem) return apiError(descriptionProblem, 400);
 
     const rows = await supabaseServiceFetch<ProductRow[]>("/rest/v1/products", {
       method: "POST",

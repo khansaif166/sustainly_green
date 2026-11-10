@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Package, IndianRupee, Leaf, Truck, Building2 } from "lucide-react";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
+import { DESCRIPTION_MAX_CHARS, RECOMMENDED_DESCRIPTION_WORDS } from "@/lib/productSeo";
+import DescriptionWordHint from "@/app/components/DescriptionWordHint";
 
 const LISTING_TYPES = ["Product", "Service"];
 const AVAILABILITY   = ["B2B", "B2C"];
@@ -305,8 +307,9 @@ export default function AdminEditProductPage() {
                 </div>
               </div>
               <div>
-                <p className="ape-label">Short Description *</p>
-                <textarea className="ape-textarea" rows={4} maxLength={500} placeholder="What is this product, how does it help buyers, what makes it sustainable…" value={description} onChange={e => setDescription(e.target.value)} />
+                <p className="ape-label">Description * (aim for {RECOMMENDED_DESCRIPTION_WORDS}+ words)</p>
+                <textarea className="ape-textarea" rows={10} maxLength={DESCRIPTION_MAX_CHARS} placeholder="What it is and what it's made of, sizes/variants, uses and who buys it, certifications, why it's sustainable, delivery areas, 2–3 FAQs…" value={description} onChange={e => setDescription(e.target.value)} />
+                <DescriptionWordHint value={description} />
               </div>
               <div>
                 <p className="ape-label">Add More Images</p>

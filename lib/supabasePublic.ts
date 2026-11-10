@@ -37,6 +37,7 @@ type SupabaseProductRow = {
   description: string | null;
   listing_type: string | null;
   category_id: string | null;
+  category?: { name: string | null; slug: string | null } | null;
   available_for: string[] | null;
   price_type: string | null;
   price: number | string | null;
@@ -120,7 +121,9 @@ export type PublicProduct = {
   availableFor: string[];
   shipRegions: string[];
   inStock: boolean;
-  categoryId?: string; 
+  categoryId?: string;
+  categoryName?: string;
+  categorySlug?: string;
   priceType?: string;
   price?: number;
   currency: string;
@@ -213,6 +216,7 @@ const PRODUCT_SELECT = [
   "eco_verified",
   "product_images(url,sort_order)",
   "vendor:vendors(slug)",
+  "category:categories(name,slug)",
 ].join(",");
 
 function requireSupabaseConfig() {
@@ -371,7 +375,9 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
     availableFor: stringArray(row.available_for),
     shipRegions: stringArray(row.ship_regions),
     inStock: row.in_stock !== false,
-    categoryId: stringValue(row.category_id) || undefined,   // <-- ADD
+    categoryId: stringValue(row.category_id) || undefined,
+    categoryName: stringValue(row.category?.name) || undefined,
+    categorySlug: stringValue(row.category?.slug) || undefined,
     priceType: stringValue(row.price_type) || undefined,
     price: numberValue(row.price),
     currency: stringValue(row.currency) || "INR",
