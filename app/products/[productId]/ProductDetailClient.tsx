@@ -18,6 +18,7 @@ import BuyerRFQModal from "../../components/ContactVendorModal";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import type { PublicProduct } from "@/lib/supabasePublic";
 import { productHref, vendorHref } from "@/lib/slug";
+import ProductSpecificationsTable from "@/app/components/product-specifications/ProductSpecificationsTable";
 
 type Product = PublicProduct;
 
@@ -50,7 +51,7 @@ export default function ProductDetailClient({
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-[#f7f9f8] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <main className="min-h-screen bg-[#f7f9f8] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 app-page-surface">
         <div className="mx-auto max-w-7xl">
           <Link
             href="/"
@@ -146,6 +147,8 @@ export default function ProductDetailClient({
                     {product.description}
                   </p>
                 )}
+
+                <ProductSpecificationsTable specifications={product.specifications} />
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   <MetaItem

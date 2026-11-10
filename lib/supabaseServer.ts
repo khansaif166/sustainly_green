@@ -81,11 +81,19 @@ function requireServiceRoleKey() {
   return SUPABASE_SERVICE_ROLE_KEY;
 }
 
+export class SupabaseHttpError extends Error {
+  constructor(message: string, public status: number, public code?: string) {
+    super(message);
+    this.name = "SupabaseHttpError";
+  }
+}
+
 async function parseSupabaseResponse<T>(response: Response): Promise<T> {
   const text = await response.text();
 
   if (!response.ok) {
     let message = text || `Supabase request failed: ${response.status}`;
+    let code: string | undefined;
 
     try {
       const parsed = JSON.parse(text) as {
@@ -93,7 +101,9 @@ async function parseSupabaseResponse<T>(response: Response): Promise<T> {
         msg?: string;
         error?: string;
         error_description?: string;
+        code?: string;
       };
+      code = parsed.code;
       message =
         parsed.message ||
         parsed.msg ||
@@ -102,7 +112,7 @@ async function parseSupabaseResponse<T>(response: Response): Promise<T> {
         message;
     } catch {}
 
-    throw new Error(message);
+    throw new SupabaseHttpError(message, response.status, code);
   }
 
   if (!text) return undefined as T;
@@ -153,11 +163,12 @@ async function fetchWithRetry(url: string, init: RequestInit): Promise<Response>
 export async function supabaseServiceFetch<T>(
   path: string,
   options: RequestInit = {},
+  retryTransientFailures = true,
 ): Promise<T> {
   const url = `${requireSupabaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
   const serviceRoleKey = requireServiceRoleKey();
 
-  const response = await fetchWithRetry(url, {
+  const init: RequestInit = {
     ...options,
     headers: {
       apikey: serviceRoleKey,
@@ -165,7 +176,10 @@ export async function supabaseServiceFetch<T>(
       "Content-Type": "application/json",
       ...(options.headers || {}),
     },
-  });
+  };
+  const response = retryTransientFailures
+    ? await fetchWithRetry(url, init)
+    : await fetch(url, { ...init, signal: AbortSignal.timeout(SUPABASE_FETCH_TIMEOUT_MS) });
 
   return parseSupabaseResponse<T>(response);
 }

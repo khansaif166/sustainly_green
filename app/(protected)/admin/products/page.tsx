@@ -297,6 +297,9 @@ export default function AdminProductsPage() {
           <a href="/admin/products/new" className="apr-add">
             <Package size={14} /> Add Product
           </a>
+          <a href="/admin/products/import" className="apr-add">
+            <Package size={14} /> Bulk Upload
+          </a>
         </div>
 
         {/* Grid */}

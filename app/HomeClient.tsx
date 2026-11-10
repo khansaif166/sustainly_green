@@ -22,6 +22,7 @@ import {
 } from "@/lib/supabaseAuth";
 import { getVendorBadgeMeta } from "@/lib/vendorBadges";
 import Footer from "./components/layouts/Footer";
+import CategorySelect from "./components/CategorySelect";
 import {
   ArrowRight,
   BadgeCheck,
@@ -367,6 +368,7 @@ export default function HomeClient({
   const [authLoading, setAuthLoading] = useState(true);
   const [profile, setProfile] = useState<SupabaseProfile | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryItem[]>(initialCategories);
+  const previewCategories = categoryOptions.slice(0, 10);
 
   function scrollCities(direction: -1 | 1) {
     const strip = cityStripRef.current;
@@ -511,7 +513,7 @@ export default function HomeClient({
   }
 
   return (
-    <main className="market-home">
+    <main className="market-home app-page-surface">
       <div className="market-shell">
         <header className="market-header">
           <div className="utility-bar">
@@ -531,11 +533,11 @@ export default function HomeClient({
 
             <div className="mobile-menu-slot">
               {!authLoading && profile ? (
-                <Link href={dashboardLink} className="mobile-auth-link mobile-auth-link-strong">
+                <Link href={dashboardLink} className="mobile-auth-link mobile-auth-link-strong app-account-control">
                   Dashboard
                 </Link>
               ) : (
-                <Link href="/login" className="mobile-auth-link">
+                <Link href="/login" className="mobile-auth-link app-account-control">
                   <UserRound size={15} />
                   Sign In
                 </Link>
@@ -562,18 +564,13 @@ export default function HomeClient({
                 }}
                 placeholder="Search eco-friendly products, suppliers, categories..."
               />
-              <select
-                value={selectedCategory}
-                onChange={(event) => setSelectedCategory(event.target.value)}
-                aria-label="Search category"
-              >
-                <option value="">All Categories</option>
-                {categoryOptions.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+              <div className="search-category-control">
+                <CategorySelect
+                  value={selectedCategory}
+                  onChange={setSelectedCategory}
+                  options={categoryOptions.map((category) => ({ value: category.id, label: category.name }))}
+                />
+              </div>
               <button type="button" className="search-button" onClick={runSearch}>
                 <Search size={18} />
               </button>
@@ -582,24 +579,24 @@ export default function HomeClient({
             <div className="account-actions">
               {!authLoading && profile ? (
                 <>
-                  <span className="sign-in-link account-user">
+                  <span className="sign-in-link account-user app-account-label">
                     <UserRound size={18} />
                     Hi, {profile.name || "User"}
                   </span>
-                  <Link href={dashboardLink} className="join-button">
+                  <Link href={dashboardLink} className="join-button app-account-control">
                     Dashboard
                   </Link>
-                  <button type="button" className="sign-in-link" onClick={handleLogout}>
+                  <button type="button" className="sign-in-link app-account-control" onClick={handleLogout}>
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="sign-in-link">
+                  <Link href="/login" className="sign-in-link app-account-control">
                     <UserRound size={18} />
                     Sign In
                   </Link>
-                  <Link href="/register?role=BUYER" className="join-button">
+                  <Link href="/register?role=BUYER" className="join-button app-account-control">
                     Join Free
                   </Link>
                 </>
@@ -626,12 +623,12 @@ export default function HomeClient({
             <div className="mobile-menu-auth">
               {!authLoading && profile ? (
                 <>
-                  <Link href={dashboardLink} className="mobile-menu-auth-primary" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href={dashboardLink} className="mobile-menu-auth-primary app-account-control" onClick={() => setMobileMenuOpen(false)}>
                     Dashboard
                   </Link>
                   <button
                     type="button"
-                    className="mobile-menu-auth-secondary"
+                    className="mobile-menu-auth-secondary app-account-control"
                     onClick={() => {
                       void handleLogout();
                       setMobileMenuOpen(false);
@@ -642,13 +639,13 @@ export default function HomeClient({
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="mobile-menu-auth-secondary" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/login" className="mobile-menu-auth-secondary app-account-control" onClick={() => setMobileMenuOpen(false)}>
                     Login
                   </Link>
-                  <Link href="/register?role=BUYER" className="mobile-menu-auth-primary" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/register?role=BUYER" className="mobile-menu-auth-primary app-account-control" onClick={() => setMobileMenuOpen(false)}>
                     Sign up
                   </Link>
-                  <Link href="/register?role=VENDOR" className="mobile-menu-auth-secondary" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/register?role=VENDOR" className="mobile-menu-auth-secondary app-account-control" onClick={() => setMobileMenuOpen(false)}>
                     List Business
                   </Link>
                 </>
@@ -660,7 +657,7 @@ export default function HomeClient({
         <section className="hero-composition">
           <aside className="sidebar-card">
             <div className="sidebar-list">
-              {categoryOptions.map((category) => (
+              {previewCategories.map((category) => (
                 <Link key={category.id} href={categoryHref(category.id, category.slug)} className="sidebar-link">
                   <span className="sidebar-icon">{iconForCategory(category.icon)}</span>
                   <span className="sidebar-label">{category.name}</span>
@@ -678,7 +675,7 @@ export default function HomeClient({
             <div className="sidebar-cta">
               <p className="sidebar-cta-label">New to SustainlyGreen?</p>
               <p>Join our network of sustainable businesses worldwide.</p>
-              <Link href="/register?role=VENDOR" className="sidebar-cta-button">
+              <Link href="/register?role=VENDOR" className="sidebar-cta-button app-account-control">
                 Join Free
               </Link>
             </div>
@@ -690,10 +687,14 @@ export default function HomeClient({
                 <div
                   className="hero-ad-slide"
                   style={{
-                    backgroundImage: `url(${homepageAds[heroSlide - 1].imageUrl})`,
                     opacity: heroVisible ? 1 : 0,
                   }}
                 >
+                  <img
+                    src={homepageAds[heroSlide - 1].imageUrl}
+                    alt={homepageAds[heroSlide - 1].title || "Featured banner"}
+                    className="hero-ad-image"
+                  />
                   <Link
                     href={homepageAds[heroSlide - 1].linkUrl}
                     className="hero-ad-main-link"
@@ -707,10 +708,6 @@ export default function HomeClient({
                   {homepageAds[heroSlide - 1].title && (
                     <span className="hero-ad-title">{homepageAds[heroSlide - 1].title}</span>
                   )}
-                  <div className="hero-buttons hero-ad-buttons">
-                    <Link href="/browse" className="primary-hero-button">Explore Products</Link>
-                    <Link href="/browse?type=vendor" className="secondary-hero-button">Find Suppliers</Link>
-                  </div>
                 </div>
               ) : (
                 <>
@@ -837,13 +834,13 @@ export default function HomeClient({
           </div>
         </section>
 
-        <section className="section-block">
+        <section className="section-block shop-category-section">
           <div className="section-head">
             <h2>Shop by Category</h2>
             <Link href="/categories">View all categories</Link>
           </div>
           <div className="category-strip">
-            {categoryOptions.map((category) => (
+            {previewCategories.map((category) => (
               <Link key={category.id} href={categoryHref(category.id, category.slug)} className="category-pill-card">
                 <span className="category-pill-icon">{iconForCategory(category.icon)}</span>
                 <span>{category.name}</span>
@@ -986,7 +983,7 @@ export default function HomeClient({
         </section>
 
         <section className="trust-band">
-          <div className="trust-head">
+          <div className="trust-head" style={{ color: "#ffffff" }}>
             <h2>Trusted, Verified &amp; Certified</h2>
           </div>
           <div className="trust-points">
@@ -1099,7 +1096,7 @@ export default function HomeClient({
         .home-blog-more { margin-top: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #059669; }
         @media (max-width: 900px) { .home-blog-grid { grid-template-columns: 1fr; } }
         .market-home {
-          background: #fcfdfb;
+          background: #ffffff;
           color: #10241b;
           width: 100%;
           max-width: 100%;
@@ -1338,12 +1335,12 @@ export default function HomeClient({
           color: #6e8578;
         }
 
-        .search-bar input,
-        .search-bar select {
+        .search-bar input {
           border: 0;
-          background: transparent;
+          background-color: transparent;
           outline: 0;
           font: inherit;
+          font-size: 14px;
           color: #1a3427;
           min-width: 0;
         }
@@ -1352,12 +1349,13 @@ export default function HomeClient({
           padding: 0 14px;
         }
 
-        .search-bar select {
+        .search-category-control {
           display: none;
+          width: 160px;
           border-left: 1px solid #e1e8e3;
-          padding: 0 16px;
-          min-height: 48px;
+          height: 48px;
           color: #2e4a3b;
+          --category-select-padding-left: 16px;
         }
 
         .search-button {
@@ -1392,6 +1390,7 @@ export default function HomeClient({
           align-items: center;
           gap: 8px;
           padding: 10px 12px;
+          border: 1px solid transparent;
           border-radius: 10px;
           color: #183426;
           font-weight: 500;
@@ -1406,8 +1405,6 @@ export default function HomeClient({
           background: #fff;
         }
 
-        .sign-in-link,
-        .join-button,
         .primary-hero-button,
         .secondary-hero-button,
         .sidebar-cta-button,
@@ -1423,22 +1420,6 @@ export default function HomeClient({
             filter 170ms ease;
         }
 
-        .sign-in-link:hover {
-          color: #176d35;
-          background: #eef7f0;
-          transform: translateY(-1px);
-        }
-
-        .join-button:hover {
-          color: #fff;
-          background: #247d3c;
-          border-color: #247d3c;
-          box-shadow: 0 8px 18px rgba(31, 111, 53, 0.2);
-          transform: translateY(-2px);
-        }
-
-        .sign-in-link:focus-visible,
-        .join-button:focus-visible,
         .primary-hero-button:focus-visible,
         .secondary-hero-button:focus-visible,
         .sidebar-cta-button:focus-visible,
@@ -1448,8 +1429,6 @@ export default function HomeClient({
           outline-offset: 3px;
         }
 
-        .sign-in-link:active,
-        .join-button:active,
         .primary-hero-button:active,
         .secondary-hero-button:active,
         .sidebar-cta-button:active,
@@ -1624,10 +1603,10 @@ export default function HomeClient({
             flex: initial;
             width: auto;
             max-width: 100%;
-            grid-template-columns: auto minmax(0, 1fr) auto auto;
+            grid-template-columns: auto minmax(0, 1fr) 160px 52px;
           }
 
-          .search-bar select {
+          .search-category-control {
             display: block;
           }
 
@@ -1641,6 +1620,17 @@ export default function HomeClient({
 
           .mobile-menu-toggle {
             display: none;
+          }
+        }
+
+        @media (min-width: 981px) and (max-width: 1279px) {
+          .header-main {
+            grid-template-columns: minmax(0, 1fr) auto;
+          }
+
+          .search-bar {
+            grid-column: 1 / -1;
+            grid-row: 2;
           }
         }
 
@@ -1813,14 +1803,7 @@ export default function HomeClient({
           border-radius: 6px;
           background: linear-gradient(180deg, #2a8a43, #1f6f35);
           color: #fff;
-          font-size: 13px;
           font-weight: 700;
-        }
-
-        .sidebar-cta .sidebar-cta-button:hover {
-          filter: brightness(0.9);
-          box-shadow: 0 8px 16px rgba(31, 111, 53, 0.24);
-          transform: translateY(-2px);
         }
 
         .hero-stack {
@@ -1859,11 +1842,19 @@ export default function HomeClient({
           flex-direction: column;
           justify-content: flex-end;
           padding: 34px;
-          background-position: center;
-          background-size: cover;
           color: #fff;
           isolation: isolate;
           transition: opacity 260ms ease;
+        }
+
+        .hero-ad-image {
+          position: absolute;
+          z-index: -2;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          object-position: center;
         }
 
         .hero-ad-main-link {
@@ -1881,10 +1872,11 @@ export default function HomeClient({
         }
 
         .hero-ad-label {
-          position: relative;
+          position: absolute;
+          top: 16px;
+          left: 16px;
           z-index: 2;
           width: fit-content;
-          margin-bottom: 8px;
           border: 1px solid rgba(255, 255, 255, 0.55);
           border-radius: 999px;
           padding: 5px 10px;
@@ -1903,17 +1895,6 @@ export default function HomeClient({
           font-weight: 750;
           line-height: 1.1;
           text-shadow: 0 2px 18px rgba(0, 0, 0, 0.36);
-        }
-
-        .hero-ad-buttons {
-          position: relative;
-          z-index: 3;
-          margin-top: 18px;
-        }
-
-        .hero-ad-buttons .secondary-hero-button {
-          border-color: rgba(255, 255, 255, 0.72);
-          background: rgba(255, 255, 255, 0.94);
         }
 
         .hero-slide-controls {
@@ -2381,6 +2362,10 @@ export default function HomeClient({
           min-width: 0;
         }
 
+        .shop-category-section {
+          margin-top: 64px;
+        }
+
         .section-head {
           display: flex;
           justify-content: space-between;
@@ -2785,12 +2770,6 @@ export default function HomeClient({
         }
 
         .product-info h3 {
-          font-size: 16px;
-          line-height: 1.32;
-          margin-bottom: 8px;
-        }
-
-        .split-section .product-info h3 {
           display: -webkit-box;
           min-height: 2.7em;
           margin-bottom: 10px;
@@ -2810,15 +2789,9 @@ export default function HomeClient({
           margin-bottom: 8px;
         }
 
-        .split-section .product-price {
-          margin: 0;
-          font-size: 14px;
-          line-height: 1.3;
-        }
-
         .product-unit,
-        .split-section .product-vendor,
-        .split-section .verified-label {
+        .product-vendor,
+        .product-info .verified-label {
           font-size: 12px;
         }
 
@@ -2845,10 +2818,11 @@ export default function HomeClient({
         }
 
         .product-price {
-          font-size: 18px;
+          font-size: 14px;
           font-weight: 700;
           color: #173326;
-          margin: 0 0 4px;
+          line-height: 1.3;
+          margin: 0;
         }
 
         .product-price span,
@@ -3053,7 +3027,7 @@ export default function HomeClient({
           grid-template-columns: auto 1fr auto;
           gap: 28px;
           align-items: center;
-          background: linear-gradient(90deg, #eef8ef 0%, #f9fcf9 50%, #eff7f2 100%);
+          background: #000000;
           transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
         }
 
@@ -3074,14 +3048,14 @@ export default function HomeClient({
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          color: #2a493b;
+          color: #ffffff;
           font-size: 14px;
           font-weight: 500;
           transition: color 170ms ease, transform 170ms ease;
         }
 
         .trust-point:hover {
-          color: #1f7b3a;
+          color: #cccecc;
           transform: translateY(-2px);
         }
 
@@ -3096,7 +3070,7 @@ export default function HomeClient({
         .trust-certifications p {
           margin: 0 0 10px;
           font-size: 13px;
-          color: #5c7568;
+          color: #ffffff;
           text-align: right;
         }
 
@@ -3202,16 +3176,6 @@ export default function HomeClient({
           min-height: 134px;
         }
 
-        .compact-product-card .product-info h3 {
-          display: -webkit-box;
-          min-height: 2.7em;
-          overflow: hidden;
-          font-size: 15px;
-          line-height: 1.35;
-          -webkit-box-orient: vertical;
-          -webkit-line-clamp: 2;
-        }
-
         @media (max-width: 1220px) {
           .menu-categories-button {
             width: 220px;
@@ -3265,6 +3229,10 @@ export default function HomeClient({
         }
 
         @media (max-width: 980px) {
+          .shop-category-section {
+            margin-top: 40px;
+          }
+
           .market-shell {
             padding: 0 0 40px;
           }
@@ -3305,7 +3273,7 @@ export default function HomeClient({
             min-height: 44px;
           }
 
-          .search-bar select {
+          .search-category-control {
             display: none;
           }
 
@@ -3538,7 +3506,7 @@ export default function HomeClient({
             transform-origin: center top;
           }
 
-          .search-bar select {
+          .search-category-control {
             display: none;
           }
 

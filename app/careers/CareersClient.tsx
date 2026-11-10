@@ -10,7 +10,7 @@ export default function CareersClient({ jobs }: { jobs: PublicCareer[] }) {
   return (
     <>
       <Header />
-      <main className="max-w-full mx-auto px-6 py-16 space-y-14">
+      <main className="max-w-full mx-auto px-6 py-16 space-y-14 app-page-surface">
         <Link
           href="/"
           className="

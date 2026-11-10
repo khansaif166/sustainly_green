@@ -1,5 +1,6 @@
 import { apiError, apiOk } from "@/lib/apiResponse";
 import { descriptionError } from "@/lib/productSeo";
+import { ProductSpecificationValidationError } from "@/lib/productSpecifications";
 import {
   requireRole,
   supabaseServiceFetch,
@@ -11,6 +12,7 @@ import {
   getVendor,
   mapProduct,
   PRODUCT_SELECT,
+  PRODUCT_DETAIL_SELECT,
   type ProductRow,
   replaceImages,
   replaceTags,
@@ -80,7 +82,7 @@ export async function POST(request: Request) {
     ]);
 
     const refreshedParams = new URLSearchParams({
-      select: PRODUCT_SELECT,
+      select: PRODUCT_DETAIL_SELECT,
       id: `eq.${product.id}`,
       limit: "1",
     });
@@ -94,6 +96,7 @@ export async function POST(request: Request) {
     if (authError) return apiError(authError.message, authError.status);
     const configError = toConfigError(error);
     if (configError) return apiError(configError.message, configError.status);
+    if (error instanceof ProductSpecificationValidationError) return apiError(error.message, 400, { issues: error.issues });
     if (error instanceof Error && error.message === "Listing title is required.") {
       return apiError(error.message, 400);
     }

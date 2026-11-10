@@ -44,7 +44,7 @@ export default function DealsClient() {
     <>
       <Header />
 
-      <main className="max-w-7xl mx-auto px-6 py-14 space-y-16">
+      <main className="max-w-7xl mx-auto px-6 py-14 space-y-16 app-page-surface">
         {/* ================= HERO ================= */}
         <section className="text-center max-w-3xl mx-auto space-y-4">
           <h1 className="text-3xl md:text-4xl font-semibold text-[var(--color-text-primary)]">

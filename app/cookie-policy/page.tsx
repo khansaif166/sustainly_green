@@ -15,7 +15,7 @@ export default function CookiePolicyPage() {
   return (
     <>
       <Header />
-      <main className="bg-[var(--color-bg-soft)] px-4 py-16">
+      <main className="bg-[var(--color-bg-soft)] px-4 py-16 app-page-surface">
         <Link
           href="/"
           className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-white)] px-5 py-2.5 text-sm font-medium text-[var(--color-ocean-blue)] transition hover:bg-[var(--color-ocean-blue)] hover:text-white"

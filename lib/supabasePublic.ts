@@ -1,3 +1,5 @@
+import { readProductSpecifications, type ProductSpecification } from "@/lib/productSpecifications";
+
 type SupabaseVendorRow = {
   id: string;
   slug?: string | null;
@@ -17,6 +19,7 @@ type SupabaseVendorRow = {
   claim_status: "UNCLAIMED" | "CLAIM_REQUESTED" | "CLAIMED" | "REJECTED" | null;
   listing_verified: boolean | null;
   public_contact: Record<string, unknown> | null;
+  products?: Array<{ count: number }> | null; // <-- ADD THIS
 };
 
 type SupabaseCategoryRow = {
@@ -35,6 +38,7 @@ type SupabaseProductRow = {
   vendor_name: string | null;
   title: string | null;
   description: string | null;
+  specifications?: unknown;
   listing_type: string | null;
   category_id: string | null;
   category?: { name: string | null; slug: string | null } | null;
@@ -98,6 +102,7 @@ export type PublicVendor = {
   isClaimRequested: boolean;
   publicContact?: Record<string, unknown>;
   logoText: string;
+  productCount?: number;
 };
 
 export type PublicCategory = {
@@ -116,6 +121,7 @@ export type PublicProduct = {
   vendorName: string;
   title: string;
   description?: string;
+  specifications?: ProductSpecification[];
   images: string[];
   listingType?: string;
   availableFor: string[];
@@ -193,6 +199,7 @@ const VENDOR_SELECT = [
   "claim_status",
   "listing_verified",
   "public_contact",
+  "products(count)",
 ].join(",");
 
 const PRODUCT_SELECT = [
@@ -330,6 +337,7 @@ function mapVendor(row: SupabaseVendorRow): PublicVendor {
     isClaimRequested: claimStatus === "CLAIM_REQUESTED",
     publicContact: row.public_contact || undefined,
     logoText: initials(companyName),
+    productCount: row.products?.[0]?.count || 0,
   };
 }
 
@@ -370,6 +378,7 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
     vendorName: stringValue(row.vendor_name) || "Listed Supplier",
     title: stringValue(row.title) || "Untitled Product",
     description: stringValue(row.description) || undefined,
+    ...(row.specifications !== undefined ? { specifications: readProductSpecifications(row.specifications) } : {}),
     images,
     listingType: stringValue(row.listing_type) || undefined,
     availableFor: stringArray(row.available_for),
@@ -450,6 +459,7 @@ export type VendorPageQuery = {
   badge?: string;
   location?: string;
   sort?: string;
+  claimStatus?: string;
 };
 
 export type ProductPageQuery = {
@@ -551,7 +561,13 @@ export async function fetchApprovedVendorsPage(
       ? "eco_score.desc.nullslast,company_name.asc,id.asc"
       : "company_name.asc,id.asc",
   });
+  
   if (conditions.length) params.set("and", `(${conditions.join(",")})`);
+  
+  // <-- ADD THIS BLOCK -->
+  if (query.claimStatus && query.claimStatus !== "ALL") {
+    params.set("claim_status", `eq.${query.claimStatus}`);
+  }
 
   const result = await fetchClampedPage<SupabaseVendorRow>(`vendors?${params}`, page, pageSize);
   return { ...result, items: result.items.map(mapVendor) };
@@ -649,14 +665,21 @@ export async function searchSuggestions(
   };
 }
 
-export async function fetchActiveCategories(limit = 100): Promise<PublicCategory[]> {
+export async function fetchActiveCategories(limit: number | "all" = 100): Promise<PublicCategory[]> {
   const params = new URLSearchParams({
     select: "id,name,slug,image_url,active,sort_order",
     active: "eq.true",
-    order: "sort_order.asc.nullslast,name.asc",
-    limit: String(limit),
+    order: "sort_order.asc.nullslast,name.asc,id.asc",
+    limit: String(limit === "all" ? 1000 : limit),
   });
-  const rows = await supabaseGet<SupabaseCategoryRow[]>(`categories?${params}`);
+  const rows: SupabaseCategoryRow[] = [];
+  do {
+    if (limit === "all") params.set("offset", String(rows.length));
+    const page = await supabaseGet<SupabaseCategoryRow[]>(`categories?${params}`);
+    rows.push(...page);
+    // Continue until empty so a server-side response cap cannot truncate the list.
+    if (limit !== "all" || page.length === 0) break;
+  } while (true);
   return rows.map(mapCategory);
 }
 
@@ -721,7 +744,7 @@ export async function fetchApprovedVendorById(idOrSlug: string): Promise<PublicV
 
 export async function fetchApprovedProductById(id: string): Promise<PublicProduct | null> {
   const params = new URLSearchParams({
-    select: PRODUCT_SELECT,
+    select: `${PRODUCT_SELECT},specifications`,
     id: `eq.${id}`,
     approved: "eq.true",
     limit: "1",

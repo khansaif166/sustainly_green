@@ -10,7 +10,7 @@ export default function CheckEmailPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-gray-50 px-6 text-sm text-gray-500">
+        <main className="flex min-h-screen items-center justify-center bg-gray-50 px-6 text-sm text-gray-500 app-page-surface">
           Loading email instructions...
         </main>
       }

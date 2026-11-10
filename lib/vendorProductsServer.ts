@@ -1,4 +1,5 @@
 import { supabaseServiceFetch } from "@/lib/supabaseServer";
+import { productSpecificationsPayload, readProductSpecifications } from "@/lib/productSpecifications";
 
 export type ProductImageRow = {
   url: string | null;
@@ -16,6 +17,7 @@ export type ProductRow = {
   vendor_name: string;
   title: string;
   description: string | null;
+  specifications?: unknown;
   listing_type: string | null;
   available_for: string[];
   category_id: string | null;
@@ -80,6 +82,8 @@ export const PRODUCT_SELECT = [
   "product_sustainability_tags(tag_id,tag_name_snapshot)",
 ].join(",");
 
+export const PRODUCT_DETAIL_SELECT = `${PRODUCT_SELECT},specifications`;
+
 export function stringOrNull(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
@@ -114,6 +118,7 @@ export function mapProduct(row: ProductRow) {
     vendorName: row.vendor_name,
     title: row.title,
     description: row.description || "",
+    ...(row.specifications !== undefined ? { specifications: readProductSpecifications(row.specifications) } : {}),
     listingType: row.listing_type || "",
     availableFor: row.available_for || [],
     categoryId: row.category_id || "",
@@ -168,6 +173,7 @@ export function buildProductPayload(
     vendor_id: vendor.id,
     vendor_name: vendor.company_name || "Unknown Vendor",
     title,
+    ...productSpecificationsPayload(body),
     description: stringOrNull(body.description),
     listing_type: stringOrNull(body.listingType),
     available_for: stringArray(body.availableFor),

@@ -62,7 +62,7 @@ export default function ResourcesPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#f7faf6] px-4 py-14">
+      <main className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#f7faf6] px-4 py-14 app-page-surface">
         <div className="mx-auto w-full max-w-6xl min-w-0">
           <Link
             href="/"

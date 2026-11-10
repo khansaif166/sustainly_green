@@ -11,7 +11,7 @@ export default function BuyerRegisterRedirect() {
   }, [router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-500">
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-500 app-page-surface">
       Redirecting to buyer registration...
     </main>
   );

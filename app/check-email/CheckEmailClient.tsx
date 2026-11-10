@@ -38,8 +38,8 @@ export default function CheckEmailClient() {
   const isVendor = role === "VENDOR";
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="grid min-h-screen w-full grid-cols-1 md:grid-cols-[46vw_1fr]">
+    <main className="min-h-screen bg-gray-50 app-page-surface">
+      <div className="grid min-h-screen w-full grid-cols-1 md:grid-cols-[46vw_1fr] app-page-surface">
         <section className="relative hidden flex-col justify-center overflow-hidden bg-gradient-to-br from-green-950 via-emerald-800 to-green-700 px-12 text-white md:flex lg:px-16">
           <div
             className="absolute inset-0 bg-cover bg-center opacity-20"

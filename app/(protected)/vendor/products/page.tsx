@@ -81,7 +81,7 @@ export default function VendorProductsPage() {
         .vp-err{background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:12px 16px;font-size:13px;color:#991b1b;font-weight:500}
       `}</style>
 
-      <div className="vp-page">
+      <div className="vp-page app-page-surface">
         {error && <div className="vp-err">{error}</div>}
 
         {/* Hero */}
@@ -92,6 +92,9 @@ export default function VendorProductsPage() {
               <p className="vp-hero-sub">Manage and update your product listings</p>
               <Link href="/vendor/products/new" className="vp-add-btn">
                 <PlusCircle size={14} />Add New Product
+              </Link>
+              <Link href="/vendor/products/import" className="vp-add-btn" style={{ marginLeft: 10 }}>
+                <PlusCircle size={14} />Bulk Upload
               </Link>
             </div>
             <div className="vp-hero-stats">

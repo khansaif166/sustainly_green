@@ -10,6 +10,10 @@ import {
 } from "lucide-react";
 import { fetchCurrentProfile, getCurrentUser, signOutSupabase } from "@/lib/supabaseAuth";
 import SessionTimeoutNotice from "@/app/components/SessionTimeoutNotice";
+// Attach product styles before the access guard reveals the child page.
+import "@/app/components/product-images/productImages.module.css";
+import "@/app/components/product-specifications/productSpecifications.module.css";
+import "@/app/components/product-import/productImport.module.css";
 
 const NAV = [
   { name: "Home",       href: "/",                  icon: Home },
@@ -53,7 +57,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   }
 
   if (checkingAuth) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="app-page-surface" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ width: 32, height: 32, border: "4px solid #dcfce7", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
@@ -146,20 +150,20 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
             );
           })}
           <div className="vl-divider" />
-          <button className="vl-logout" onClick={logout}><LogOut size={17} />Logout</button>
+          <button className="vl-logout app-account-control" onClick={logout}><LogOut size={17} />Logout</button>
         </nav>
 
         <div className="vl-user">
           <div className="vl-avatar">{initials}</div>
           <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: 12.5, fontWeight: 700, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</p>
+            <p className="app-account-label" style={{ fontWeight: 700, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</p>
             <p style={{ fontSize: 10.5, color: "rgba(255,255,255,.32)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userEmail}</p>
           </div>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="vl-main">{children}</main>
+      <main className="vl-main app-page-surface">{children}</main>
     </>
   );
 }

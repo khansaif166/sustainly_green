@@ -81,14 +81,14 @@ export default function BecomeVendorPage() {
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 app-page-surface">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-200 border-t-green-600" />
       </div>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-6 py-12">
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-6 py-12 app-page-surface">
       <div className="w-full max-w-md">
         <Link
           href="/buyer/dashboard"

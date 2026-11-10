@@ -255,10 +255,10 @@ export default function BuyerRFQModal({
               Log in or create a free buyer account to send your requirement and receive a quote from this vendor.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <Link href={loginHref} className="auth-modal-primary" onClick={onClose}>
+              <Link href={loginHref} className="auth-modal-primary app-account-control" onClick={onClose}>
                 Log in
               </Link>
-              <Link href={registerHref} className="auth-modal-secondary" onClick={onClose}>
+              <Link href={registerHref} className="auth-modal-secondary app-account-control" onClick={onClose}>
                 <UserPlus className="h-4 w-4" />
                 Sign up
               </Link>

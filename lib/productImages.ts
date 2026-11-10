@@ -1,7 +1,7 @@
 // lib/productImages.ts
 //
-// Vendor product images are normalized in the browser before upload: whatever a
-// vendor picks gets decoded, downscaled to a sane edge length and re-encoded
+// Product images are normalized in the browser before upload: whatever a
+// user picks gets decoded, downscaled to a sane edge length and re-encoded
 // until it fits the size budget. Nothing is rejected for being too big or the
 // wrong shape — only files the browser genuinely cannot decode as an image.
 
@@ -26,7 +26,8 @@ export const MAX_PIXELS = MAX_EDGE * MAX_EDGE;
 export const MIN_USEFUL_EDGE = 600;
 
 // The detail hero renders at aspect-[3/2] with object-cover, so images far from
-// 3:2 lose their edges on display. Advisory only — we never crop the file.
+// 3:2 lose their edges on display. Normalization never crops; the optional
+// editor in productImageCrop.ts lets the user choose a 3:2 crop explicitly.
 export const TARGET_ASPECT = 3 / 2;
 export const ASPECT_TOLERANCE = 0.08;
 
@@ -133,8 +134,8 @@ export async function prepareProductImage(file: File): Promise<PreparedImage | n
   const { width: sourceWidth, height: sourceHeight } = dimensionsOf(source);
   if (!sourceWidth || !sourceHeight) return null;
 
-  const type = supportsWebp() ? "image/webp" : "image/jpeg";
-  const extension = type === "image/webp" ? "webp" : "jpg";
+  const type = supportsWebp() ? "image/webp" : "image/png";
+  const extension = type === "image/webp" ? "webp" : "png";
 
   let scale = Math.min(1, MAX_EDGE / Math.max(sourceWidth, sourceHeight));
 

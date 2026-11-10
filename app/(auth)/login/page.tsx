@@ -162,14 +162,14 @@ export default function LoginPage() {
         <div className="grid grid-cols-2 gap-3">
           <Link
             href="/register?role=BUYER"
-            className="rounded-xl border border-gray-200 px-4 py-3 text-center hover:border-[#059669] hover:bg-emerald-50/50 transition-all"
+            className="rounded-xl border border-gray-200 px-4 py-3 text-center hover:border-[#059669] hover:bg-emerald-50/50 transition-all app-account-control"
           >
             <span className="block text-[13px] font-bold text-gray-900">Register as a buyer</span>
             <span className="block text-[11px] text-gray-500 mt-0.5">Source sustainable products</span>
           </Link>
           <Link
             href="/register?role=VENDOR"
-            className="rounded-xl border border-gray-200 px-4 py-3 text-center hover:border-[#059669] hover:bg-emerald-50/50 transition-all"
+            className="rounded-xl border border-gray-200 px-4 py-3 text-center hover:border-[#059669] hover:bg-emerald-50/50 transition-all app-account-control"
           >
             <span className="block text-[13px] font-bold text-gray-900">List your business</span>
             <span className="block text-[11px] text-gray-500 mt-0.5">Sell as a supplier</span>

@@ -40,7 +40,7 @@ export default function VendorPendingApprovalPage() {
         .vpn-footer{text-align:center;font-size:12px;color:#9ca3af}
       `}</style>
 
-      <div className="vpn-wrap">
+      <div className="vpn-wrap app-page-surface">
         <div className="vpn-card">
 
           {/* Hero */}

@@ -56,7 +56,7 @@ export default function PricingClient() {
     <>
       <Header />
 
-      <main className="w-full max-w-6xl mx-auto px-6 md:px-12 py-16 flex flex-col justify-center relative">
+      <main className="w-full max-w-6xl mx-auto px-6 md:px-12 py-16 flex flex-col justify-center relative app-page-surface">
 
         {/* ================= VALUE PROPOSITION / BENTO BOX WITH ANIMATED SVGS ================= */}
         <section className="mb-24 flex flex-col items-center w-full">
