@@ -533,7 +533,8 @@ export default function BrowsePage({
             background: "#fff",
             padding: 0,
             overflow: "hidden",
-            display: "flex"
+            display: "flex",
+            borderRadius: "14px"
           }}
         >
           {/* Vertical left color bar indicating status */}
@@ -552,74 +553,89 @@ export default function BrowsePage({
             
             <div className="bs-row-body" style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1 }}>
              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                <h3 className="bs-row-title" style={{ margin: 0, fontSize: "16px", fontWeight: 800 }}>{vt(v.companyName, "Unnamed Vendor")}</h3>
+                <h3 className="bs-row-title" style={{ margin: 0, fontSize: "17px", fontWeight: 800 }}>{vt(v.companyName, "Unnamed Vendor")}</h3>
                 {isUnclaimed ? (
-                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#b45309", background: "#fef3c7", padding: "2px 8px", borderRadius: "50px", border: "1px solid #fcd34d", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#b45309", background: "#fef3c7", padding: "3px 10px", borderRadius: "50px", border: "1px solid #fcd34d", display: "flex", alignItems: "center", gap: "4px" }}>
                     <FiAlertTriangle size={12} /> UNCLAIMED
                   </span>
                 ) : (
-                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#166534", background: "#dcfce7", padding: "2px 8px", borderRadius: "50px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#166534", background: "#dcfce7", padding: "3px 10px", borderRadius: "50px", display: "flex", alignItems: "center", gap: "4px" }}>
                     <FiCheckCircle size={12} /> VERIFIED BUSINESS
                   </span>
                 )}
                 
                 {!isUnclaimed && v.category && (
-                  <span style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", fontSize: "10px", fontWeight: 600, padding: "2px 8px", borderRadius: "6px" }}>
+                  <span style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", fontSize: "11px", fontWeight: 600, padding: "3px 10px", borderRadius: "6px" }}>
                     {vt(v.category)}
                   </span>
                 )}
               </div>
               
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "13px", color: "#4b5563", marginBottom: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "13px", color: "#6b7280", marginBottom: "8px" }}>
                 {isUnclaimed && v.category && <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><FiGrid size={13} /> {vt(v.category)}</span>}
                 {locationString && <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><FiMapPin size={13} /> {locationString}</span>}
                 
                 {!isUnclaimed && v.approved && (
                   <span style={{ display: "flex", alignItems: "center", gap: "4px", color: "#15803d", fontWeight: 700 }}>
-                    <HiOutlineShieldCheck size={14} /> GST & Address Verified
+                    <HiOutlineShieldCheck size={16} /> GST & Address Verified
                   </span>
                 )}
               </div>
               
               {v.description && (
-                <p className="bs-card-desc" style={{ margin: 0, color: "#4b5563", fontSize: "13px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                <p className="bs-card-desc" style={{ margin: 0, color: "#4b5563", fontSize: "13px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.55 }}>
                   {vt(v.description).replace(/<[^>]+>/g, "")}
                 </p>
               )}
             </div>
             
             {/* Stats Block (List View) */}
-            {!isUnclaimed && (
-              <div style={{ display: "flex", gap: "24px", padding: "0 24px", borderLeft: "1px solid #f3f4f6", borderRight: "1px solid #f3f4f6", textAlign: "center" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{v.productCount ? `${v.productCount}+` : '0'}</span>
-                  <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Products</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{(v.certifications || []).length}</span>
-                  <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Certs</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{yib ? `${yib}` : '-'}</span>
-                  <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Years</span>
-                </div>
-              </div>
-            )}
+            <div style={{ display: "flex", gap: "24px", padding: "0 24px", borderLeft: "1px solid #f3f4f6", borderRight: "1px solid #f3f4f6", textAlign: "center" }}>
+              {isUnclaimed ? (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>--</span>
+                    <span style={{ fontSize: "11px", color: "#b45309", fontWeight: 600 }}>(Claim to edit)</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>--</span>
+                    <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Verification locked</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{v.productCount ? `${v.productCount}+` : '0'}</span>
+                    <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Active Products</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{(v.certifications || []).length}</span>
+                    <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Certifications</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{yib ? `${yib}` : '-'}</span>
+                    <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Yrs in Business</span>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="bs-row-right" style={{ justifyContent: "center", width: "160px", gap: "8px" }}>
               {isUnclaimed ? (
                 <button 
                   onClick={(e) => { e.preventDefault(); handleClaimClick(e, v); }} 
-                  style={{ width: "100%", background: "transparent", color: "#b45309", border: "1px solid #d97706", padding: "8px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                  style={{ width: "100%", background: "transparent", color: "#b45309", border: "1px solid #d97706", padding: "10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", transition: "all 0.2s" }}
+                  onMouseOver={(e) => e.currentTarget.style.background = "#fffbeb"} 
+                  onMouseOut={(e) => e.currentTarget.style.background = "transparent"}
                 >
                   Claim <FiArrowUpRight size={14} />
                 </button>
               ) : (
-                <button style={{ width: "100%", background: "#14532d", color: "#fff", border: "none", borderRadius: "8px", padding: "8px", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#064e3b"} onMouseOut={e => e.currentTarget.style.background = "#14532d"} onClick={(e) => { e.preventDefault(); }}>
-                  <FiMessageSquare size={13} /> Inquiry
+                <button style={{ width: "100%", background: "#14532d", color: "#fff", border: "none", borderRadius: "8px", padding: "10px", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#064e3b"} onMouseOut={e => e.currentTarget.style.background = "#14532d"} onClick={(e) => { e.preventDefault(); }}>
+                  <FiMessageSquare size={13} /> Send Inquiry
                 </button>
               )}
-              <Link href={vendorHref(v.id, v.slug)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff", color: "#374151", border: "1px solid #d1d5db", padding: "8px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, textDecoration: "none" }}>
+              <Link href={vendorHref(v.id, v.slug)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", color: "#374151", border: "1px solid #d1d5db", padding: "10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, textDecoration: "none", transition: "background 0.2s" }} onMouseOver={(e) => e.currentTarget.style.background = "#f9fafb"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
                 View Profile
               </Link>
             </div>
