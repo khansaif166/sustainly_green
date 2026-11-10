@@ -38,6 +38,7 @@ type Vendor = PublicVendor & {
   city?: string;
   country?: string;
   profileCompleteness?: number;
+  ecoVerified?: boolean;
 };
 type Category = { id: string; name: string; slug?: string; imageUrl?: string };
 interface FilterState { badge: string; location: string; sortBy: string; }
