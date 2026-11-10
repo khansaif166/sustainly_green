@@ -7,7 +7,8 @@ import { ArrowRight, BadgeCheck, BookOpen, Network, SearchCheck } from "lucide-r
 import { getSiteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Sustainly Green SDG Commitment | The Hub of Sustainability",
+  // The root layout's title template appends "| Sustainly Green".
+  title: "Our SDG Commitment (SDG 12 & 13)",
   description: "Discover how Sustainly Green supports SDG 12 and SDG 13 through verified sustainable suppliers, responsible sourcing, circular economy solutions, and lower-carbon business connections.",
   alternates: { canonical: `${getSiteUrl()}/sdg-commitment` },
 };
