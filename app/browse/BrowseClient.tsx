@@ -46,10 +46,8 @@ const DEFAULT_SORT = "newest";
 const BADGES = [
   { val: "", label: "All Badges", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
   { val: "verified", label: "Verified", color: "#15803d", bg: "rgba(22,163,74,0.12)" },
-  { val: "approved", label: "Approved", color: "#0369a1", bg: "rgba(3,105,161,0.1)" },
-  { val: "listed", label: "Listed", color: "#b45309", bg: "rgba(180,83,9,0.1)" },
-  { val: "claim_requested", label: "Claim Requested", color: "#7c3aed", bg: "rgba(124,58,237,0.1)" },
   { val: "eco_verified", label: "Eco Verified", color: "#047857", bg: "rgba(4,120,87,0.1)" },
+  { val: "unclaimed", label: "Unclaimed", color: "#b45309", bg: "rgba(254,243,199,1)" },
 ];
 
 function badgeStyle(badge?: string) {
@@ -64,17 +62,15 @@ function vt(v: unknown, fb = "") {
 }
 
 function vendorBadge(v: Vendor) {
-  if (v.isClaimRequested) return "claim_requested";
-  if (v.isUnclaimed) return "listed";
-  if (v.listingVerified) return "verified";
-  return "approved";
+  if (v.claimStatus === 'UNCLAIMED' || v.isUnclaimed) return "unclaimed";
+  if (v.ecoVerified) return "eco_verified";
+  return "verified";
 }
 
 function vendorBadgeLabel(v: Vendor) {
   const badge = BADGES.find((item) => item.val === vendorBadge(v));
-  return badge?.label || "Approved";
+  return badge?.label || "Verified";
 }
-
 /* ============================================================
    MAIN COMPONENT
 ============================================================ */
@@ -526,135 +522,104 @@ export default function BrowsePage({
     const locationParts = [v.city, v.state, v.country].filter(Boolean);
     const locationString = locationParts.length > 0 ? locationParts.join(", ") : v.location || "Location not specified";
 
+    
     if (viewMode !== "grid") {
       return (
         /* --- LIST MODE --- */
-        <Link 
-          href={vendorHref(v.id, v.slug)} 
+        <div 
           className="bs-row"
           style={{
-            borderColor: isUnclaimed ? "#fcd34d" : "#bbf7d0",
+            borderColor: isUnclaimed ? "#fcd34d" : "#e5e7eb",
             background: "#fff",
             padding: 0,
-            overflow: "hidden"
+            overflow: "hidden",
+            display: "flex"
           }}
         >
           {/* Vertical left color bar indicating status */}
           <div style={{ width: "6px", background: isUnclaimed ? "#fcd34d" : "#10b981", flexShrink: 0 }} />
           
-          <div style={{ display: "flex", gap: "16px", padding: "16px", width: "100%" }}>
+          <div style={{ display: "flex", gap: "16px", padding: "16px", width: "100%", alignItems: "center" }}>
             <div className="bs-vc-logo" style={{ 
-              width: 64, height: 64, fontSize: 18, flexShrink: 0, borderRadius: 12, 
-              background: isUnclaimed ? "#fffbeb" : "#f0fdf4",
-              color: isUnclaimed ? "#b45309" : "#15803d",
-              border: `1px solid ${isUnclaimed ? "#fcd34d" : "#bbf7d0"}`
+              width: 72, height: 72, fontSize: 20, flexShrink: 0, borderRadius: 12, 
+              background: isUnclaimed ? "#fffbeb" : "#15803d",
+              color: isUnclaimed ? "#b45309" : "#fff",
+              border: isUnclaimed ? "1px solid #fcd34d" : "none",
+              display: "flex", alignItems: "center", justifyContent: "center"
             }}>
               {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} /> : logoInitials(v)}
             </div>
             
-            <div className="bs-row-body" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div className="bs-row-body" style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1 }}>
              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                <h3 className="bs-row-title" style={{ margin: 0 }}>{vt(v.companyName, "Unnamed Vendor")}</h3>
+                <h3 className="bs-row-title" style={{ margin: 0, fontSize: "16px", fontWeight: 800 }}>{vt(v.companyName, "Unnamed Vendor")}</h3>
                 {isUnclaimed ? (
-                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#b45309", background: "#fef3c7", padding: "2px 6px", borderRadius: "4px", border: "1px solid #fcd34d" }}>
-                    <FiAlertTriangle size={10} style={{ marginRight: 3, verticalAlign: "middle" }}/>UNCLAIMED
+                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#b45309", background: "#fef3c7", padding: "2px 8px", borderRadius: "50px", border: "1px solid #fcd34d", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <FiAlertTriangle size={12} /> UNCLAIMED
                   </span>
                 ) : (
-                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#065f46", background: "#a7f3d0", padding: "2px 6px", borderRadius: "4px" }}>
-                    <FiCheckCircle size={10} style={{ marginRight: 3, verticalAlign: "middle" }} />
-                    VERIFIED
+                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#166534", background: "#dcfce7", padding: "2px 8px", borderRadius: "50px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <FiCheckCircle size={12} /> VERIFIED BUSINESS
+                  </span>
+                )}
+                
+                {!isUnclaimed && v.category && (
+                  <span style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", fontSize: "10px", fontWeight: 600, padding: "2px 8px", borderRadius: "6px" }}>
+                    {vt(v.category)}
                   </span>
                 )}
               </div>
               
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "12px", color: "#6b7280", marginBottom: "6px" }}>
-                {v.category && <span><FiGrid size={11} style={{ marginRight: 4, verticalAlign: "middle" }}/>{vt(v.category)}</span>}
-                {locationString && <span><FiMapPin size={11} style={{ marginRight: 4, verticalAlign: "middle" }}/>{locationString}</span>}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "13px", color: "#4b5563", marginBottom: "8px" }}>
+                {isUnclaimed && v.category && <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><FiGrid size={13} /> {vt(v.category)}</span>}
+                {locationString && <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><FiMapPin size={13} /> {locationString}</span>}
+                
+                {!isUnclaimed && v.approved && (
+                  <span style={{ display: "flex", alignItems: "center", gap: "4px", color: "#15803d", fontWeight: 700 }}>
+                    <HiOutlineShieldCheck size={14} /> GST & Address Verified
+                  </span>
+                )}
               </div>
               
-              {v.description && <p className="bs-card-desc" style={{ margin: 0, color: "#4b5563" }}>{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 120)}…</p>}
-              
-              {(v.subCategories || []).length > 0 && (
-                <div className="bs-card-tags" style={{ marginTop: 8 }}>
-                  {v.subCategories!.slice(0, 3).map((item, i) => (
-                    <span key={i} className="bs-tag" style={isUnclaimed ? { background: "#fff", border: "1px solid #e5e7eb" } : {}}>{vt(item)}</span>
-                  ))}
-                </div>
+              {v.description && (
+                <p className="bs-card-desc" style={{ margin: 0, color: "#4b5563", fontSize: "13px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                  {vt(v.description).replace(/<[^>]+>/g, "")}
+                </p>
               )}
             </div>
             
-            <div className="bs-row-right" style={{ justifyContent: "center", width: "160px" }}>
+            {/* Stats Block (List View) */}
+            {!isUnclaimed && (
+              <div style={{ display: "flex", gap: "24px", padding: "0 24px", borderLeft: "1px solid #f3f4f6", borderRight: "1px solid #f3f4f6", textAlign: "center" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{v.productCount ? `${v.productCount}+` : '0'}</span>
+                  <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Products</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{(v.certifications || []).length}</span>
+                  <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Certs</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{yib ? `${yib}` : '-'}</span>
+                  <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Years</span>
+                </div>
+              </div>
+            )}
+
+            <div className="bs-row-right" style={{ justifyContent: "center", width: "160px", gap: "8px" }}>
               {isUnclaimed ? (
                 <button 
                   onClick={(e) => { e.preventDefault(); handleClaimClick(e, v); }} 
-                  style={{ width: "100%", background: "#f59e0b", color: "#fff", border: "none", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer", marginBottom: "8px" }}
+                  style={{ width: "100%", background: "transparent", color: "#b45309", border: "1px solid #d97706", padding: "8px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
                 >
-                  Claim Profile
+                  Claim <FiArrowUpRight size={14} />
                 </button>
               ) : (
-                <span className="bs-vc-trust" style={{ fontSize: "11px", marginBottom: "12px", textAlign: "right" }}>
-                  <FiCheckCircle size={12} /> Identity Checked
-                </span>
+                <button style={{ width: "100%", background: "#14532d", color: "#fff", border: "none", borderRadius: "8px", padding: "8px", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#064e3b"} onMouseOut={e => e.currentTarget.style.background = "#14532d"} onClick={(e) => { e.preventDefault(); }}>
+                  <FiMessageSquare size={13} /> Inquiry
+                </button>
               )}
-              <span style={{ width: "100%", display: "block", textAlign: "center", background: "#fff", color: "#374151", border: "1px solid #d1d5db", padding: "8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700 }}>
-                View Profile
-              </span>
-            </div>
-          </div>
-        </Link>
-      );
-    }
-
-    // --- GRID MODE: UNCLAIMED CARD ---
-    if (isUnclaimed) {
-      return (
-        <div className="bs-vendor-card bs-vendor-card-unclaimed">
-          <div className="bs-vc-topbar bs-vc-topbar-unclaimed">
-            {/* <span className="bs-vc-topbar-left bs-vc-topbar-left-unclaimed">UNCLAIMED BUSINESS</span> */}
-            <span className="bs-vc-topbar-right bs-vc-topbar-right-unclaimed">
-              <FiAlertTriangle size={10} /> UNCLAIMED LISTING
-            </span>
-          </div>
-
-          <div className="bs-vc-main">
-            <div className="bs-vc-header-row" style={{ alignItems: 'center' }}>
-              <div className="bs-vc-logo-box bs-vc-logo-box-unclaimed">
-                {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} /> : logoInitials(v)}
-              </div>
-              <div className="bs-vc-info">
-                <h3 style={{ fontSize: '18px' }}>{vt(v.companyName, "Unnamed Vendor")}</h3>
-                <div className="bs-vc-location">
-                  <FiMapPin size={12} /> {locationString}
-                </div>
-              </div>
-            </div>
-
-            <div className="bs-vc-unclaimed-trust">
-              <FiUser size={14} /> Unclaimed profile
-            </div>
-
-            {v.description && (
-              <p className="bs-vc-desc">{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 100)}…</p>
-            )}
-
-            {(v.subCategories || []).length > 0 && (
-              <div className="bs-vc-tags-row">
-                {v.subCategories!.slice(0, 3).map((item, i) => (
-                  <span key={`sub-${i}`} className="bs-vc-tag-pill bs-vc-tag-pill-unclaimed">{vt(item)}</span>
-                ))}
-              </div>
-            )}
-
-            <div className="bs-vc-locked-stats">
-              <span>Products: -- <span className="bs-vc-locked-hint">(Claim to edit)</span> <FiLock size={13} color="#9ca3af" /></span>
-              <span>Certifications: -- <FiLock size={13} color="#9ca3af" /></span>
-            </div>
-
-            <div style={{ marginTop: 'auto' }}>
-            <button onClick={(e) => handleClaimClick(e, v)} className="bs-btn-claim">
-    <u>Claim this business</u> <FiArrowUpRight size={16} />
-  </button>
-              <Link href={vendorHref(v.id, v.slug)} className="bs-btn-secondary-full">
+              <Link href={vendorHref(v.id, v.slug)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff", color: "#374151", border: "1px solid #d1d5db", padding: "8px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, textDecoration: "none" }}>
                 View Profile
               </Link>
             </div>
@@ -663,82 +628,151 @@ export default function BrowsePage({
       );
     }
 
-    // --- GRID MODE: VERIFIED CARD ---
+
+    // --- GRID MODE: UNCLAIMED CARD ---
+    if (isUnclaimed) {
+      return (
+        <div className="bs-vendor-card" style={{ background: "#f4f5f6", borderColor: "#e5e7eb", display: "flex", flexDirection: "column" }}>
+          {/* Top Bar */}
+          <div style={{ padding: "16px 16px 0", display: "flex", alignItems: "center", gap: "8px", color: "#6b7280", fontSize: "11px", fontWeight: 700, letterSpacing: "0.03em" }}>
+            <FiAlertTriangle size={14} /> UNCLAIMED LISTING
+          </div>
+
+          <div className="bs-vc-main" style={{ paddingTop: "12px", display: "flex", flexDirection: "column", flex: 1 }}>
+            {/* Logo and Name */}
+            <div className="bs-vc-header-row" style={{ alignItems: 'center', gap: "14px", marginBottom: "16px" }}>
+              <div className="bs-vc-logo-box" style={{ background: "#e5e7eb", color: "#374151", border: "none", borderRadius: "14px", width: "54px", height: "54px", fontSize: "18px", fontWeight: 800 }}>
+                {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 14 }} /> : logoInitials(v)}
+              </div>
+              <div className="bs-vc-info">
+                <h3 style={{ fontSize: '18px', color: '#111', fontWeight: 800, margin: "0 0 4px" }}>{vt(v.companyName, "Unnamed Vendor")}</h3>
+                <div className="bs-vc-location" style={{ fontSize: "13px", color: "#4b5563", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <FiMapPin size={13} /> {locationString}
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            {v.description && (
+              <p className="bs-vc-desc" style={{ fontSize: "13px", color: "#374151", marginBottom: "14px", lineHeight: 1.5 }}>
+                {vt(v.description).replace(/<[^>]+>/g, "").slice(0, 100)}…
+              </p>
+            )}
+
+            {/* Categories / Tags */}
+            {(v.subCategories || []).length > 0 && (
+              <div className="bs-vc-tags-row" style={{ marginBottom: "16px", gap: "8px" }}>
+                {v.subCategories!.slice(0, 3).map((item, i) => (
+                  <span key={`sub-${i}`} style={{ background: "#e5e7eb", color: "#4b5563", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 600 }}>{vt(item)}</span>
+                ))}
+              </div>
+            )}
+
+            <div style={{ flex: 1 }}></div> {/* Pushes bottom content down */}
+
+            {/* Locked Stats Section */}
+            <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "14px", paddingBottom: "14px", marginBottom: "8px", display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px", fontWeight: 700, color: "#111" }}>
+              <div style={{ display: "flex", justifyItems: "center", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Products: --</span>
+                <span style={{ color: "#b45309", display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>(Claim to edit) <FiLock size={12} color="#9ca3af" /></span>
+              </div>
+              <div style={{ display: "flex", justifyItems: "center", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Certifications: --</span>
+                <span style={{ color: "#6b7280", display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 500 }}>Verification locked <FiLock size={12} color="#9ca3af" /></span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button onClick={(e) => handleClaimClick(e, v)} style={{ background: "transparent", border: "1px solid #d97706", color: "#b45309", borderRadius: "8px", padding: "10px", fontSize: "13px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", transition: "all 0.2s" }} onMouseOver={(e) => e.currentTarget.style.background = "#fffbeb"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
+                Claim this business <FiArrowUpRight size={16} />
+              </button>
+              <Link href={vendorHref(v.id, v.slug)} style={{ background: "transparent", color: "#374151", border: "none", padding: "10px", fontSize: "13px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", cursor: "pointer", borderRadius: "8px", transition: "background 0.2s" }} onMouseOver={(e) => e.currentTarget.style.background = "#e5e7eb"} onMouseOut={(e) => e.currentTarget.style.background = "transparent"}>
+                View Profile
+              </Link>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- GRID MODE: VERIFIED CARD REDESIGN ---
     return (
-      <div className="bs-vendor-card">
-       <div className="bs-vc-topbar">
-          <span className="bs-vc-topbar-left">VERIFIED BUSINESS</span>
-         
+      <div className="bs-vendor-card" style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        
+        {/* Top Bar with separate pills */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 16px 0" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", background: "#dcfce7", color: "#166534", fontSize: "10px", fontWeight: 700, padding: "4px 10px", borderRadius: "50px", textTransform: "uppercase" }}>
+            <FiCheckCircle size={12} /> VERIFIED BUSINESS
+          </span>
+          {v.category && (
+            <span style={{ display: "inline-flex", alignItems: "center", background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", fontSize: "11px", fontWeight: 600, padding: "3px 10px", borderRadius: "6px" }}>
+              {vt(v.category)}
+            </span>
+          )}
         </div>
 
-        <div className="bs-vc-main">
-          <div className="bs-vc-header-row">
-            <div className="bs-vc-logo-box">
-              {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} /> : logoInitials(v)}
+        <div className="bs-vc-main" style={{ display: "flex", flexDirection: "column", flex: 1, padding: "16px 0 0" }}>
+          
+          {/* Header Row: Logo & Name */}
+          <div style={{ display: "flex", gap: "14px", padding: "0 16px 16px", alignItems: "center" }}>
+            <div style={{ width: "56px", height: "56px", borderRadius: "10px", background: "#15803d", color: "#fff", fontSize: "18px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {v.logoUrl ? <img src={v.logoUrl} alt={vt(v.companyName)} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "10px" }} /> : logoInitials(v)}
             </div>
-            <div className="bs-vc-info">
-              <h3>{vt(v.companyName, "Unnamed Vendor")}</h3>
-              
-              <div className="bs-vc-location" style={{ marginBottom: "6px" }}>
-                <FiMapPin size={12} /> {locationString}
+            <div>
+              <h3 style={{ fontSize: "17px", fontWeight: 800, color: "#111", margin: "0 0 4px", lineHeight: 1.2 }}>{vt(v.companyName, "Unnamed Vendor")}</h3>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "13px", color: "#6b7280" }}>
+                <FiMapPin size={13} /> {locationString}
               </div>
-              
-              {v.category && <span className="bs-vc-pill-cat">{vt(v.category)}</span>}
             </div>
           </div>
 
+          {/* Shield Trust Badge */}
           {v.approved && (
-            <div className="bs-vc-trust">
-              <FiCheckCircle size={14} /> GST & Address Verified
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 700, color: "#15803d", padding: "0 16px", marginBottom: "14px" }}>
+              <HiOutlineShieldCheck size={18} /> GST & Address Verified
             </div>
           )}
 
+          {/* Description */}
           {v.description && (
-            <p className="bs-vc-desc">{vt(v.description).replace(/<[^>]+>/g, "").slice(0, 100)}…</p>
+            <p style={{ fontSize: "13px", color: "#4b5563", lineHeight: 1.55, margin: "0 16px 16px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+              {vt(v.description).replace(/<[^>]+>/g, "").slice(0, 110)}…
+            </p>
           )}
+          
+          <div style={{ flex: 1 }}></div> {/* Spacer */}
 
-          {(v.subCategories || []).length > 0 && (
-            <div className="bs-vc-tags-row">
-              {v.subCategories!.slice(0, 3).map((item, i) => (
-                <span key={`sub-${i}`} className="bs-vc-tag-pill">{vt(item)}</span>
-              ))}
+          {/* Stats Grid (3 Columns) */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderTop: "1px solid #f3f4f6", borderBottom: "1px solid #f3f4f6", padding: "16px 0", margin: "0 16px 16px", textAlign: "center" }}>
+            <div style={{ borderRight: "1px solid #f3f4f6", display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{v.productCount ? `${v.productCount}+` : '0'}</span>
+              <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Active Products</span>
             </div>
-          )}
-
-          <div className="bs-vc-stats-grid">
-            <div className="bs-vc-stat-item">
-              <span className="bs-vc-stat-val">{v.productCount ? `${v.productCount}+` : '0'}</span>
-              <span className="bs-vc-stat-label">Active Products</span>
+            <div style={{ borderRight: "1px solid #f3f4f6", display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{(v.certifications || []).length}</span>
+              <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Certifications</span>
             </div>
-            <div className="bs-vc-stat-item">
-              <span className="bs-vc-stat-val">{(v.certifications || []).length}</span>
-              <span className="bs-vc-stat-label">
-                Certifications 
-                {(v.certifications || []).length > 0 && ` (${v.certifications![0]})`}
-              </span>
-            </div>
-            <div className="bs-vc-stat-item">
-              <span className="bs-vc-stat-val">{yib ? `${yib}+` : '-'}</span>
-              <span className="bs-vc-stat-label">Yrs in Business</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ fontSize: "16px", fontWeight: 800, color: "#111" }}>{yib ? `${yib}` : '-'}</span>
+              <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Yrs in Business</span>
             </div>
           </div>
 
-          <div className="bs-vc-actions">
-            <button className="bs-btn-primary" onClick={(e) => { e.preventDefault(); }}>
+          {/* Actions */}
+          <div style={{ display: "flex", gap: "10px", padding: "0 16px 16px" }}>
+            <button style={{ flex: 1, background: "#14532d", color: "#fff", border: "none", borderRadius: "8px", padding: "10px", fontSize: "13px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#064e3b"} onMouseOut={e => e.currentTarget.style.background = "#14532d"} onClick={(e) => { e.preventDefault(); }}>
               <FiMessageSquare size={14} /> Send Inquiry
             </button>
-            <Link href={vendorHref(v.id, v.slug)} className="bs-btn-secondary">
+            <Link href={vendorHref(v.id, v.slug)} style={{ flex: 1, background: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: "8px", padding: "10px", fontSize: "13px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", transition: "background 0.2s" }} onMouseOver={e => e.currentTarget.style.background = "#f9fafb"} onMouseOut={e => e.currentTarget.style.background = "#fff"}>
               View Profile
             </Link>
-            {/* <button className="bs-btn-icon" title="Save Vendor">
-              <FiBookmark size={14} />
-            </button> */}
           </div>
+
         </div>
       </div>
     );
-  };
-  const items = type === "Vendor" ? vendors : products;
+  };  const items = type === "Vendor" ? vendors : products;
   const isEmpty = !loading && items.length === 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -1645,26 +1679,46 @@ export default function BrowsePage({
             {/* --- MOVED CLAIM FILTER BAR HERE --- */}
             {type === "Vendor" && (
               <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
-                {['ALL', 'CLAIMED', 'UNCLAIMED'].map(status => (
-                  <button
-                    key={status}
-                    onClick={() => updateUrl("claim_status", status === "ALL" ? "" : status)}
-                    style={{
-                      padding: '6px 16px',
-                      borderRadius: '50px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      border: '1px solid ' + (claimFilter === status ? '#16a34a' : '#d1d5db'),
-                      background: claimFilter === status ? '#f0fdf4' : '#fff',
-                      color: claimFilter === status ? '#15803d' : '#4b5563',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {status === 'ALL' ? 'All Statuses' : status.replace('_', ' ')}
-                  </button>
-                ))}
+                {['ALL', 'VERIFIED', 'UNCLAIMED'].map(status => {
+                  // Map display values to API parameter values
+                  const paramValue = status === 'VERIFIED' ? 'CLAIMED' : status === 'ALL' ? '' : status;
+                  
+                  return (
+                    <button
+                      key={status}
+                      onClick={() => updateUrl("claim_status", paramValue)}
+                      style={{
+                        padding: '6px 16px',
+                        borderRadius: '50px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        border: '1px solid ' + (
+                          (status === 'ALL' && !claimFilter) || 
+                          (status === 'VERIFIED' && claimFilter === 'CLAIMED') || 
+                          (status === 'UNCLAIMED' && claimFilter === 'UNCLAIMED') 
+                          ? '#16a34a' : '#d1d5db'
+                        ),
+                        background: (
+                          (status === 'ALL' && !claimFilter) || 
+                          (status === 'VERIFIED' && claimFilter === 'CLAIMED') || 
+                          (status === 'UNCLAIMED' && claimFilter === 'UNCLAIMED') 
+                          ? '#f0fdf4' : '#fff'
+                        ),
+                        color: (
+                          (status === 'ALL' && !claimFilter) || 
+                          (status === 'VERIFIED' && claimFilter === 'CLAIMED') || 
+                          (status === 'UNCLAIMED' && claimFilter === 'UNCLAIMED') 
+                          ? '#15803d' : '#4b5563'
+                        ),
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {status === 'ALL' ? 'All Statuses' : status}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
