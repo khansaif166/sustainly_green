@@ -42,6 +42,7 @@ import {
   Truck,
   UserRound,
   Zap,
+  MapPin,
 } from "lucide-react";
 
 export type CategoryItem = {
@@ -949,16 +950,41 @@ export default function HomeClient({
             </div>
             <div className="card-grid four-up">
               {featuredSuppliers.map((supplier, index) => (
-                <Link key={supplier.id} href={vendorHref(supplier.id, supplier.slug)} className="supplier-card">
-                  {getVendorBadgeMeta(supplier) && (
-                    <img src={getVendorBadgeMeta(supplier)?.src} alt={getVendorBadgeMeta(supplier)?.label} className="supplier-verified-img" />
-                  )}
-                  <div className={`supplier-mark mark-${index % 4}`}>{supplier.mark}</div>
-                  <h3>{supplier.name}</h3>
-                  <p className="supplier-country">{supplier.state || supplier.country}</p>
-                  <p className="verified-label">
-                    {supplier.badge} vendor
-                  </p>
+                <Link key={supplier.id} href={vendorHref(supplier.id, supplier.slug)} className="bs-vendor-card">
+                  
+                  <div className="bs-vc-topbar">
+                    
+                    <span className="bs-vc-topbar-right">
+                      <ShieldCheck size={10} /> VERIFIED SUPPLIER
+                    </span>
+                  </div>
+
+                  <div className="bs-vc-main">
+                    <div className="bs-vc-header-row">
+                      <div className="bs-vc-logo-box">
+                        {supplier.mark}
+                      </div>
+                      <div className="bs-vc-info">
+                        <h3>{supplier.name}</h3>
+                        
+                        <div className="bs-vc-location" style={{ marginBottom: "6px" }}>
+                          <MapPin size={12} /> {supplier.state ? `${supplier.state}, ${supplier.country}` : supplier.country}
+                        </div>
+                        
+                        {/* Looks for 'category' first, falls back to the first 'subcategory' */}
+                        {((supplier as any).category || supplier.subcategories?.[0]) && (
+                          <span className="bs-vc-pill-cat">
+                            {(supplier as any).category || supplier.subcategories[0]}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bs-vc-trust">
+                      <ShieldCheck size={14} /> Identity Checked
+                    </div>
+                  </div>
+
                 </Link>
               ))}
             </div>
@@ -1110,7 +1136,128 @@ export default function HomeClient({
           padding: 0 0 48px;
           overflow-x: hidden;
         }
+        /* ── VERIFIED VENDOR CARD REDESIGN (HOME) ── */
+        .bs-vendor-card {
+          gap: 0;
+          position: relative;
+          border: 1px solid #bbf7d0;
+          border-radius: 12px;
+          background: #ffffff;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          text-decoration: none;
+          color: inherit;
+          min-height: 190px;
+          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+        .split-section .bs-vendor-card:hover {
+          border-color: #92e0ab;
+          box-shadow: 0 16px 30px rgba(31, 111, 53, 0.11);
+          transform: translateY(-5px);
+        }
+        .bs-vc-topbar {
+          background: #ecfdf5;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 6px 12px;
+          border-bottom: 1px solid #d1fae5;
+        }
+        .bs-vc-topbar-left {
+          font-size: 10px;
+          font-weight: 700;
+          color: #065f46;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+          .bs-vc-info h3 {
+          font-size: 14px; /* Reduced from 16px */
+          font-weight: 800;
+          color: #111;
+          margin: 0 0 4px;
+          line-height: 1.2;
+          text-align: left;
+        }
 
+        .bs-vc-pill-cat {
+          display: inline-block;
+          background: #ecfdf5;
+          color: #065f46;
+          font-size: 10.5px;
+          font-weight: 600;
+          padding: 3px 8px;
+          border-radius: 6px;
+          margin-top: 2px;
+        }
+        .bs-vc-topbar-right {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: #a7f3d0;
+          color: #065f46;
+          font-size: 10px;
+          font-weight: 800;
+          padding: 4px 8px;
+          border-radius: 50px;
+          text-transform: uppercase;
+        }
+        .bs-vc-main {
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+        }
+        .bs-vc-header-row {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+        .bs-vc-logo-box {
+          width: 52px;
+          height: 52px;
+          border-radius: 8px;
+          background: #f0fdf4;
+          color: #15803d;
+          font-size: 18px;
+          font-weight: 800;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          border: 1px solid #bbf7d0;
+        }
+        .bs-vc-info {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .bs-vc-info h3 {
+          font-size: 16px;
+          font-weight: 800;
+          color: #111;
+          margin: 0 0 4px;
+          line-height: 1.2;
+          text-align: left;
+        }
+        .bs-vc-location {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: #4b5563;
+          margin-bottom: 6px;
+        }
+        .bs-vc-trust {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 12px;
+          color: #15803d;
+          font-weight: 600;
+          margin-top: auto;
+        }
         .quick-action-button {
           border: 0;
           text-align: left;
