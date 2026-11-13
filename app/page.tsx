@@ -204,7 +204,8 @@ const getHomepageData = cache(async () => {
 
   let initialFeaturedSuppliers: SupplierCard[] = staticSuppliers;
   try {
-    const vendors = await fetchApprovedVendors(8);
+    // Fetches 1,000 vendors so we have plenty to filter from!
+    const vendors = await fetchApprovedVendors(1000);
 
     if (vendors.length > 0) {
       initialFeaturedSuppliers = vendors.map((vendor, index) => {
@@ -223,6 +224,8 @@ const getHomepageData = cache(async () => {
           listingVerified: vendor.listingVerified,
           listingBadgeType: vendor.listingBadgeType,
           publicContact: vendor.publicContact,
+          claim_status: (vendor as any).claim_status || (vendor.isUnclaimed ? "UNCLAIMED" : "CLAIMED"),
+          logoUrl: vendor.logoUrl, // <-- ADD THIS LINE
         };
       });
     }

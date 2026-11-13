@@ -43,6 +43,7 @@ import {
   UserRound,
   Zap,
   MapPin,
+  AlertTriangle,
 } from "lucide-react";
 
 export type CategoryItem = {
@@ -76,6 +77,8 @@ export type SupplierCard = {
   listingVerified?: boolean;
   listingBadgeType?: string;
   publicContact?: Record<string, unknown>;
+  claim_status?: string;
+  logoUrl?: string;
 };
 
 const sellerCities = [
@@ -949,44 +952,65 @@ export default function HomeClient({
               <Link href="/browse?type=vendor">View all</Link>
             </div>
             <div className="card-grid four-up">
-              {featuredSuppliers.map((supplier, index) => (
-                <Link key={supplier.id} href={vendorHref(supplier.id, supplier.slug)} className="bs-vendor-card">
-                  
-                  <div className="bs-vc-topbar">
-                    
-                    <span className="bs-vc-topbar-right">
-                      <ShieldCheck size={10} /> VERIFIED SUPPLIER
-                    </span>
-                  </div>
+              {featuredSuppliers.filter(supplier => supplier.claim_status === 'CLAIMED' || supplier.badge === 'Claimed').length === 0 ? (
+                
+                /* EMPTY STATE: Shows if there are still 0 claimed vendors */
+                <div style={{ gridColumn: "1 / -1", padding: "60px 20px", textAlign: "center", background: "#f9fafb", borderRadius: "12px", border: "1px dashed #d1d5db" }}>
+                  <ShieldCheck size={32} style={{ color: "#9ca3af", margin: "0 auto 12px", display: "block" }} />
+                  <h3 style={{ fontSize: "16px", color: "#374151", margin: "0 0 6px" }}>No Verified Vendors Yet</h3>
+                  <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>Check back soon as more businesses complete their verification.</p>
+                </div>
 
-                  <div className="bs-vc-main">
-                    <div className="bs-vc-header-row">
-                      <div className="bs-vc-logo-box">
-                        {supplier.mark}
-                      </div>
-                      <div className="bs-vc-info">
-                        <h3>{supplier.name}</h3>
+              ) : (
+
+                /* GRID: Renders only the top 8 Claimed/Verified Vendors */
+                featuredSuppliers
+                  .filter(supplier => supplier.claim_status === 'CLAIMED' || supplier.badge === 'Claimed')
+                  .slice(0, 8)
+                  .map((supplier) => (
+                    <Link key={supplier.id} href={vendorHref(supplier.id, supplier.slug)} className="bs-vendor-card">
+                      
+                      <div className="bs-vc-topbar">
                         
-                        <div className="bs-vc-location" style={{ marginBottom: "6px" }}>
-                          <MapPin size={12} /> {supplier.state ? `${supplier.state}, ${supplier.country}` : supplier.country}
+                        <span className="bs-vc-topbar-right">
+                          <ShieldCheck size={10} /> VERIFIED SUPPLIER
+                        </span>
+                      </div>
+
+                      <div className="bs-vc-main">
+                        <div className="bs-vc-header-row">
+                          <div className="bs-vc-logo-box" style={{ padding: supplier.logoUrl ? 0 : undefined }}>
+                            {supplier.logoUrl ? (
+                              <img 
+                                src={supplier.logoUrl} 
+                                alt={supplier.name} 
+                                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "7px" }} 
+                              />
+                            ) : (
+                              supplier.mark
+                            )}
+                          </div>
+                          <div className="bs-vc-info">
+                            <h3>{supplier.name}</h3>
+                            <div className="bs-vc-location" style={{ marginBottom: "6px" }}>
+                              <MapPin size={12} /> {supplier.state ? `${supplier.state}, ${supplier.country}` : supplier.country}
+                            </div>
+                            {((supplier as any).category || supplier.subcategories?.[0]) && (
+                              <span className="bs-vc-pill-cat">
+                                {(supplier as any).category || supplier.subcategories?.[0]}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        
-                        {/* Looks for 'category' first, falls back to the first 'subcategory' */}
-                        {((supplier as any).category || supplier.subcategories?.[0]) && (
-                          <span className="bs-vc-pill-cat">
-                            {(supplier as any).category || supplier.subcategories?.[0]}
-                          </span>
-                        )}
+
+                        <div className="bs-vc-trust">
+                          <ShieldCheck size={14} /> Identity Checked
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="bs-vc-trust">
-                      <ShieldCheck size={14} /> Identity Checked
-                    </div>
-                  </div>
-
-                </Link>
-              ))}
+                    </Link>
+                  ))
+              )}
             </div>
             <button type="button" className="carousel-arrow carousel-arrow-right" aria-label="Next suppliers">
               <ChevronRight size={18} />
@@ -1150,6 +1174,53 @@ export default function HomeClient({
           color: inherit;
           min-height: 190px;
           transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+          /* ── UNCLAIMED VENDOR CARD COLORS (HOME) ── */
+        .bs-vendor-card-unclaimed {
+          border-color: #fcd34d !important;
+        }
+        .bs-vc-topbar-unclaimed {
+          background: #fffbeb !important;
+          border-bottom: 1px solid #fcd34d !important;
+        }
+        .bs-vc-topbar-left-unclaimed {
+          font-size: 10px;
+          font-weight: 700;
+          color: #b45309;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .bs-vc-topbar-right-unclaimed {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: #fef3c7 !important;
+          color: #b45309 !important;
+          border: 1px solid #fcd34d !important;
+          font-size: 10px;
+          font-weight: 800;
+          padding: 4px 8px;
+          border-radius: 50px;
+          text-transform: uppercase;
+        }
+        .bs-vc-logo-box-unclaimed {
+          background: #fffbeb !important;
+          color: #b45309 !important;
+          border-color: #fcd34d !important;
+        }
+        .bs-vc-tag-pill-unclaimed {
+          background: #ffffff !important;
+          border: 1px solid #e5e7eb !important;
+          color: #374151 !important;
+        }
+        .bs-vc-unclaimed-trust {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 12px;
+          color: #b45309;
+          font-weight: 600;
+          margin-top: auto;
         }
         .split-section .bs-vendor-card:hover {
           border-color: #92e0ab;
