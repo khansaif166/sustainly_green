@@ -335,7 +335,7 @@ function mapVendor(row: SupabaseVendorRow): PublicVendor {
           : undefined,
     isClaimed: claimStatus === "CLAIMED",
     isUnclaimed: claimStatus === "UNCLAIMED",
-    claim_status: row.claim_status,
+    claim_status: row.claim_status || undefined,
     isClaimRequested: claimStatus === "CLAIM_REQUESTED",
     publicContact: row.public_contact || undefined,
     logoText: initials(companyName),
