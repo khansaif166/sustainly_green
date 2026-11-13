@@ -974,7 +974,7 @@ export default function HomeClient({
                         {/* Looks for 'category' first, falls back to the first 'subcategory' */}
                         {((supplier as any).category || supplier.subcategories?.[0]) && (
                           <span className="bs-vc-pill-cat">
-                            {(supplier as any).category || supplier.subcategories[0]}
+                            {(supplier as any).category || supplier.subcategories?.[0]}
                           </span>
                         )}
                       </div>
