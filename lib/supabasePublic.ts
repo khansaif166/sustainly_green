@@ -103,6 +103,7 @@ export type PublicVendor = {
   publicContact?: Record<string, unknown>;
   logoText: string;
   productCount?: number;
+  claim_status?: string;
 };
 
 export type PublicCategory = {
