@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef, useTransition } from "react";
+import { useEffect, useMemo, useState, useRef, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
@@ -23,6 +23,8 @@ import {
 } from "react-icons/fi";
 import { HiOutlineSparkles, HiOutlineShieldCheck } from "react-icons/hi2";
 import { getValidSession } from "@/lib/supabaseAuth";
+import { browseBadge, browseSort, browseType, normalizeBrowseParams } from "@/lib/browseFilters";
+import { useBrowseNavigation } from "./useBrowseNavigation";
 
 /* ---------------- TYPES ---------------- */
 type Product = PublicProduct & {
@@ -41,8 +43,14 @@ type Vendor = PublicVendor & {
   ecoVerified?: boolean;
 };
 type Category = { id: string; name: string; slug?: string; imageUrl?: string };
+type Subcategory = { id: string; name: string; categoryId: string };
+type ProductType = { id: string; name: string; subcategoryId: string };
 interface FilterState { badge: string; location: string; sortBy: string; }
 const DEFAULT_SORT = "newest";
+
+function BrowseSidebar({ children }: { children: ReactNode }) {
+  return <aside className="bs-sidebar">{children}</aside>;
+}
 
 const BADGES = [
   { val: "", label: "All Badges", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
@@ -79,25 +87,34 @@ export default function BrowsePage({
   initialProducts = [],
   initialVendors = [],
   initialCategories = [],
+  initialSubcategories = [],
+  initialProductTypes = [],
   totalCount = 0,
   page = 1,
   pageSize = 12,
   vendorSummaries = [],
+  loadError = false,
 }: {
   initialProducts?: Product[];
   initialVendors?: Vendor[];
   initialCategories?: Category[];
+  initialSubcategories?: Subcategory[];
+  initialProductTypes?: ProductType[];
   totalCount?: number;
   page?: number;
   pageSize?: number;
   vendorSummaries?: Array<{ id: string; slug?: string; companyName: string; state?: string }>;
+  loadError?: boolean;
 }) {
   const router = useRouter();
-  const params = useSearchParams();
+  const rawParams = useSearchParams();
+  const { navigation, inputs, loading } = useBrowseNavigation(rawParams.toString());
+  const params = normalizeBrowseParams(inputs.submittedQuery);
 
-  const typeParam = params.get("type") || "Product";
-  const type = typeParam.toLowerCase() === "vendor" ? "Vendor" : typeParam.toLowerCase() === "service" ? "Service" : "Product";
+  const type = browseType(params.get("type"));
   const category = params.get("category") || "";
+  const subcategory = params.get("subcategory") || "";
+  const productType = params.get("product_type") || "";
   const search = params.get("q") || "";
 
   // The server sends just the rows for this page; every filter, the sort and
@@ -106,9 +123,9 @@ export default function BrowsePage({
   const vendors = initialVendors;
   const categories = initialCategories;
   const filters: FilterState = {
-    badge: params.get("badge") || "",
-    location: params.get("loc") || "",
-    sortBy: params.get("sort") || DEFAULT_SORT,
+    badge: browseBadge(params.get("badge")),
+    location: type === "Vendor" ? params.get("loc") || "" : "",
+    sortBy: browseSort(params.get("sort")),
   };
   const categoryId =
     categories.find(
@@ -116,19 +133,19 @@ export default function BrowsePage({
         item.id === category ||
         item.slug?.toLowerCase() === category.toLowerCase(),
     )?.id || category;
-  const [loading, startNavigation] = useTransition();
+  const subcategories = initialSubcategories.filter(item => item.categoryId === categoryId);
+  const selectedSubcategory = subcategories.find(item => item.id === subcategory);
+  const productTypes = initialProductTypes.filter(item => item.subcategoryId === selectedSubcategory?.id);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const claimFilter = params.get("claim_status") || "ALL";
+  const claimFilter = type === "Vendor" ? params.get("claim_status") || "ALL" : "ALL";
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [localSearch, setLocalSearch] = useState(search);
-  const [localLocation, setLocalLocation] = useState(filters.location);
-  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const locationDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const localSearch = inputs.search;
+  const localLocation = inputs.location;
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
   // Page lives in the URL (?page=N) rather than component state so each page
   // of results is a real, linkable URL Googlebot can reach and crawl.
   const currentPage = page;
-  const [expanded, setExpanded] = useState({ type: true, category: true, eco: true, location: false, sort: true });
+  const [expanded, setExpanded] = useState({ type: true, category: true, subcategory: true, productType: true, eco: true, location: false, sort: true });
   const [rfqProduct, setRfqProduct] = useState<Product | null>(null);
   // NEW: State for the Claim Login modal
   const [claimLoginVendor, setClaimLoginVendor] = useState<Vendor | null>(null);
@@ -160,58 +177,52 @@ export default function BrowsePage({
     fetchVendorStates().then(setVendorLocations).catch(() => {});
   }, [type, expanded.location, vendorLocations.length]);
 
-  // Sync the boxes from the URL (back button, cleared chip) — but not while
-  // a typed value is still waiting to be applied, or keystrokes get lost.
-  useEffect(() => { if (!debounce.current) setLocalSearch(search); }, [search]);
-  useEffect(() => { if (!locationDebounce.current) setLocalLocation(filters.location); }, [filters.location]);
-
   function handleSearch(val: string) {
-    setLocalSearch(val);
-    if (debounce.current) clearTimeout(debounce.current);
-    debounce.current = setTimeout(() => { debounce.current = null; updateUrl("q", val, {}, true); }, 350);
+    navigation.input("q", val);
   }
 
   function handleLocation(val: string) {
-    setLocalLocation(val);
-    if (locationDebounce.current) clearTimeout(locationDebounce.current);
-    locationDebounce.current = setTimeout(() => { locationDebounce.current = null; updateUrl("loc", val, {}, true); }, 350);
+    navigation.input("loc", val);
   }
 
   // Any change other than the page number starts again from page 1. Typing
   // replaces the history entry, so Back doesn't step through every letter.
   function updateUrl(key: string, value: string, extra: Record<string, string> = {}, replace = false) {
-    const url = new URLSearchParams(params.toString());
-    for (const [name, next] of Object.entries({ [key]: value, ...extra })) {
-      if (next) url.set(name, next);
-      else url.delete(name);
-    }
-    if (key !== "page") url.delete("page");
-    const href = `/browse?${url.toString()}`;
-    startNavigation(() => (replace ? router.replace(href, { scroll: false }) : router.push(href)));
+    navigation.update({ [key]: value, ...extra }, replace, key !== "page");
   }
 
   function setFilter(key: "badge" | "sort", value: string) {
     updateUrl(key, key === "sort" && value === DEFAULT_SORT ? "" : value);
   }
 
-  function pageHref(page: number) {
-    const url = new URLSearchParams(params.toString());
-    if (page > 1) url.set("page", String(page));
-    else url.delete("page");
-    const query = url.toString();
-    return `/browse${query ? `?${query}` : ""}`;
+  function changeBrowseType(value: string) {
+    navigation.changeType(value);
   }
 
-  function resetAll() { startNavigation(() => router.push(`/browse?type=${type}`)); }
+  function pageHref(page: number) {
+    return navigation.pageHref(page);
+  }
 
-  const activeCount = [filters.badge, filters.location].filter(Boolean).length;
+  function resetAll() { navigation.reset(); }
+
+  const activeFilters = [
+    ...(search ? [{ key: "q", label: `Search: ${search}` }] : []),
+    ...(type !== "Vendor" && category ? [{ key: "category", label: `Category: ${categories.find(c => c.id === categoryId)?.name || category}` }] : []),
+    ...(subcategory ? [{ key: "subcategory", label: `Subcategory: ${initialSubcategories.find(s => s.id === subcategory)?.name || subcategory}` }] : []),
+    ...(productType ? [{ key: "product_type", label: `Product type: ${initialProductTypes.find(t => t.id === productType)?.name || productType}` }] : []),
+    ...(filters.badge ? [{ key: "badge", label: `Badge: ${BADGES.find(b => b.val === filters.badge)?.label || filters.badge}` }] : []),
+    ...(filters.location ? [{ key: "loc", label: `Location: ${filters.location}` }] : []),
+    ...(claimFilter !== "ALL" ? [{ key: "claim_status", label: `Status: ${claimFilter === "CLAIMED" ? "Claimed" : claimFilter === "UNCLAIMED" ? "Unclaimed" : claimFilter.replaceAll("_", " ").toLowerCase()}` }] : []),
+    ...(filters.sortBy !== DEFAULT_SORT ? [{ key: "sort", label: "Sort: Name A–Z" }] : []),
+  ];
+  const activeCount = activeFilters.length;
 
   /* ---- Sidebar ---- */
-  const Sidebar = () => (
-    <aside className="bs-sidebar">
+  const sidebar = (
+    <BrowseSidebar>
       <div className="bs-sb-head">
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <FiFilter size={15} style={{ color: "#16a34a" }} />
+        <div className="bs-filter-heading">
+          <FiFilter size={15} style={{ color: "#16a34a", flexShrink: 0 }} />
           <span style={{ fontWeight: 700, fontSize: 14, color: "#111" }}>Filters</span>
           {activeCount > 0 && <span className="bs-badge">{activeCount}</span>}
         </div>
@@ -229,7 +240,7 @@ export default function BrowsePage({
               <button
                 key={val}
                 className={`bs-opt${type === val ? " bs-opt-active" : ""}`}
-                onClick={() => updateUrl("type", val, { badge: "", loc: "" })}
+                onClick={() => changeBrowseType(val)}
               >
                 <Icon size={13} />{label}
               </button>
@@ -246,12 +257,36 @@ export default function BrowsePage({
           </button>
           {expanded.category && (
             <div className="bs-opts">
-              <button className={`bs-opt${!category ? " bs-opt-active" : ""}`} onClick={() => updateUrl("category", "")}>All Categories</button>
+              <button className={`bs-opt${!category ? " bs-opt-active" : ""}`} onClick={() => updateUrl("category", "", { subcategory: "", product_type: "" })}>All Categories</button>
               {categories.map(c => (
-                <button key={c.id} className={`bs-opt${categoryId === c.id ? " bs-opt-active" : ""}`} onClick={() => updateUrl("category", c.slug || c.id)}>{c.name}</button>
+                <button key={c.id} className={`bs-opt${categoryId === c.id ? " bs-opt-active" : ""}`} onClick={() => updateUrl("category", c.slug || c.id, { subcategory: "", product_type: "" })}>{c.name}</button>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {type !== "Vendor" && categoryId && subcategories.length > 0 && (
+        <div className="bs-section">
+          <button className="bs-section-btn" onClick={() => setExpanded(e => ({ ...e, subcategory: !e.subcategory }))}>
+            <span>Subcategory</span>{expanded.subcategory ? <FiChevronUp size={13} /> : <FiChevronDown size={13} />}
+          </button>
+          {expanded.subcategory && <div className="bs-opts">
+            <button className={`bs-opt${!subcategory ? " bs-opt-active" : ""}`} onClick={() => updateUrl("subcategory", "", { product_type: "" })}>All Subcategories</button>
+            {subcategories.map(item => <button key={item.id} className={`bs-opt${subcategory === item.id ? " bs-opt-active" : ""}`} onClick={() => updateUrl("subcategory", item.id, { product_type: "" })}>{item.name}</button>)}
+          </div>}
+        </div>
+      )}
+
+      {type === "Product" && subcategory && productTypes.length > 0 && (
+        <div className="bs-section">
+          <button className="bs-section-btn" onClick={() => setExpanded(e => ({ ...e, productType: !e.productType }))}>
+            <span>Product type</span>{expanded.productType ? <FiChevronUp size={13} /> : <FiChevronDown size={13} />}
+          </button>
+          {expanded.productType && <div className="bs-opts">
+            <button className={`bs-opt${!productType ? " bs-opt-active" : ""}`} onClick={() => updateUrl("product_type", "")}>All Product types</button>
+            {productTypes.map(item => <button key={item.id} className={`bs-opt${productType === item.id ? " bs-opt-active" : ""}`} onClick={() => updateUrl("product_type", item.id)}>{item.name}</button>)}
+          </div>}
         </div>
       )}
 
@@ -303,13 +338,13 @@ export default function BrowsePage({
         </button>
         {expanded.sort && (
           <div className="bs-opts">
-            {[{ val: "newest", label: "Newest First" }, { val: "eco_score", label: "Eco Score ↓" }, { val: "name_az", label: "Name A → Z" }].map(({ val, label }) => (
+            {[{ val: "newest", label: "Newest First" }, { val: "name_az", label: "Name A → Z" }].map(({ val, label }) => (
               <button key={val} className={`bs-opt${filters.sortBy === val ? " bs-opt-active" : ""}`} onClick={() => setFilter("sort", val)}>{label}</button>
             ))}
           </div>
         )}
       </div>
-    </aside>
+    </BrowseSidebar>
   );
 
   /* ---- Product Card ---- */
@@ -790,7 +825,7 @@ export default function BrowsePage({
       </div>
     );
   };  const items = type === "Vendor" ? vendors : products;
-  const isEmpty = !loading && items.length === 0;
+  const isEmpty = !loading && !loadError && items.length === 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(currentPage, totalPages);
  const pageStart = (safePage - 1) * pageSize;
@@ -817,7 +852,12 @@ export default function BrowsePage({
     <Link
       href={pageHref(page)}
       scroll={false}
-      onClick={scrollToResults}
+      onClick={(event) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        updateUrl("page", page > 1 ? String(page) : "");
+        scrollToResults();
+      }}
       className={`bs-page-btn${active ? " bs-page-btn-active" : ""}`}
       aria-current={active ? "page" : undefined}
       rel={label === "Previous" ? "prev" : label === "Next" ? "next" : undefined}
@@ -1011,9 +1051,12 @@ export default function BrowsePage({
           margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.07);
         }
         .bs-badge {
+          display: inline-flex; align-items: center; justify-content: center;
+          box-sizing: border-box; height: 20px; min-width: 20px; flex-shrink: 0;
           background: #16a34a; color: #fff; font-size: 10px;
-          font-weight: 700; border-radius: 50px; padding: 1px 6px;
+          font-weight: 700; line-height: 1; border-radius: 50px; padding: 0 6px;
         }
+        .bs-filter-heading { display: flex; align-items: center; gap: 8px; line-height: 20px; }
         .bs-reset {
           display: flex; align-items: center; gap: 4px;
           font-size: 11.5px; color: #9ca3af;
@@ -1077,11 +1120,14 @@ export default function BrowsePage({
         .bs-active-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
         .bs-chip {
           display: inline-flex; align-items: center; gap: 5px;
+          max-width: 100%; text-align: left;
           padding: 5px 12px; border-radius: 50px;
           background: rgba(22,163,74,0.1); color: #15803d;
           font-size: 12px; font-weight: 600; border: none; cursor: pointer; font-family: inherit;
           transition: background .15s;
         }
+        .bs-chip span { min-width: 0; overflow-wrap: anywhere; }
+        .bs-chip svg { flex-shrink: 0; }
         .bs-chip:hover { background: rgba(22,163,74,0.18); }
 
         /* ── GRIDS ── */
@@ -1556,8 +1602,10 @@ export default function BrowsePage({
 
         /* ── RESPONSIVE ── */
         @media (max-width: 900px) {
-          .bs-hero-inner { flex-direction: column; align-items: stretch; gap: 24px; }
+          .bs-hero-inner { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 24px; }
+          .bs-hero-left { flex: 0 1 auto; min-width: 0; width: 100%; max-width: none; }
           .bs-hero-right {
+            flex: 0 1 auto; min-width: 0;
             flex-wrap: nowrap; overflow-x: auto; padding-bottom: 10px;
             justify-content: flex-start; scroll-snap-type: x mandatory;
             margin: 0 -24px; padding: 0 24px 16px;
@@ -1614,7 +1662,7 @@ export default function BrowsePage({
 
               <div className="bs-tabs">
                 {[{ val: "Product", label: "Products", Icon: FiPackage }, { val: "Vendor", label: "Vendors", Icon: FiUsers }, { val: "Service", label: "Services", Icon: FiTool }].map(({ val, label, Icon }) => (
-                  <button key={val} className={`bs-tab${type === val ? " bs-tab-active" : ""}`} onClick={() => updateUrl("type", val)}>
+                  <button key={val} className={`bs-tab${type === val ? " bs-tab-active" : ""}`} onClick={() => changeBrowseType(val)}>
                     <Icon size={13} />{label}
                   </button>
                 ))}
@@ -1660,7 +1708,7 @@ export default function BrowsePage({
 
         {/* ── CONTENT ── */}
         <div className="bs-wrap">
-          <Sidebar />
+          {sidebar}
 
           <main className="bs-main app-page-surface">
             <div ref={resultsTopRef} className="bs-results-anchor" />
@@ -1668,7 +1716,7 @@ export default function BrowsePage({
             {/* Toolbar */}
             <div className="bs-toolbar">
               <p className="bs-count">
-                {loading ? "Loading…" : <><strong>{totalCount}</strong> {type === "Vendor" ? "vendors" : type === "Service" ? "services" : "products"} found{search && <> for &ldquo;<strong>{search}</strong>&rdquo;</>}</>}
+                {loading ? "Loading…" : loadError ? "Results unavailable" : <><strong>{totalCount}</strong> {type === "Vendor" ? "vendors" : type === "Service" ? "services" : "products"} found{search && <> for &ldquo;<strong>{search}</strong>&rdquo;</>}</>}
               </p>
               <div className="bs-toolbar-right">
                 <button className="bs-mobile-filter" onClick={() => setSidebarOpen(true)}>
@@ -1682,49 +1730,41 @@ export default function BrowsePage({
             </div>
 
             {/* Active filter chips */}
-            {(filters.badge || filters.location) && (
-              <div className="bs-active-chips">
-                {filters.badge && (
-                  <button className="bs-chip" onClick={() => setFilter("badge", "")}>
-                    {BADGES.find((item) => item.val === filters.badge)?.label || filters.badge} <FiX size={10} />
+            {activeCount > 0 && (
+              <div className="bs-active-chips" aria-label="Active filters">
+                {activeFilters.map(filter => (
+                  <button key={filter.key} className="bs-chip" onClick={() => updateUrl(filter.key, "")} aria-label={`Remove ${filter.label}`}>
+                    <span>{filter.label}</span><FiX size={10} aria-hidden="true" />
                   </button>
-                )}
-                {filters.location && <button className="bs-chip" onClick={() => updateUrl("loc", "")}>{filters.location} <FiX size={10} /></button>}
+                ))}
               </div>
             )}
 
             {/* --- MOVED CLAIM FILTER BAR HERE --- */}
             {type === "Vendor" && (
               <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
-                {['ALL', 'VERIFIED', 'UNCLAIMED'].map(status => {
-                  // Map display values to API parameter values
-                  const paramValue = status === 'VERIFIED' ? 'CLAIMED' : status === 'ALL' ? '' : status;
-                  
+                {[{ value: "ALL", label: "All Statuses" }, { value: "CLAIMED", label: "Claimed" }, { value: "UNCLAIMED", label: "Unclaimed" }].map(({ value, label }) => {
+                  const selected = claimFilter === value;
                   return (
                     <button
-                      key={status}
-                      onClick={() => updateUrl("claim_status", paramValue)}
+                      key={value}
+                      aria-pressed={selected}
+                      onClick={() => updateUrl("claim_status", value === "ALL" ? "" : value)}
                       style={{
                         padding: '6px 16px',
                         borderRadius: '50px',
                         fontSize: '12px',
                         fontWeight: 700,
                         border: '1px solid ' + (
-                          (status === 'ALL' && !claimFilter) || 
-                          (status === 'VERIFIED' && claimFilter === 'CLAIMED') || 
-                          (status === 'UNCLAIMED' && claimFilter === 'UNCLAIMED') 
+                          selected
                           ? '#16a34a' : '#d1d5db'
                         ),
                         background: (
-                          (status === 'ALL' && !claimFilter) || 
-                          (status === 'VERIFIED' && claimFilter === 'CLAIMED') || 
-                          (status === 'UNCLAIMED' && claimFilter === 'UNCLAIMED') 
+                          selected
                           ? '#f0fdf4' : '#fff'
                         ),
                         color: (
-                          (status === 'ALL' && !claimFilter) || 
-                          (status === 'VERIFIED' && claimFilter === 'CLAIMED') || 
-                          (status === 'UNCLAIMED' && claimFilter === 'UNCLAIMED') 
+                          selected
                           ? '#15803d' : '#4b5563'
                         ),
                         cursor: 'pointer',
@@ -1732,7 +1772,7 @@ export default function BrowsePage({
                         transition: 'all 0.2s ease'
                       }}
                     >
-                      {status === 'ALL' ? 'All Statuses' : status}
+                      {label}
                     </button>
                   );
                 })}
@@ -1741,8 +1781,17 @@ export default function BrowsePage({
 
             {/* Skeleton */}
             {loading && (
-              <div className={type === "Vendor" ? "bs-vendor-grid" : "bs-grid"}>
-                {Array.from({ length: 8 }).map((_, i) => <div key={i} className="bs-skel" />)}
+              <div className={type === "Vendor" ? "bs-vendor-grid" : "bs-grid"} role="status" aria-label="Loading results" aria-busy="true">
+                {Array.from({ length: 8 }).map((_, i) => <div key={i} className="bs-skel" aria-hidden="true" />)}
+              </div>
+            )}
+
+            {!loading && loadError && (
+              <div className="bs-empty" role="alert">
+                <div className="bs-empty-ico"><FiAlertTriangle /></div>
+                <h3>Unable to load results</h3>
+                <p>Please try again. Your filters have been kept.</p>
+                <button type="button" className="bs-page-btn" onClick={() => router.refresh()}><FiRefreshCw size={14} />Retry</button>
               </div>
             )}
 
@@ -1752,11 +1801,12 @@ export default function BrowsePage({
                 <div className="bs-empty-ico">{type === "Vendor" ? <FiUsers /> : <FiPackage />}</div>
                 <h3>No {type.toLowerCase()}s found</h3>
                 <p>Try adjusting your search or filters to find what you&apos;re looking for.</p>
+                {activeCount > 0 && <button type="button" className="bs-page-btn" onClick={resetAll}>Clear all filters</button>}
               </div>
             )}
 
             {/* Results */}
-            {!loading && !isEmpty && (
+            {!loading && !loadError && !isEmpty && (
               type === "Vendor" ? (
                 <div className={viewMode === "grid" ? "bs-vendor-grid" : "bs-list-mode"}>
                   {visibleVendors.map(v => <VendorCard key={v.id} v={v} />)}
@@ -1769,7 +1819,7 @@ export default function BrowsePage({
             )}
 
             {/* Pagination */}
-            {!loading && !isEmpty && totalPages > 1 && (
+            {!loading && !loadError && !isEmpty && totalPages > 1 && (
               <div className="bs-pagination" aria-label={`${type} pagination`}>
                 <p className="bs-page-meta">
                   Showing <strong>{pageStart + 1}-{pageEnd}</strong> of <strong>{totalCount}</strong>
@@ -1810,7 +1860,7 @@ export default function BrowsePage({
               <div className="bs-drawer-close">
                 <button className="bs-drawer-close-btn" onClick={() => setSidebarOpen(false)}><FiX size={15} /></button>
               </div>
-              <Sidebar />
+              {sidebar}
             </div>
           </>
         )}
@@ -1858,4 +1908,4 @@ export default function BrowsePage({
       </div>
     </>
   );
-} 
+}

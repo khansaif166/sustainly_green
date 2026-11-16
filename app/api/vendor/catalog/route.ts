@@ -11,12 +11,15 @@ export async function GET(request: Request) {
   try {
     await requireRole(request, ["VENDOR", "ADMIN"]);
 
-    const [cats, subs, tags] = await Promise.all([
+    const [cats, subs, types, tags] = await Promise.all([
       supabaseServiceFetch<Array<{ id: string; name: string }>>(
         "/rest/v1/categories?select=id,name&active=eq.true&order=name.asc&limit=1000",
       ),
       supabaseServiceFetch<Array<{ id: string; name: string; category_id: string }>>(
         "/rest/v1/subcategories?select=id,name,category_id&active=eq.true&order=name.asc&limit=1000",
+      ),
+      supabaseServiceFetch<Array<{ id: string; name: string; subcategory_id: string; active: boolean }>>(
+        "/rest/v1/product_types?select=id,name,subcategory_id,active&order=name.asc&limit=1000",
       ),
       supabaseServiceFetch<Array<{ id: string; name: string }>>(
         "/rest/v1/sustainability_tags?select=id,name&active=eq.true&order=name.asc&limit=1000",
@@ -27,6 +30,7 @@ export async function GET(request: Request) {
       ok: true,
       categories: cats,
       subcategories: subs.map((r) => ({ id: r.id, name: r.name, categoryId: r.category_id })),
+      productTypes: types.map((r) => ({ id: r.id, name: r.name, subcategoryId: r.subcategory_id, active: r.active })),
       tags,
     });
   } catch (error) {

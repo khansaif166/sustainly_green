@@ -1,0 +1,91 @@
+<div id="sg-breadcrumb-preview">
+  <style>
+    #sg-breadcrumb-preview .sg-stage{padding:22px 12px;min-height:470px;box-sizing:border-box;display:flex;justify-content:center;align-items:flex-start}
+    #sg-breadcrumb-preview .sg-product{--sg-link:light-dark(#157347,#85d6ab);--sg-text:light-dark(#14241b,#ecf3ef);--sg-secondary:light-dark(#68766d,#a6b8ad);width:100%;max-width:580px;min-width:0;box-sizing:border-box;padding:28px;border-radius:26px;background:light-dark(#fff,#15251c);border:1px solid light-dark(#e2e9e5,#32453a);box-shadow:0 5px 22px light-dark(#112b1710,#00000024);font-family:Arial,sans-serif;color:var(--sg-text)}
+    #sg-breadcrumb-preview .sg-badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;font-size:11px;font-weight:500}
+    #sg-breadcrumb-preview .sg-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:30px;background:light-dark(#f0f3f1,#26382e);color:var(--sg-secondary)}
+    #sg-breadcrumb-preview .sg-approved{background:light-dark(#edf9f1,#1b3d29);color:var(--sg-link)}
+    #sg-breadcrumb-preview .sg-badge svg{width:13px;height:13px}
+    #sg-breadcrumb-preview .sg-crumbs{display:flex;align-items:center;flex-wrap:wrap;column-gap:7px;row-gap:7px;margin-bottom:12px;font-size:13px;line-height:1.5}
+    #sg-breadcrumb-preview .sg-crumbs a{display:inline-flex;align-items:center;min-height:24px;color:var(--sg-link);text-decoration:none;border-radius:3px;overflow-wrap:anywhere}
+    #sg-breadcrumb-preview .sg-crumbs a:hover{text-decoration:underline;text-underline-offset:4px}
+    #sg-breadcrumb-preview .sg-crumbs a:focus-visible{outline:2px solid var(--sg-link);outline-offset:3px}
+    #sg-breadcrumb-preview .sg-crumbs svg{width:12px;height:12px;flex-shrink:0;color:var(--sg-secondary)}
+    #sg-breadcrumb-preview .sg-product h2{margin:0;font-size:29px;line-height:1.2;font-weight:500;letter-spacing:-.9px;color:var(--sg-text);overflow-wrap:anywhere}
+    #sg-breadcrumb-preview .sg-supplier{margin:12px 0 0;font-size:13px;color:var(--sg-secondary);line-height:1.6}
+    #sg-breadcrumb-preview .sg-supplier strong{color:var(--sg-link);font-weight:500}
+    #sg-breadcrumb-preview .sg-description{margin:20px 0 0;font-size:14px;line-height:1.8;color:var(--sg-secondary)}
+    #sg-breadcrumb-preview .sg-price{margin-top:22px;padding:18px;border-radius:16px;background:light-dark(#f6f8f7,#203329)}
+    #sg-breadcrumb-preview .sg-price-label{margin:0 0 8px;font-size:11px;letter-spacing:1px;color:var(--sg-secondary)}
+    #sg-breadcrumb-preview .sg-price-value{margin:0;font-size:21px;font-weight:500;letter-spacing:-.3px}
+    #sg-breadcrumb-preview .sg-price-note{margin:9px 0 0;font-size:12px;line-height:1.65;color:var(--sg-secondary)}
+    #sg-breadcrumb-preview .sg-current-path{margin:12px 0 0;font-size:14px;color:var(--sg-link);line-height:1.6}
+    #sg-breadcrumb-preview .sg-navigation{min-height:21px;margin:17px 0 0;font-size:12px;line-height:1.6;color:var(--sg-secondary)}
+    #sg-breadcrumb-preview .sg-crumbs .sg-type-part{display:contents}
+    #sg-breadcrumb-preview .sg-type-part[hidden]{display:none}
+    @media(max-width:420px){#sg-breadcrumb-preview .sg-stage{padding:16px 4px;min-height:510px}#sg-breadcrumb-preview .sg-product{padding:22px 18px}#sg-breadcrumb-preview .sg-product h2{font-size:26px}}
+    @media(pointer:coarse){#sg-breadcrumb-preview .sg-crumbs a{min-height:44px}}
+  </style>
+  <div class="viz-carousel viz-dotted-background" aria-label="Product category placement comparison">
+    <section data-variant="Clickable breadcrumb" aria-label="Clickable breadcrumb above the product title">
+      <div class="sg-stage">
+        <article class="sg-product" aria-label="Product detail preview">
+          <div class="sg-badges"><span class="sg-badge">Product</span><span class="sg-badge sg-approved"><i data-lucide="badge-check" aria-hidden="true"></i>Approved listing</span></div>
+          <nav class="sg-crumbs" aria-label="Product category">
+            <a href="#computers" data-path="Computers">Computers</a>
+            <i data-lucide="chevron-right" aria-hidden="true"></i>
+            <a href="#desktops" data-path="Computers → Desktops">Desktops</a>
+            <span class="sg-type-part"><i data-lucide="chevron-right" aria-hidden="true"></i><a href="#all-in-one" data-path="Computers → Desktops → All-in-One PCs">All-in-One PCs</a></span>
+          </nav>
+          <h2>All-in-One Desktop PC</h2>
+          <p class="sg-supplier">Supplied by <strong>Elite Computers</strong></p>
+          <p class="sg-description">An efficient desktop for your workspace, with a compact design and an integrated display.</p>
+          <div class="sg-price"><p class="sg-price-label">PRICING</p><p class="sg-price-value">Contact for pricing</p><p class="sg-price-note">Pricing is shared privately based on quantity and delivery requirements.</p></div>
+          <p class="sg-navigation" aria-live="polite"></p>
+        </article>
+      </div>
+    </section>
+    <section data-variant="Current placement" aria-label="Current plain category text below the product title" hidden>
+      <div class="sg-stage">
+        <article class="sg-product" aria-label="Current product detail layout">
+          <div class="sg-badges"><span class="sg-badge">Product</span><span class="sg-badge sg-approved"><i data-lucide="badge-check" aria-hidden="true"></i>Approved listing</span></div>
+          <h2>All-in-One Desktop PC</h2>
+          <p class="sg-current-path">Computers → Desktops<span class="sg-type-part"> → All-in-One PCs</span></p>
+          <p class="sg-supplier">Supplied by <strong>Elite Computers</strong></p>
+          <p class="sg-description">An efficient desktop for your workspace, with a compact design and an integrated display.</p>
+          <div class="sg-price"><p class="sg-price-label">PRICING</p><p class="sg-price-value">Contact for pricing</p><p class="sg-price-note">Pricing is shared privately based on quantity and delivery requirements.</p></div>
+          <p class="sg-navigation" aria-live="polite"></p>
+        </article>
+      </div>
+    </section>
+  </div>
+  <script>
+    (() => {
+      const root = document.getElementById('sg-breadcrumb-preview');
+      const saved = window.openai?.widgetState;
+      const state = { showProductType: saved?.modelContent?.showProductType !== false };
+      function render() {
+        root.querySelectorAll('.sg-type-part').forEach(element => { element.hidden = !state.showProductType; });
+      }
+      function remember() {
+        window.openai?.setWidgetState({ modelContent: { showProductType: state.showProductType }, privateContent: null }).catch(() => {});
+      }
+      render();
+      root.querySelectorAll('[data-path]').forEach(link => link.addEventListener('click', event => {
+        event.preventDefault();
+        root.querySelector('.sg-navigation').textContent = 'Browse: ' + link.dataset.path;
+      }));
+      window.addEventListener('openai:set_globals', event => {
+        const next = event.detail?.globals?.widgetState;
+        if (typeof next?.modelContent?.showProductType === 'boolean') {
+          state.showProductType = next.modelContent.showProductType;
+          render();
+        }
+      });
+      if (globalThis.Tweak) {
+        const tweak = new Tweak({ container: root, onChange: () => { render(); remember(); } });
+        tweak.addToggle(state, 'showProductType', { label: 'Product type assigned' });
+      }
+    })();
+  </script>
+</div>

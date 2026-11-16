@@ -47,6 +47,7 @@ const NAV_SECTIONS = [
     items: [
       { name: "Categories",     href: "/admin/categories",     icon: Layers   },
       { name: "Subcategories",  href: "/admin/subcategories",  icon: ListTree },
+      { name: "Product types",   href: "/admin/product-types",   icon: Package },
       { name: "Tags",           href: "/admin/tags",           icon: Tag      },
       { name: "Certifications", href: "/admin/certifications", icon: ShieldCheck },
     ],

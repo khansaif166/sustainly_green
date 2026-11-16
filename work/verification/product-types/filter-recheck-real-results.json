@@ -1,0 +1,96 @@
+{
+  "origin": "http://127.0.0.1:3101",
+  "readOnly": true,
+  "counts": {
+    "Product": 12,
+    "Service": 5,
+    "Vendor": 3
+  },
+  "typedHierarchyMatches": 1,
+  "results": [
+    {
+      "name": "375px real response held: last chip/count/selection clear before results",
+      "status": "PASS"
+    },
+    {
+      "name": "375px real response held: parent clears both descendants",
+      "status": "PASS"
+    },
+    {
+      "name": "375px real response held: Reset clears all selections",
+      "status": "PASS"
+    },
+    {
+      "name": "375px real responses held: rapid chip removals preserve latest selection",
+      "status": "PASS"
+    },
+    {
+      "name": "768px real response held: last chip/count/selection clear before results",
+      "status": "PASS"
+    },
+    {
+      "name": "768px real response held: parent clears both descendants",
+      "status": "PASS"
+    },
+    {
+      "name": "768px real response held: Reset clears all selections",
+      "status": "PASS"
+    },
+    {
+      "name": "768px real responses held: rapid chip removals preserve latest selection",
+      "status": "PASS"
+    },
+    {
+      "name": "1440px real response held: last chip/count/selection clear before results",
+      "status": "PASS"
+    },
+    {
+      "name": "1440px real response held: parent clears both descendants",
+      "status": "PASS"
+    },
+    {
+      "name": "1440px real response held: Reset clears all selections",
+      "status": "PASS"
+    },
+    {
+      "name": "1440px real responses held: rapid chip removals preserve latest selection",
+      "status": "PASS"
+    },
+    {
+      "name": "Real catalog Product → Vendor: search/sort/page reset",
+      "status": "PASS"
+    },
+    {
+      "name": "Real catalog Product → Service: search/sort/page reset",
+      "status": "PASS"
+    },
+    {
+      "name": "Real catalog Vendor → Product: search/sort/page reset",
+      "status": "PASS"
+    },
+    {
+      "name": "Real catalog Vendor → Service: search/sort/page reset",
+      "status": "PASS"
+    },
+    {
+      "name": "Real catalog Service → Product: search/sort/page reset",
+      "status": "PASS"
+    },
+    {
+      "name": "Real catalog Service → Vendor: search/sort/page reset",
+      "status": "PASS"
+    },
+    {
+      "name": "Real Back/Forward restores hierarchy and clean state",
+      "status": "PASS"
+    },
+    {
+      "name": "Real search draft preserves chips until submission; clearing recovers results",
+      "status": "PASS"
+    },
+    {
+      "name": "Real invalid hierarchy URL returns empty, not request error",
+      "status": "PASS"
+    }
+  ]
+}

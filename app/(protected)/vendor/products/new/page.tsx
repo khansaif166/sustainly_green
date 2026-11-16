@@ -7,6 +7,7 @@ import { getValidSession } from "@/lib/supabaseAuth";
 import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
+import ProductTypeSelect, { type ProductTypeOption } from "@/app/components/ProductTypeSelect";
 import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 import { DESCRIPTION_MAX_CHARS, MIN_DESCRIPTION_WORDS, descriptionError } from "@/lib/productSeo";
 import DescriptionWordHint from "@/app/components/DescriptionWordHint";
@@ -25,12 +26,14 @@ export default function AddProductPage() {
 
   const [categories,    setCategories]    = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductTypeOption[]>([]);
   const [tags,          setTags]          = useState<any[]>([]);
 
   const [listingType,        setListingType]        = useState("");
   const [title,              setTitle]              = useState("");
   const [categoryId,         setCategoryId]         = useState("");
   const [subCategoryId,      setSubCategoryId]      = useState("");
+  const [productTypeId, setProductTypeId] = useState("");
   const [description,        setDescription]        = useState("");
   const productImages = useProductImages();
   const productSpecifications = useProductSpecifications();
@@ -64,6 +67,7 @@ export default function AddProductPage() {
       const data = await res.json();
       setCategories(data.categories || []);
       setSubCategories(data.subcategories || []);
+      setProductTypes(data.productTypes || []);
       setTags(data.tags || []);
     }
     load();
@@ -92,7 +96,7 @@ export default function AddProductPage() {
       const res = await fetch("/api/vendor/products", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, listingType, availableFor, categoryId, subCategoryId, images: ordered, specifications: specificationValues, priceType, price, currency, moq, discount, shipRegions, inStock, sustainabilityTagIds: selectedTags, sustainabilityClaim }),
+        body: JSON.stringify({ title, description, listingType, availableFor, categoryId, subCategoryId, productTypeId, images: ordered, specifications: specificationValues, priceType, price, currency, moq, discount, shipRegions, inStock, sustainabilityTagIds: selectedTags, sustainabilityClaim }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error?.message || "Failed to create listing.");
@@ -248,7 +252,7 @@ export default function AddProductPage() {
                 <span className="ap-label">Listing Type *</span>
                 <div className="ap-chips">
                   {LISTING_TYPES.map(t => (
-                    <button key={t} type="button" className={`ap-chip${listingType === t ? " on" : ""}`} onClick={() => setListingType(t)}>{t}</button>
+                    <button key={t} type="button" className={`ap-chip${listingType === t ? " on" : ""}`} onClick={() => { setListingType(t); setProductTypeId(""); }}>{t}</button>
                   ))}
                 </div>
               </div>
@@ -262,19 +266,21 @@ export default function AddProductPage() {
               <div className="ap-grid2">
                 <div className="ap-field">
                   <span className="ap-label">Category *</span>
-                  <select className="ap-select" value={categoryId} onChange={e => { setCategoryId(e.target.value); setSubCategoryId(""); }} required>
+                  <select className="ap-select" value={categoryId} onChange={e => { setCategoryId(e.target.value); setSubCategoryId(""); setProductTypeId(""); }} required>
                     <option value="">Select category</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="ap-field">
                   <span className="ap-label">Subcategory *</span>
-                  <select className="ap-select" value={subCategoryId} onChange={e => setSubCategoryId(e.target.value)} disabled={!categoryId} required>
+                  <select className="ap-select" value={subCategoryId} onChange={e => { setSubCategoryId(e.target.value); setProductTypeId(""); }} disabled={!categoryId} required>
                     <option value="">Select subcategory</option>
                     {filteredSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               </div>
+
+              <ProductTypeSelect listingType={listingType} subcategoryId={subCategoryId} productTypes={productTypes} value={productTypeId} onChange={setProductTypeId} className="ap-select" />
 
               <div className="ap-field">
                 <span className="ap-label">Description * (min {MIN_DESCRIPTION_WORDS} words)</span>

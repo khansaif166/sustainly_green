@@ -62,15 +62,19 @@ export function productImportWorkbook(catalog: ImportCatalog) {
     ["in_stock: TRUE or FALSE; defaults to TRUE. Tags: up to 3 exact catalog names separated by semicolons."],
     ["image_1 through image_5: exact local filenames, case-sensitive. Select the matching image files alongside the sheet. Images are optional."],
     ["First image is the cover; you can crop and change the cover in preview. Photos are optimized before upload."],
-    ["Subcategory names must belong to the selected category. Use Catalog for active slugs, names and tags."],
+    ["Subcategory names must belong to the selected category. Optional product_type_name requires a matching subcategory and a Product listing. Use Catalog for active names."],
     ["Create only: no existing product updates. One vendor per batch. Vendor products are pending review; admin products are approved."],
     ["Keep the page open until results are resolved. Retry failed/uncertain rows here to avoid duplicates. Reloading starts a new batch."],
     ["No formulas, macros, remote image URLs, vendor IDs, approval fields or specification columns."],
   ]), "Instructions");
-  const reference = [["Type", "Name", "Category slug"],
-    ...catalog.categories.map(category => ["Category", category.name, category.slug]),
-    ...catalog.subcategories.map(subcategory => ["Subcategory", subcategory.name, catalog.categories.find(category => category.id === subcategory.categoryId)?.slug ?? ""]),
-    ...catalog.tags.map(tag => ["Sustainability tag", tag.name, ""]),
+  const reference = [["Type", "Name", "Category slug", "Subcategory"],
+    ...catalog.categories.map(category => ["Category", category.name, category.slug, ""]),
+    ...catalog.subcategories.map(subcategory => ["Subcategory", subcategory.name, catalog.categories.find(category => category.id === subcategory.categoryId)?.slug ?? "", ""]),
+    ...catalog.productTypes.map(type => {
+      const sub = catalog.subcategories.find(item => item.id === type.subcategoryId);
+      return ["Product type", type.name, catalog.categories.find(category => category.id === sub?.categoryId)?.slug ?? "", sub?.name ?? ""];
+    }),
+    ...catalog.tags.map(tag => ["Sustainability tag", tag.name, "", ""]),
   ];
   XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(reference), "Catalog");
   return { examples, data: XLSX.write(book, { type: "array", bookType: "xlsx" }) as ArrayBuffer };

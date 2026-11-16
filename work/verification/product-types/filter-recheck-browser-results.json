@@ -1,0 +1,318 @@
+[
+  {
+    "name": "375px top: Product → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px top: Product → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px top: Vendor → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px top: Vendor → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px top: Service → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px top: Service → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px sidebar: Product → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px sidebar: Product → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px sidebar: Vendor → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px sidebar: Vendor → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px sidebar: Service → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px sidebar: Service → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "375px: current tab preserves filters and pending typing",
+    "status": "PASS"
+  },
+  {
+    "name": "375px: location typing retains focus",
+    "status": "PASS"
+  },
+  {
+    "name": "375px: all active filters have removable chips and count",
+    "status": "PASS"
+  },
+  {
+    "name": "768px top: Product → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px top: Product → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px top: Vendor → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px top: Vendor → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px top: Service → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px top: Service → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px sidebar: Product → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px sidebar: Product → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px sidebar: Vendor → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px sidebar: Vendor → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px sidebar: Service → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px sidebar: Service → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "768px: current tab preserves filters and pending typing",
+    "status": "PASS"
+  },
+  {
+    "name": "768px: location typing retains focus",
+    "status": "PASS"
+  },
+  {
+    "name": "768px: all active filters have removable chips and count",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px top: Product → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px top: Product → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px top: Vendor → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px top: Vendor → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px top: Service → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px top: Service → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px sidebar: Product → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px sidebar: Product → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px sidebar: Vendor → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px sidebar: Vendor → Service resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px sidebar: Service → Product resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px sidebar: Service → Vendor resets everything",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px: current tab preserves filters and pending typing",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px: location typing retains focus",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px: all active filters have removable chips and count",
+    "status": "PASS"
+  },
+  {
+    "name": "375px: centered 20px badges (one filters)",
+    "status": "PASS"
+  },
+  {
+    "name": "375px: centered 20px badges (multiple filters)",
+    "status": "PASS"
+  },
+  {
+    "name": "375px: last chip/count/selected control update before held response",
+    "status": "PASS"
+  },
+  {
+    "name": "375px: parent removal cascades immediately, count changes while response held",
+    "status": "PASS"
+  },
+  {
+    "name": "375px: Reset clears selection immediately in sidebar/drawer",
+    "status": "PASS"
+  },
+  {
+    "name": "768px: centered 20px badges (one filters)",
+    "status": "PASS"
+  },
+  {
+    "name": "768px: centered 20px badges (multiple filters)",
+    "status": "PASS"
+  },
+  {
+    "name": "768px: last chip/count/selected control update before held response",
+    "status": "PASS"
+  },
+  {
+    "name": "768px: parent removal cascades immediately, count changes while response held",
+    "status": "PASS"
+  },
+  {
+    "name": "768px: Reset clears selection immediately in sidebar/drawer",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px: centered 20px badges (one filters)",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px: centered 20px badges (multiple filters)",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px: last chip/count/selected control update before held response",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px: parent removal cascades immediately, count changes while response held",
+    "status": "PASS"
+  },
+  {
+    "name": "1440px: Reset clears selection immediately in sidebar/drawer",
+    "status": "PASS"
+  },
+  {
+    "name": "Rapid chip removals survive intermediate responses without restoring old controls",
+    "status": "PASS"
+  },
+  {
+    "name": "Unsubmitted search/location drafts do not change chips or count",
+    "status": "PASS"
+  },
+  {
+    "name": "Failed response retains optimistic removals and Retry recovers",
+    "status": "PASS"
+  },
+  {
+    "name": "Chained Product → Vendor → Service shows Services with a clean URL",
+    "status": "PASS"
+  },
+  {
+    "name": "Back/Forward restores filters and input values",
+    "status": "PASS"
+  },
+  {
+    "name": "Pending search cannot undo a tab switch",
+    "status": "PASS"
+  },
+  {
+    "name": "Pending search cannot undo Reset",
+    "status": "PASS"
+  },
+  {
+    "name": "Category change keeps pending search and removes dependent filters",
+    "status": "PASS"
+  },
+  {
+    "name": "Simultaneous search and location keep both values",
+    "status": "PASS"
+  },
+  {
+    "name": "Current tab does not cancel pending search",
+    "status": "PASS"
+  },
+  {
+    "name": "Back cancels pending input instead of restoring the old target",
+    "status": "PASS"
+  },
+  {
+    "name": "Category and subcategory chips cascade; type chip keeps parents",
+    "status": "PASS"
+  },
+  {
+    "name": "Vendor status, badge, location and sort chips remove individually",
+    "status": "PASS"
+  },
+  {
+    "name": "Claimed status, default selection, Unclaimed badge and sort controls",
+    "status": "PASS"
+  },
+  {
+    "name": "Legacy sort/badge URL is normalized in place",
+    "status": "PASS"
+  },
+  {
+    "name": "Pagination keeps hierarchy and pending search",
+    "status": "PASS"
+  },
+  {
+    "name": "Request errors render Retry, not zero matches, and can recover",
+    "status": "PASS"
+  },
+  {
+    "name": "Genuine zero matches offer Clear all filters in current type",
+    "status": "PASS"
+  },
+  {
+    "name": "Unmount cancels a queued search",
+    "status": "PASS"
+  }
+]
