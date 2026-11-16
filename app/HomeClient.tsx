@@ -79,6 +79,7 @@ export type SupplierCard = {
   publicContact?: Record<string, unknown>;
   claim_status?: string;
   logoUrl?: string;
+  description?: string;
 };
 
 const sellerCities = [
@@ -962,16 +963,15 @@ export default function HomeClient({
                 </div>
 
               ) : (
-
                 /* GRID: Renders only the top 8 Claimed/Verified Vendors */
+                /* Notice: No extra { here! */
                 featuredSuppliers
                   .filter(supplier => supplier.claim_status === 'CLAIMED' || supplier.badge === 'Claimed')
                   .slice(0, 8)
                   .map((supplier) => (
-                    <Link key={supplier.id} href={vendorHref(supplier.id, supplier.slug)} className="bs-vendor-card">
+                    <Link key={supplier.id} href={vendorHref(supplier.id, supplier.slug)} className="bs-vendor-card" style={{ minHeight: "220px" }}>
                       
                       <div className="bs-vc-topbar">
-                        
                         <span className="bs-vc-topbar-right">
                           <ShieldCheck size={10} /> VERIFIED SUPPLIER
                         </span>
@@ -991,9 +991,9 @@ export default function HomeClient({
                             )}
                           </div>
                           <div className="bs-vc-info">
-                            <h3>{supplier.name}</h3>
-                            <div className="bs-vc-location" style={{ marginBottom: "6px" }}>
-                              <MapPin size={12} /> {supplier.state ? `${supplier.state}, ${supplier.country}` : supplier.country}
+                            <h3 style={{ fontSize: "13.5px", fontWeight: 800, margin: "0 0 4px", lineHeight: 1.2 }}>{supplier.name}</h3>
+                            <div className="bs-vc-location" style={{ marginBottom: "6px", fontSize: "11px" }}>
+                              <MapPin size={11} /> {supplier.state ? `${supplier.state}, ${supplier.country}` : supplier.country}
                             </div>
                             {((supplier as any).category || supplier.subcategories?.[0]) && (
                               <span className="bs-vc-pill-cat">
@@ -1003,8 +1003,19 @@ export default function HomeClient({
                           </div>
                         </div>
 
-                        <div className="bs-vc-trust">
-                          <ShieldCheck size={14} /> Identity Checked
+                        <p style={{ fontSize: "11.5px", color: "#4b5563", margin: "0 0 12px 0", lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          {(supplier as any).description 
+                            ? (supplier as any).description 
+                            : "Verified sustainable supplier committed to eco-friendly practices and responsible sourcing."}
+                        </p>
+
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "auto", paddingTop: "12px", borderTop: "1px dashed #e5e7eb" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "#065f46", background: "#ecfdf5", padding: "5px 8px", borderRadius: "6px", fontWeight: 700, border: "1px solid #d1fae5", textTransform: "uppercase" }}>
+                            <BadgeCheck size={12} /> GST Verified
+                          </span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "#065f46", background: "#ecfdf5", padding: "5px 8px", borderRadius: "6px", fontWeight: 700, border: "1px solid #d1fae5", textTransform: "uppercase" }}>
+                            <MapPin size={12} /> Address Verified
+                          </span>
                         </div>
                       </div>
 
@@ -1162,19 +1173,19 @@ export default function HomeClient({
         }
         /* ── VERIFIED VENDOR CARD REDESIGN (HOME) ── */
         .bs-vendor-card {
-          gap: 0;
-          position: relative;
-          border: 1px solid #bbf7d0;
-          border-radius: 12px;
-          background: #ffffff;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          text-decoration: none;
-          color: inherit;
-          min-height: 190px;
-          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-        }
+  gap: 0;
+  position: relative;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  min-height: 220px; /* Increased slightly to fit new content nicely */
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
           /* ── UNCLAIMED VENDOR CARD COLORS (HOME) ── */
         .bs-vendor-card-unclaimed {
           border-color: #fcd34d !important;
@@ -1243,13 +1254,13 @@ export default function HomeClient({
           letter-spacing: 0.05em;
         }
           .bs-vc-info h3 {
-          font-size: 14px; /* Reduced from 16px */
-          font-weight: 800;
-          color: #111;
-          margin: 0 0 4px;
-          line-height: 1.2;
-          text-align: left;
-        }
+  font-size: 13.5px; /* Decreased font size for better proportion */
+  font-weight: 800;
+  color: #111;
+  margin: 0 0 4px;
+  line-height: 1.2;
+  text-align: left;
+}
 
         .bs-vc-pill-cat {
           display: inline-block;
@@ -1313,13 +1324,47 @@ export default function HomeClient({
           text-align: left;
         }
         .bs-vc-location {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 12px;
-          color: #4b5563;
-          margin-bottom: 6px;
-        }
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+  /* NEW STYLES FOR DESCRIPTION & VERIFICATION LABELS */
+.bs-vc-desc {
+  font-size: 11.5px;
+  color: #4b5563;
+  margin: 0 0 12px 0;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bs-vc-trust-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.bs-vc-trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #065f46;
+  background: #ecfdf5;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  border: 1px solid #d1fae5;
+  text-transform: uppercase;
+}
         .bs-vc-trust {
           display: inline-flex;
           align-items: center;
