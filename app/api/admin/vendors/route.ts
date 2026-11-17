@@ -6,7 +6,7 @@ import {
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
-
+import { validateVendorFields, vendorKey, vendorListingRecord } from "@/lib/vendorImport";
 
 type VendorRow = {
   id: string;
@@ -94,5 +94,52 @@ export async function GET(request: Request) {
     if (configError) return apiError(configError.message, configError.status);
     console.error("ADMIN_VENDORS_GET_API_ERROR", error);
     return apiError("Unable to load vendors.", 503);
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    await requireRole(request, ["ADMIN"]);
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return apiError("Enter valid vendor details.", 400);
+    }
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return apiError("Enter valid vendor details.", 400);
+    }
+    const { vendor, fieldErrors } = validateVendorFields(body as Record<string, unknown>);
+    if (Object.keys(fieldErrors).length) {
+      return apiError("Check the highlighted vendor details.", 400, { fieldErrors });
+    }
+
+    const existing = await supabaseServiceFetchAll<{
+      company_name: string;
+      registered_address: string | null;
+      state: string | null;
+    }>("/rest/v1/vendors?select=company_name,registered_address,state&order=id.asc");
+    if (existing.some((row) => vendorKey(row.company_name, row.registered_address || "", row.state || "") === vendor.key)) {
+      return apiError("A vendor with this company name, address, and state already exists.", 409);
+    }
+
+    const rows = await supabaseServiceFetch<Array<{ id: string }>>(
+      "/rest/v1/vendors?select=id",
+      {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ ...vendorListingRecord(vendor), source: "ADMIN_CREATED" }),
+      },
+      false, // An insert cannot safely be retried after an uncertain response.
+    );
+    return apiOk({ ok: true, vendor: { id: rows[0].id } }, 201);
+  } catch (error) {
+    const authError = toAuthError(error);
+    if (authError) return apiError(authError.message, authError.status);
+    const configError = toConfigError(error);
+    if (configError) return apiError(configError.message, configError.status);
+    console.error("ADMIN_VENDORS_POST_API_ERROR", error);
+    return apiError("Unable to create vendor. Please try again.", 503);
   }
 }

@@ -8,7 +8,7 @@ import {
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
-import { MAX_IMPORT_ROWS, parseVendorSheet, vendorKey } from "@/lib/vendorImport";
+import { MAX_IMPORT_ROWS, parseVendorSheet, vendorKey, vendorListingRecord } from "@/lib/vendorImport";
 
 export const runtime = "nodejs";
 
@@ -54,7 +54,8 @@ export async function POST(request: Request) {
       header: 1,
       defval: "",
       raw: false,
-      blankrows: false,
+      // Preserve worksheet positions so row errors match the uploaded file.
+      blankrows: true,
     });
     const result = parseVendorSheet(rows);
     if (!result.ok) {
@@ -75,27 +76,9 @@ export async function POST(request: Request) {
       key: row.key,
       excelRow: row.excelRow,
       record: {
-        company_name: row.companyName,
-        logo_url: row.logo || null,
-        primary_category: row.categories[0] || null,
-        sub_categories: row.categories.slice(1),
-        key_products: row.products,
-        registered_address: row.address || null,
-        state: row.state || null,
-        country: "India",
-        short_description: row.description || null,
-        // Public listing details that have no dedicated column live here,
-        // alongside operatingHours (admin badge edits merge, not replace).
-        public_contact: Object.fromEntries(
-          Object.entries({ operatingHours: row.operatingHours || null, ...row.extra })
-            .filter(([, value]) => value !== null && value !== ""),
-        ),
-        claim_status: "UNCLAIMED",
+        ...vendorListingRecord(row),
         source: "CLIENT_IMPORT",
         import_batch_id: importBatchId,
-        approved: true,
-        status: "approved",
-        listing_verified: false,
         raw_firebase: { importFile: file.name, sheetName: workbook.SheetNames[0], rowNumber: row.excelRow },
       },
     }));
