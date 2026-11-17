@@ -14,7 +14,6 @@ type VendorSeoRow = DatedRow & {
   slug: string | null;
   short_description: string | null;
   registered_address: string | null;
-  primary_sustainability_cert: string | null;
 };
 
 type CategorySeoRow = DatedRow & {
@@ -133,11 +132,9 @@ export async function vendorSitemapEntries() {
   // Note the description check is an OR: mapVendor() falls back to
   // registered_address when short_description is empty (lib/supabasePublic.ts).
   const vendorQuery = new URLSearchParams({
-    select:
-      "id,slug,updated_at,short_description,registered_address,primary_sustainability_cert",
+    select: "id,slug,updated_at,short_description,registered_address",
     approved: "eq.true",
     or: "(short_description.not.is.null,registered_address.not.is.null)",
-    primary_sustainability_cert: "not.is.null",
     order: "id.asc",
   });
   const productQuery = new URLSearchParams({
