@@ -1,0 +1,91 @@
+[
+  {
+    "name": "Admin catalog lists parent IDs and statuses",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin creates product type with parent subcategory",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin catalog validates missing parent, blank and overlong names",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin edits and toggles a type",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin deletes an unused type",
+    "status": "PASS"
+  },
+  {
+    "name": "Duplicate type errors return conflict",
+    "status": "PASS"
+  },
+  {
+    "name": "Invalid parent move returns validation error",
+    "status": "PASS"
+  },
+  {
+    "name": "Used type deletion returns conflict and the exact explanatory message for FK errors",
+    "status": "PASS"
+  },
+  {
+    "name": "Used type deletion returns conflict for RESTRICT SQLSTATE",
+    "status": "FAIL",
+    "message": "Expected values to be strictly equal:\n\n503 !== 409\n"
+  },
+  {
+    "name": "Buyer and vendor cannot manage catalog",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin creates product with valid type and mapped SQL field",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin product without type succeeds",
+    "status": "PASS"
+  },
+  {
+    "name": "Vendor creates pending product with type",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin and vendor reject malformed IDs, Services with type, mismatched parents and new inactive assignments",
+    "status": "PASS"
+  },
+  {
+    "name": "Service without a product type succeeds",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin edit round-trips the type",
+    "status": "PASS"
+  },
+  {
+    "name": "Vendor edit round-trips the type",
+    "status": "PASS"
+  },
+  {
+    "name": "Inactive type retained on an unrelated admin edit",
+    "status": "PASS"
+  },
+  {
+    "name": "Vendor cannot edit another vendor product",
+    "status": "PASS"
+  },
+  {
+    "name": "Vendor catalog supplies inactive records for retaining old selections",
+    "status": "PASS"
+  },
+  {
+    "name": "Import prepare forwards resolved productTypeId to the RPC",
+    "status": "PASS"
+  },
+  {
+    "name": "Import prepare rejects invalid type name before RPC",
+    "status": "PASS"
+  }
+]

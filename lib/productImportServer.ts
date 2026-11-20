@@ -12,12 +12,13 @@ async function importActor(request: Request, mode: Mode) {
 }
 
 async function catalog(): Promise<ImportCatalog> {
-  const [categories, subcategories, tags] = await Promise.all([
+  const [categories, subcategories, productTypes, tags] = await Promise.all([
     supabaseServiceFetchAll<ImportCatalog["categories"][number]>("/rest/v1/categories?select=id,name,slug&active=eq.true&order=name.asc,id.asc"),
     supabaseServiceFetchAll<{ id: string; name: string; category_id: string }>("/rest/v1/subcategories?select=id,name,category_id&active=eq.true&order=name.asc,id.asc"),
+    supabaseServiceFetchAll<{ id: string; name: string; subcategory_id: string }>("/rest/v1/product_types?select=id,name,subcategory_id&active=eq.true&order=name.asc,id.asc"),
     supabaseServiceFetchAll<ImportCatalog["tags"][number]>("/rest/v1/sustainability_tags?select=id,name&active=eq.true&order=name.asc,id.asc"),
   ]);
-  return { categories, subcategories: subcategories.map(row => ({ id: row.id, name: row.name, categoryId: row.category_id })), tags };
+  return { categories, subcategories: subcategories.map(row => ({ id: row.id, name: row.name, categoryId: row.category_id })), productTypes: productTypes.map(row => ({ id: row.id, name: row.name, subcategoryId: row.subcategory_id })), tags };
 }
 
 function importError(error: unknown) {

@@ -22,6 +22,7 @@ export type ProductRow = {
   available_for: string[];
   category_id: string | null;
   subcategory_id: string | null;
+  product_type_id: string | null;
   price_type: string | null;
   price: number | string | null;
   currency: string;
@@ -62,6 +63,7 @@ export const PRODUCT_SELECT = [
   "available_for",
   "category_id",
   "subcategory_id",
+  "product_type_id",
   "price_type",
   "price",
   "currency",
@@ -123,6 +125,7 @@ export function mapProduct(row: ProductRow) {
     availableFor: row.available_for || [],
     categoryId: row.category_id || "",
     subCategoryId: row.subcategory_id || "",
+    productTypeId: row.product_type_id || "",
     priceType: row.price_type || "",
     price: row.price === null ? "" : String(row.price),
     currency: row.currency || "INR",
@@ -179,6 +182,7 @@ export function buildProductPayload(
     available_for: stringArray(body.availableFor),
     category_id: stringOrNull(body.categoryId),
     subcategory_id: stringOrNull(body.subCategoryId),
+    product_type_id: stringOrNull(body.productTypeId),
     price_type: stringOrNull(body.priceType),
     price: numberOrNull(body.price),
     currency: stringOrNull(body.currency) || "INR",

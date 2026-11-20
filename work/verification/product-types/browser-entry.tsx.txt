@@ -1,0 +1,71 @@
+import React, {useEffect} from 'react';
+import {createRoot} from 'react-dom/client';
+import AdminTypes from '../../../app/(protected)/admin/product-types/page';
+import AdminNew from '../../../app/(protected)/admin/products/new/page';
+import AdminEdit from '../../../app/(protected)/admin/products/[id]/page';
+import VendorNew from '../../../app/(protected)/vendor/products/new/page';
+import VendorEdit from '../../../app/(protected)/vendor/products/[id]/page';
+import Browse from '../../../app/browse/BrowseClient';
+const w=window as any;
+const uuid=(n:number)=>'10000000-0000-4000-8000-'+String(n).padStart(12,'0');
+w.ids={cat:uuid(1),sub:uuid(2),type:uuid(3),vendor:uuid(4),otherCat:uuid(5),otherSub:uuid(6),inactive:uuid(7),otherType:uuid(8),secondSub:uuid(9)};
+const i=w.ids;
+const categories=[{id:i.cat,name:'Computers',slug:'computers'},{id:i.otherCat,name:'Eco Products',slug:'eco-products'}];
+const subcategories=[{id:i.sub,name:'Desktops',categoryId:i.cat},{id:i.secondSub,name:'Laptops',categoryId:i.cat},{id:i.otherSub,name:'Bottles',categoryId:i.otherCat}];
+const types=[{id:i.type,name:'All-in-One PCs',subcategoryId:i.sub,active:true},{id:i.inactive,name:'Legacy PCs',subcategoryId:i.sub,active:false},{id:i.otherType,name:'Bamboo bottles',subcategoryId:i.otherSub,active:true}];
+let currentTypes=types.map(t=>({...t}));
+const masters=()=>({categories,subCategories:subcategories,productTypes:currentTypes,tags:[],vendors:[{id:i.vendor,companyName:'Test Vendor',company_name:'Test Vendor'}]});
+w.navigations=[];w.refreshes=0;w.autoNavigate=false;
+const navigate=(url:string,replace=false)=>{w.nav=url;w.navigations.push({url,replace});if(w.autoNavigate)w.commitNavigation(url,replace);};
+w.router={push:(url:string)=>navigate(url),replace:(url:string)=>navigate(url,true),back:()=>history.back(),refresh:()=>{w.refreshes++;if(w.recoverOnRetry){w.loadError=false;renderFixture();}}};
+w.confirmResult=false;w.confirmations=[];w.alerts=[];
+w.confirm=(s:string)=>{w.confirmations.push(s);return w.confirmResult};w.alert=(s:string)=>w.alerts.push(s);
+w.calls=[];
+w.fetch=async (path:string,options:any={})=>{
+ const method=options.method||'GET';const body=options.body?JSON.parse(options.body):null;
+ w.calls.push({path,method,body});
+ await new Promise(r=>setTimeout(r,15));
+ const response=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
+ if(method!=='GET'){
+  if(w.forceError)return response({error:{message:'Simulated API error'}},409);
+  if(path.includes('/master/product-types')){
+   const id=path.split('/').at(-1);
+   if(method==='POST')currentTypes.push({id:uuid(99),...body,active:true});
+   if(method==='PATCH')currentTypes=currentTypes.map(t=>t.id===id?{...t,...body}:t);
+   if(method==='DELETE')currentTypes=currentTypes.filter(t=>t.id!==id);
+   return response({});
+  }
+  return response({error:{message:'Captured listing request'}},400);
+ }
+ if(path.endsWith('/master/categories'))return response({items:categories});
+ if(path.endsWith('/master/subcategories'))return response({items:subcategories});
+ if(path.endsWith('/master/product-types'))return response({items:currentTypes});
+ if(path.includes('masters=1'))return response({masters:masters()});
+ if(path==='/api/vendor/catalog')return response({categories,subcategories,productTypes:currentTypes,tags:[]});
+ if(/\/products\//.test(path))return response({product:{id:uuid(80),vendorId:i.vendor,title:'Existing test product',description:'Sustainable computer equipment '.repeat(160),listingType:'Product',categoryId:i.cat,subCategoryId:i.sub,productTypeId:w.inactiveEdit?i.inactive:i.type,priceType:'Price on Request',availableFor:['B2B'],images:[],specifications:[],sustainabilityTagIds:[],shipRegions:[],currency:'INR',inStock:true},masters:masters()});
+ throw new Error('Unexpected mock URL '+path);
+};
+w.requestedVersion=0;w.renderedVersion=0;
+function FixtureRoot({component:Comp,version,componentProps,componentKey}:any){useEffect(()=>{w.renderedVersion=version;},[version]);return <Comp key={componentKey} {...componentProps}/>;}
+const root=createRoot(document.getElementById('root')!);let mountKey=0;let currentName='browse';let currentOptions:any={};
+function renderFixture(){
+ const components:any={adminTypes:AdminTypes,adminNew:AdminNew,adminEdit:AdminEdit,vendorNew:VendorNew,vendorEdit:VendorEdit,browse:Browse};
+ const Comp=components[currentName];const type=w.search.get('type')||'Product';
+ const empty=currentOptions.emptyResults||(type==='Service'&&w.search.get('category')==='computers');
+ const products=empty?[]:[{id:'p1',title:'Test Desktop',vendorId:i.vendor,vendorName:'Test Vendor',listingType:type,categoryId:i.cat,images:[],availableFor:[],shipRegions:[],sustainabilityTags:[],tagNames:[],approved:true}];
+ const vendors=empty?[]:[{id:i.vendor,companyName:'Test Vendor',approved:true,claimStatus:'CLAIMED',listingVerified:true,subCategories:[],tags:[]}];
+ root.render(<FixtureRoot component={Comp} componentKey={mountKey} version={++w.requestedVersion} componentProps={{initialCategories:categories,initialSubcategories:subcategories,initialProductTypes:types.filter(t=>t.active),initialProducts:products,initialVendors:vendors,totalCount:empty?0:25,page:Number(w.search.get('page'))||currentOptions.page||1,pageSize:12,loadError:w.loadError}}/>);
+}
+w.commitNavigation=(url:string,replace=false,writeHistory=true)=>{
+ w.search=new URLSearchParams(new URL(url,'https://fixture.invalid').search);
+ if(writeHistory){const target=location.pathname+'?'+w.search.toString();if(replace)history.replaceState({},'',target);else history.pushState({},'',target);}
+ renderFixture();
+};
+window.addEventListener('popstate',()=>{w.search=new URLSearchParams(location.search);renderFixture();});
+w.mount=(name:string,opts:any={})=>{
+ currentName=name;currentOptions=opts;mountKey++;
+ w.calls=[];w.nav=null;w.forceError=false;w.inactiveEdit=opts.inactive||false;w.confirmations=[];w.alerts=[];w.search=new URLSearchParams(opts.search||'');w.navigations=[];w.refreshes=0;w.autoNavigate=opts.autoNavigate||false;w.loadError=opts.loadError||false;w.recoverOnRetry=false;
+ currentTypes=(opts.empty?[]:types).map(t=>({...t}));
+ renderFixture();
+};
+w.ready=true;

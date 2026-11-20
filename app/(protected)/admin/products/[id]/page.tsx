@@ -9,6 +9,7 @@ import DescriptionWordHint from "@/app/components/DescriptionWordHint";
 import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
+import ProductTypeSelect, { type ProductTypeOption } from "@/app/components/ProductTypeSelect";
 import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 
 const LISTING_TYPES = ["Product", "Service"];
@@ -26,6 +27,7 @@ export default function AdminEditProductPage() {
 
   const [categories,    setCategories]    = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductTypeOption[]>([]);
   const [tags,          setTags]          = useState<any[]>([]);
   const [vendors,       setVendors]       = useState<any[]>([]);
 
@@ -34,6 +36,7 @@ export default function AdminEditProductPage() {
   const [title,             setTitle]             = useState("");
   const [categoryId,        setCategoryId]        = useState("");
   const [subCategoryId,     setSubCategoryId]     = useState("");
+  const [productTypeId, setProductTypeId] = useState("");
   const [description,       setDescription]       = useState("");
   const productImages = useProductImages();
   const productSpecifications = useProductSpecifications();
@@ -67,6 +70,7 @@ export default function AdminEditProductPage() {
         setTitle(p.title || "");
         setCategoryId(p.categoryId || "");
         setSubCategoryId(p.subCategoryId || "");
+        setProductTypeId(p.productTypeId || "");
         setDescription(p.description || "");
         setStoredSpecifications(p.specifications);
         setStoredImages(p.images || []);
@@ -82,6 +86,7 @@ export default function AdminEditProductPage() {
         setInStock(p.inStock ?? true);
         setCategories(payload.masters?.categories || []);
         setSubCategories(payload.masters?.subCategories || []);
+        setProductTypes(payload.masters?.productTypes || []);
         setTags(payload.masters?.tags || []);
         setVendors(payload.masters?.vendors || []);
       } catch (err) {
@@ -118,7 +123,7 @@ export default function AdminEditProductPage() {
         body: JSON.stringify({
           vendorId: selectedVendorId,
           listingType, title, description,
-          categoryId, subCategoryId,
+          categoryId, subCategoryId, productTypeId,
           images: orderedImages,
           specifications: specificationValues,
           availableFor, priceType, price, currency, moq, discount,
@@ -235,7 +240,7 @@ export default function AdminEditProductPage() {
                 <p className="ape-label">Listing Type *</p>
                 <div className="ape-chips">
                   {LISTING_TYPES.map(t => (
-                    <button key={t} type="button" onClick={() => setListingType(t)} className={`ape-chip${listingType === t ? " on" : ""}`}>{t}</button>
+                    <button key={t} type="button" onClick={() => { setListingType(t); setProductTypeId(""); }} className={`ape-chip${listingType === t ? " on" : ""}`}>{t}</button>
                   ))}
                 </div>
               </div>
@@ -246,19 +251,20 @@ export default function AdminEditProductPage() {
               <div className="ape-2col">
                 <div>
                   <p className="ape-label">Category *</p>
-                  <select className="ape-select" value={categoryId} onChange={e => setCategoryId(e.target.value)} required>
+                  <select className="ape-select" value={categoryId} onChange={e => { setCategoryId(e.target.value); setSubCategoryId(""); setProductTypeId(""); }} required>
                     <option value="">Select category</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <p className="ape-label">Subcategory *</p>
-                  <select className="ape-select" value={subCategoryId} onChange={e => setSubCategoryId(e.target.value)} disabled={!categoryId} required>
+                  <select className="ape-select" value={subCategoryId} onChange={e => { setSubCategoryId(e.target.value); setProductTypeId(""); }} disabled={!categoryId} required>
                     <option value="">Select subcategory</option>
                     {filteredSubCats.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               </div>
+              <ProductTypeSelect listingType={listingType} subcategoryId={subCategoryId} productTypes={productTypes} value={productTypeId} onChange={setProductTypeId} className="ape-select" />
               <div>
                 <p className="ape-label">Description * (aim for {RECOMMENDED_DESCRIPTION_WORDS}+ words)</p>
                 <textarea className="ape-textarea" rows={10} maxLength={DESCRIPTION_MAX_CHARS} placeholder="What it is and what it's made of, sizes/variants, uses and who buys it, certifications, why it's sustainable, delivery areas, 2–3 FAQs…" value={description} onChange={e => setDescription(e.target.value)} />

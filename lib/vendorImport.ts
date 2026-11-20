@@ -1,6 +1,5 @@
-// Column rules for the admin "Import vendors" Excel upload. Shared by the
-// browser pre-check (admin/vendors page) and the server import route so the
-// two can never disagree about what a valid sheet is.
+// Shared fields, validation and storage mapping for manual vendor creation
+// and the admin Excel import.
 
 export const REQUIRED_COLUMNS = [
   "Logo",
@@ -38,6 +37,20 @@ export const OPTIONAL_COLUMNS: Array<{ key: OptionalKey; label: string; prefixes
   { key: "mapLink", label: "Map Link", prefixes: ["maplink", "map", "googlemap", "location link"] },
   { key: "rating", label: "Ratings", prefixes: ["rating"] },
 ];
+
+export const VENDOR_REQUIRED_FIELDS = [
+  { key: "logo", label: "Logo", required: false },
+  { key: "companyName", label: "Company Name", required: true },
+  { key: "categories", label: "Categories", required: true },
+  { key: "products", label: "Products/ Services", required: true },
+  { key: "address", label: "Address", required: true },
+  { key: "state", label: "State", required: true },
+  { key: "operatingHours", label: "Operating Hours", required: true },
+  { key: "description", label: "Business Description", required: true },
+] as const;
+
+export type VendorFieldKey = (typeof VENDOR_REQUIRED_FIELDS)[number]["key"] | OptionalKey;
+export type VendorFieldErrors = Partial<Record<VendorFieldKey, string>>;
 
 /** Every column the downloadable template contains, in order. */
 export const TEMPLATE_COLUMNS = [...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS.map((c) => c.label)];
@@ -94,7 +107,7 @@ function normalizeUrl(value: string): string | null {
 /** Accepts "4.5", "4.5/5", "4.5 stars"; must land between 0 and 5. */
 function parseRating(value: string): number | null | undefined {
   if (!value) return null;
-  const match = value.replace(",", ".").match(/\d+(\.\d+)?/);
+  const match = value.replace(",", ".").match(/-?\d+(\.\d+)?/);
   const rating = match ? Number(match[0]) : NaN;
   return Number.isFinite(rating) && rating >= 0 && rating <= 5 ? Math.round(rating * 10) / 10 : undefined;
 }
@@ -126,6 +139,87 @@ export type ParsedVendorRow = {
     rating: number | null;
   };
 };
+
+export function validateVendorFields(input: Record<string, unknown>) {
+  const fieldErrors: VendorFieldErrors = {};
+  const get = (key: VendorFieldKey) => {
+    const value = input[key];
+    if (value != null && typeof value !== "string" && !(key === "rating" && typeof value === "number")) {
+      fieldErrors[key] = "Enter a text value.";
+      return "";
+    }
+    return clean(value);
+  };
+  const fields = Object.fromEntries(
+    [...VENDOR_REQUIRED_FIELDS, ...OPTIONAL_COLUMNS].map(({ key }) => [key, get(key)]),
+  ) as Record<VendorFieldKey, string>;
+  for (const field of VENDOR_REQUIRED_FIELDS) {
+    if (field.required && !fields[field.key]) fieldErrors[field.key] = `${field.label} is required.`;
+  }
+  const categories = list(fields.categories);
+  const products = list(fields.products);
+  if (fields.categories && !categories.length) fieldErrors.categories = "Enter at least one category.";
+  if (fields.products && !products.length) fieldErrors.products = "Enter at least one product or service.";
+  if (fields.logo && (!/^https?:\/\/\S+$/i.test(fields.logo) || !normalizeUrl(fields.logo))) {
+    fieldErrors.logo = "Logo must be a valid http(s) image URL.";
+  }
+  const urlField = (key: "website" | "linkedin" | "mapLink", label: string) => {
+    const url = normalizeUrl(fields[key]);
+    if (fields[key] && !url) fieldErrors[key] = `${label} must be a valid link.`;
+    return url;
+  };
+  const website = urlField("website", "Website");
+  const linkedin = urlField("linkedin", "LinkedIn");
+  const mapLink = urlField("mapLink", "Map Link");
+  const rating = parseRating(fields.rating);
+  if (rating === undefined) fieldErrors.rating = "Ratings must be a number from 0 to 5.";
+
+  const vendor: Omit<ParsedVendorRow, "excelRow"> = {
+    key: vendorKey(fields.companyName, fields.address, fields.state),
+    companyName: fields.companyName,
+    logo: fields.logo,
+    categories,
+    products,
+    address: fields.address,
+    state: fields.state,
+    operatingHours: fields.operatingHours,
+    description: fields.description,
+    extra: {
+      industry: fields.industry || null,
+      website,
+      brand: fields.brand || null,
+      tagline: fields.tagline || null,
+      productOfferings: fields.productOfferings || null,
+      linkedin,
+      sustainability: fields.sustainability || null,
+      mapLink,
+      rating: rating ?? null,
+    },
+  };
+  return { vendor, fieldErrors };
+}
+
+export function vendorListingRecord(row: Omit<ParsedVendorRow, "excelRow">) {
+  return {
+    company_name: row.companyName,
+    logo_url: row.logo || null,
+    primary_category: row.categories[0] || null,
+    sub_categories: row.categories.slice(1),
+    key_products: row.products,
+    registered_address: row.address || null,
+    state: row.state || null,
+    country: "India",
+    short_description: row.description || null,
+    public_contact: Object.fromEntries(
+      Object.entries({ operatingHours: row.operatingHours || null, ...row.extra })
+        .filter(([, value]) => value !== null && value !== ""),
+    ),
+    claim_status: "UNCLAIMED",
+    approved: true,
+    status: "approved",
+    listing_verified: false,
+  };
+}
 
 export type SheetParseResult =
   | { ok: false; columnError: string }
@@ -176,54 +270,18 @@ export function parseVendorSheet(sheetRows: unknown[][]): SheetParseResult {
     const get = (column: (typeof REQUIRED_COLUMNS)[number]) => cell(row, requiredIndex.get(column));
     const opt = (key: OptionalKey) => cell(row, optionalIndex.get(key));
 
-    const missing = REQUIRED_COLUMNS.filter((column) => column !== "Logo" && !get(column));
-    if (missing.length) rowErrors.push({ row: excelRow, message: `Missing ${missing.join(", ")}.` });
+    const { vendor, fieldErrors } = validateVendorFields(Object.fromEntries([
+      ...VENDOR_REQUIRED_FIELDS.map((field) => [field.key, get(field.label)]),
+      ...OPTIONAL_COLUMNS.map((field) => [field.key, opt(field.key)]),
+    ]));
+    for (const message of Object.values(fieldErrors)) rowErrors.push({ row: excelRow, message });
 
-    const logo = get("Logo");
-    if (logo && !/^https?:\/\/\S+$/i.test(logo)) {
-      rowErrors.push({ row: excelRow, message: "Logo must be a valid http(s) image URL." });
-    }
-
-    const urlField = (key: "website" | "linkedin" | "mapLink", label: string) => {
-      const raw = opt(key);
-      const url = normalizeUrl(raw);
-      if (raw && !url) rowErrors.push({ row: excelRow, message: `${label} must be a valid link.` });
-      return url;
-    };
-    const website = urlField("website", "Website");
-    const linkedin = urlField("linkedin", "LinkedIn");
-    const mapLink = urlField("mapLink", "Map Link");
-    const rating = parseRating(opt("rating"));
-    if (rating === undefined) rowErrors.push({ row: excelRow, message: "Ratings must be a number from 0 to 5." });
-
-    const key = vendorKey(get("Company Name"), get("Address"), get("State"));
+    const key = vendor.key;
     const firstRow = seen.get(key);
     if (firstRow) rowErrors.push({ row: excelRow, message: `Duplicate of row ${firstRow}.` });
     else seen.set(key, excelRow);
 
-    rows.push({
-      excelRow,
-      key,
-      companyName: get("Company Name"),
-      logo,
-      categories: list(get("Categories")),
-      products: list(get("Products/ Services")),
-      address: get("Address"),
-      state: get("State"),
-      operatingHours: get("Operating Hours"),
-      description: get("Business Description"),
-      extra: {
-        industry: opt("industry") || null,
-        website,
-        brand: opt("brand") || null,
-        tagline: opt("tagline") || null,
-        productOfferings: opt("productOfferings") || null,
-        linkedin,
-        sustainability: opt("sustainability") || null,
-        mapLink,
-        rating: rating ?? null,
-      },
-    });
+    rows.push({ ...vendor, excelRow });
   });
 
   return { ok: true, rows, rowErrors };

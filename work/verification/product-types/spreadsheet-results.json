@@ -1,0 +1,38 @@
+[
+  {
+    "name": "CSV product_type_name survives export and parsing",
+    "status": "PASS"
+  },
+  {
+    "name": "XLSX product_type_name survives workbook parsing",
+    "status": "PASS"
+  },
+  {
+    "name": "Generated template contains optional column and complete catalog references",
+    "status": "PASS"
+  },
+  {
+    "name": "Case and outer whitespace normalized; repeated names resolve within parent",
+    "status": "PASS"
+  },
+  {
+    "name": "Missing subcategory and mismatched category rejected",
+    "status": "PASS"
+  },
+  {
+    "name": "Unknown and overlong product type names rejected",
+    "status": "PASS"
+  },
+  {
+    "name": "Services reject typed rows but allow empty type",
+    "status": "PASS"
+  },
+  {
+    "name": "Legacy sheets omitting type column remain valid",
+    "status": "PASS"
+  },
+  {
+    "name": "Duplicate matching catalog entries are rejected as ambiguous",
+    "status": "PASS"
+  }
+]

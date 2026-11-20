@@ -4,10 +4,12 @@ import * as XLSX from "xlsx";
 import { csvCell, importCsv, matchImportImages, validateImportFields, type ImportCatalog, type ImportFields, type ImportReceipt } from "../lib/productImport";
 import { parseProductSpreadsheet, productImportWorkbook } from "../lib/productImportSpreadsheet";
 import { executeImportRow, runImportQueue, type ImportWorkflow } from "../lib/productImportWorkflow";
+import { resolveBrowseTaxonomy } from "../lib/productTaxonomy";
 
 const catalog: ImportCatalog = {
   categories: [{ id: "cat-1", name: "Packaging", slug: "packaging" }, { id: "cat-2", name: "Other", slug: "other" }],
   subcategories: [{ id: "sub-1", name: "Bottles", categoryId: "cat-1" }, { id: "sub-2", name: "Consulting", categoryId: "cat-2" }],
+  productTypes: [{ id: "type-1", name: "Bamboo Bottle", subcategoryId: "sub-1" }],
   tags: [{ id: "tag-1", name: "Recycled" }, { id: "tag-2", name: "Reusable" }],
 };
 const fields: ImportFields = { title: "Bamboo Bottle", listing_type: "Product", category_slug: "packaging", price_type: "Fixed Price", price: "350" };
@@ -18,10 +20,33 @@ test("valid product fields normalize enums, defaults, names and list values", ()
   assert.deepEqual(result.issues, []);
   assert.equal(result.product.categoryId, "cat-1");
   assert.equal(result.product.subCategoryId, "sub-1");
+  assert.equal(result.product.productTypeId, null);
   assert.deepEqual(result.product.sustainabilityTagIds, ["tag-1", "tag-2"]);
   assert.equal(result.product.currency, "INR");
   assert.equal(result.product.inStock, true);
   assert.deepEqual(result.product.availableFor, ["B2B", "B2C"]);
+});
+
+test("product type is optional but must match the product subcategory", () => {
+  assert.equal(validate({ subcategory_name: "Bottles", product_type_name: "Bamboo Bottle" }).product.productTypeId, "type-1");
+  assert(validate({ product_type_name: "Bamboo Bottle" }).issues.some(issue => issue.field === "product_type_name"));
+  assert(validate({ subcategory_name: "Consulting", product_type_name: "Bamboo Bottle", category_slug: "other" }).issues.some(issue => issue.field === "product_type_name"));
+  assert(validate({ listing_type: "Service", subcategory_name: "Bottles", product_type_name: "Bamboo Bottle" }).issues.some(issue => issue.field === "product_type_name"));
+});
+
+test("browse hierarchy resolves valid filters and rejects mismatched URL paths", () => {
+  const categories = [{ id: "cat-1", name: "Packaging", slug: "packaging" }, { id: "cat-2", name: "Other", slug: "other" }];
+  const subcategories = [{ id: "sub-1", categoryId: "cat-1" }];
+  const types = [{ id: "type-1", subcategoryId: "sub-1" }];
+  const resolve = (listingType: "Product" | "Service" | "Vendor", category: string, subcategory: string, productType: string) =>
+    resolveBrowseTaxonomy(listingType, { category, subcategory, productType }, categories, subcategories, types);
+  assert.equal(resolve("Product", "packaging", "sub-1", "type-1").productType?.id, "type-1");
+  assert.equal(resolve("Product", "cat-1", "sub-1", "type-1").valid, true);
+  assert.equal(resolve("Product", "cat-2", "sub-1", "type-1").valid, false);
+  assert.equal(resolve("Product", "", "sub-1", "").valid, false);
+  assert.equal(resolve("Product", "cat-1", "", "type-1").valid, false);
+  assert.equal(resolve("Service", "cat-1", "sub-1", "type-1").valid, false);
+  assert.equal(resolve("Vendor", "", "sub-1", "").valid, false);
 });
 
 test("required fields and price rules reject incomplete rows", () => {

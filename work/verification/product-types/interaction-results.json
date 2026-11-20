@@ -1,0 +1,198 @@
+[
+  {
+    "name": "adminNew: cascading selectors and active-only choices",
+    "status": "PASS"
+  },
+  {
+    "name": "adminNew: typed payload reaches save handler and errors display",
+    "status": "PASS"
+  },
+  {
+    "name": "adminNew: Service clears type and submits empty assignment",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorNew: cascading selectors and active-only choices",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorNew: typed payload reaches save handler and errors display",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorNew: Service clears type and submits empty assignment",
+    "status": "PASS"
+  },
+  {
+    "name": "adminEdit: cascading selectors and active-only choices",
+    "status": "PASS"
+  },
+  {
+    "name": "adminEdit: typed payload reaches save handler and errors display",
+    "status": "PASS"
+  },
+  {
+    "name": "adminEdit: Service clears type and submits empty assignment",
+    "status": "PASS"
+  },
+  {
+    "name": "adminEdit: existing inactive assignment retained until changed",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorEdit: cascading selectors and active-only choices",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorEdit: typed payload reaches save handler and errors display",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorEdit: Service clears type and submits empty assignment",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorEdit: existing inactive assignment retained until changed",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin type management: validation, add, and busy state",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin type management: edit, rename and cancel",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin type management: moving parent clears subcategory",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin type management: deactivate and activate",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin type management: delete confirmation cancels and confirms",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin type management: server error visible, row preserved",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin type management: semantic empty table",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: child options match selected parents",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: category change clears descendants and page",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: subcategory change clears type and page",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: product type change resets page",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: sidebar Service switch clears product filters",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: top Service tab clears product type",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: pagination links retain complete taxonomy",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: top Vendor tab clears product descendants",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: top Service tab resets incompatible filters at 375px",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: top Vendor tab resets incompatible filters at 375px",
+    "status": "PASS"
+  },
+  {
+    "name": "adminNew: product selector fits at 375px",
+    "status": "PASS"
+  },
+  {
+    "name": "adminEdit: product selector fits at 375px",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorNew: product selector fits at 375px",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorEdit: product selector fits at 375px",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: mobile filter drawer and type choices at 375px",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: top Service tab resets incompatible filters at 768px",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: top Vendor tab resets incompatible filters at 768px",
+    "status": "PASS"
+  },
+  {
+    "name": "adminNew: product selector fits at 768px",
+    "status": "PASS"
+  },
+  {
+    "name": "adminEdit: product selector fits at 768px",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorNew: product selector fits at 768px",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorEdit: product selector fits at 768px",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: mobile filter drawer and type choices at 768px",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: top Service tab resets incompatible filters at 1440px",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse: top Vendor tab resets incompatible filters at 1440px",
+    "status": "PASS"
+  },
+  {
+    "name": "adminNew: product selector fits at 1440px",
+    "status": "PASS"
+  },
+  {
+    "name": "adminEdit: product selector fits at 1440px",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorNew: product selector fits at 1440px",
+    "status": "PASS"
+  },
+  {
+    "name": "vendorEdit: product selector fits at 1440px",
+    "status": "PASS"
+  }
+]

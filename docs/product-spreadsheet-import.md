@@ -13,7 +13,7 @@ The migration adds private batch/row receipts and service-role-only RPCs. It doe
 1. Admins select one vendor for the entire batch; vendor accounts use their own vendor profile.
 2. Download the XLSX template, which includes Products, Instructions, and the active Catalog reference. CSV is also available. Replace the sample rows; only the first worksheet is read.
 3. Required columns: `title`, `listing_type`, `category_slug`, and `price_type`. Fixed/starting prices require a nonnegative price with at most two decimal places.
-4. Use active category slugs, subcategory names belonging to that category, and up to three active tag names. Separate list values with semicolons. Currency defaults to INR; stock defaults to TRUE.
+4. Use active category slugs, subcategory names belonging to that category, optional product type names belonging to the subcategory for Product listings, and up to three active tag names. Separate list values with semicolons. Currency defaults to INR; stock defaults to TRUE.
 5. Optionally specify exact, case-sensitive filenames in `image_1` through `image_5`, and select all matching local photos together. Duplicate selected filenames are rejected. Unreferenced photos are never uploaded.
 6. Correct/remove invalid rows. Preview photos to crop and choose a cover. Review validates/optimizes all referenced photos before confirmation.
 7. Confirm the displayed count and publication behavior. Vendor products are pending review; admin products are approved, matching the existing single-product flows.

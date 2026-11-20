@@ -1,0 +1,120 @@
+[
+  {
+    "name": "Apply base, import, specifications and product type migrations",
+    "status": "PASS"
+  },
+  {
+    "name": "Unique names are case and surrounding-space insensitive within a subcategory",
+    "status": "PASS"
+  },
+  {
+    "name": "Same name allowed under a different subcategory",
+    "status": "PASS"
+  },
+  {
+    "name": "Blank product type name rejected",
+    "status": "PASS"
+  },
+  {
+    "name": "Valid Product with full hierarchy inserts",
+    "status": "PASS"
+  },
+  {
+    "name": "Legacy Product without type remains valid",
+    "status": "PASS"
+  },
+  {
+    "name": "Service without product type remains valid",
+    "status": "PASS"
+  },
+  {
+    "name": "Service with product type rejected",
+    "status": "PASS"
+  },
+  {
+    "name": "Wrong category rejected",
+    "status": "PASS"
+  },
+  {
+    "name": "Wrong subcategory rejected",
+    "status": "PASS"
+  },
+  {
+    "name": "Used type cannot be deleted",
+    "status": "PASS"
+  },
+  {
+    "name": "Used type cannot be reparented",
+    "status": "PASS"
+  },
+  {
+    "name": "Used subcategory cannot be reparented",
+    "status": "PASS"
+  },
+  {
+    "name": "Unused type can be reparented",
+    "status": "PASS"
+  },
+  {
+    "name": "Unused subcategory can be reparented",
+    "status": "PASS"
+  },
+  {
+    "name": "Inactive type rejected for a new product",
+    "status": "PASS"
+  },
+  {
+    "name": "Existing inactive type preserved on unrelated edit",
+    "status": "PASS"
+  },
+  {
+    "name": "Public can read inactive type assigned to an approved product",
+    "status": "FAIL",
+    "message": "Inactive assigned type disappeared from public reads\n\n0 !== 1\n",
+    "code": "ERR_ASSERTION"
+  },
+  {
+    "name": "Non-admin cannot create product types",
+    "status": "PASS"
+  },
+  {
+    "name": "Non-admin cannot change or delete product types",
+    "status": "PASS"
+  },
+  {
+    "name": "Authenticated admin can create, rename, deactivate and delete unused types",
+    "status": "PASS"
+  },
+  {
+    "name": "Actual vendor and buyer JWT subjects cannot manage product types",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin import stores product type and approves product",
+    "status": "PASS"
+  },
+  {
+    "name": "Vendor import stores product type and remains pending",
+    "status": "PASS"
+  },
+  {
+    "name": "Import without product type remains compatible",
+    "status": "PASS"
+  },
+  {
+    "name": "Import rejects mismatched product type at commit",
+    "status": "PASS"
+  },
+  {
+    "name": "Import rejects type deactivated after prepare",
+    "status": "PASS"
+  },
+  {
+    "name": "Buyer cannot prepare product imports",
+    "status": "PASS"
+  },
+  {
+    "name": "Import commit still restricted to service role",
+    "status": "PASS"
+  }
+]

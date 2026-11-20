@@ -9,6 +9,7 @@ import DescriptionWordHint from "@/app/components/DescriptionWordHint";
 import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
+import ProductTypeSelect, { type ProductTypeOption } from "@/app/components/ProductTypeSelect";
 import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 
 const LISTING_TYPES = ["Product", "Service"];
@@ -21,6 +22,7 @@ export default function AdminAddProductPage() {
 
   const [categories,    setCategories]    = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductTypeOption[]>([]);
   const [tags,          setTags]          = useState<any[]>([]);
   const [vendors,       setVendors]       = useState<any[]>([]);
 
@@ -29,6 +31,7 @@ export default function AdminAddProductPage() {
   const [title,             setTitle]             = useState("");
   const [categoryId,        setCategoryId]        = useState("");
   const [subCategoryId,     setSubCategoryId]     = useState("");
+  const [productTypeId, setProductTypeId] = useState("");
   const [description,       setDescription]       = useState("");
   const productImages = useProductImages();
   const productSpecifications = useProductSpecifications();
@@ -63,6 +66,7 @@ export default function AdminAddProductPage() {
       if (res.ok) {
         setCategories(payload.masters?.categories || []);
         setSubCategories(payload.masters?.subCategories || []);
+        setProductTypes(payload.masters?.productTypes || []);
         setTags(payload.masters?.tags || []);
         setVendors(payload.masters?.vendors || []);
       }
@@ -97,7 +101,7 @@ export default function AdminAddProductPage() {
         body: JSON.stringify({
           vendorId: selectedVendorId,
           title, description, listingType, availableFor,
-          categoryId, subCategoryId,
+          categoryId, subCategoryId, productTypeId,
           images: orderedImages,
           specifications: specificationValues,
           priceType, price, currency, moq, discount,
@@ -211,7 +215,7 @@ export default function AdminAddProductPage() {
                 <p className="apn-label">Listing Type *</p>
                 <div className="apn-chips">
                   {LISTING_TYPES.map(t => (
-                    <button key={t} type="button" onClick={() => setListingType(t)} className={`apn-chip${listingType === t ? " on" : ""}`}>{t}</button>
+                    <button key={t} type="button" onClick={() => { setListingType(t); setProductTypeId(""); }} className={`apn-chip${listingType === t ? " on" : ""}`}>{t}</button>
                   ))}
                 </div>
               </div>
@@ -223,19 +227,20 @@ export default function AdminAddProductPage() {
               <div className="apn-2col">
                 <div>
                   <p className="apn-label">Category *</p>
-                  <select className="apn-select" value={categoryId} onChange={e => setCategoryId(e.target.value)} required>
+                  <select className="apn-select" value={categoryId} onChange={e => { setCategoryId(e.target.value); setSubCategoryId(""); setProductTypeId(""); }} required>
                     <option value="">Select category</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <p className="apn-label">Subcategory *</p>
-                  <select className="apn-select" value={subCategoryId} onChange={e => setSubCategoryId(e.target.value)} disabled={!categoryId} required>
+                  <select className="apn-select" value={subCategoryId} onChange={e => { setSubCategoryId(e.target.value); setProductTypeId(""); }} disabled={!categoryId} required>
                     <option value="">Select subcategory</option>
                     {filteredSubCats.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               </div>
+              <ProductTypeSelect listingType={listingType} subcategoryId={subCategoryId} productTypes={productTypes} value={productTypeId} onChange={setProductTypeId} className="apn-select" />
               <div>
                 <p className="apn-label">Description * (aim for {RECOMMENDED_DESCRIPTION_WORDS}+ words)</p>
                 <textarea className="apn-textarea" rows={10} maxLength={DESCRIPTION_MAX_CHARS} placeholder="What it is and what it's made of, sizes/variants, uses and who buys it, certifications, why it's sustainable, delivery areas, 2–3 FAQs…" value={description} onChange={e => setDescription(e.target.value)} />

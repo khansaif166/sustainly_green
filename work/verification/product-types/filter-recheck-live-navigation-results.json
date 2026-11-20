@@ -1,0 +1,22 @@
+{
+  "serviceCount": 5,
+  "vendorCount": 3,
+  "results": [
+    {
+      "name": "375px real catalog: Product Computers → Vendor → Service",
+      "status": "PASS"
+    },
+    {
+      "name": "375px real catalog: delayed search cannot undo Service switch",
+      "status": "PASS"
+    },
+    {
+      "name": "1440px real catalog: Product Computers → Vendor → Service",
+      "status": "PASS"
+    },
+    {
+      "name": "1440px real catalog: delayed search cannot undo Service switch",
+      "status": "PASS"
+    }
+  ]
+}

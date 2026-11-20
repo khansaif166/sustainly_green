@@ -9,6 +9,7 @@ import DescriptionWordHint from "@/app/components/DescriptionWordHint";
 import ProductImagePicker from "@/app/components/product-images/ProductImagePicker";
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
+import ProductTypeSelect, { type ProductTypeOption } from "@/app/components/ProductTypeSelect";
 import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck,
@@ -31,12 +32,14 @@ export default function EditProductPage() {
 
   const [categories,    setCategories]    = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductTypeOption[]>([]);
   const [tags,          setTags]          = useState<any[]>([]);
 
   const [listingType,        setListingType]        = useState("");
   const [title,              setTitle]              = useState("");
   const [categoryId,         setCategoryId]         = useState("");
   const [subCategoryId,      setSubCategoryId]      = useState("");
+  const [productTypeId, setProductTypeId] = useState("");
   const [description,        setDescription]        = useState("");
   const [originalDescription,setOriginalDescription]= useState("");
   const productImages = useProductImages();
@@ -71,6 +74,7 @@ export default function EditProductPage() {
         setTitle(p.title || "");
         setCategoryId(p.categoryId || "");
         setSubCategoryId(p.subCategoryId || "");
+        setProductTypeId(p.productTypeId || "");
         setDescription(p.description || "");
         setOriginalDescription(p.description || "");
         setStoredSpecifications(p.specifications);
@@ -89,6 +93,7 @@ export default function EditProductPage() {
           const catalog = await catalogRes.json();
           setCategories(catalog.categories || []);
           setSubCategories(catalog.subcategories || []);
+          setProductTypes(catalog.productTypes || []);
           setTags(catalog.tags || []);
         }
       } catch (err) {
@@ -123,7 +128,7 @@ export default function EditProductPage() {
       const res = await fetch(`/api/vendor/products/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ listingType, title, description, categoryId, subCategoryId, images: ordered, specifications: specificationValues, availableFor, priceType, price, currency, moq, discount, sustainabilityTagIds: selectedTags, sustainabilityClaim, shipRegions, inStock }),
+        body: JSON.stringify({ listingType, title, description, categoryId, subCategoryId, productTypeId, images: ordered, specifications: specificationValues, availableFor, priceType, price, currency, moq, discount, sustainabilityTagIds: selectedTags, sustainabilityClaim, shipRegions, inStock }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error?.message || "Update failed.");
@@ -236,7 +241,7 @@ export default function EditProductPage() {
                 <span className="ep-label">Listing Type</span>
                 <div className="ep-chips">
                   {LISTING_TYPES.map(t => (
-                    <button key={t} type="button" className={`ep-chip${listingType === t ? " on" : ""}`} onClick={() => setListingType(t)}>{t}</button>
+                    <button key={t} type="button" className={`ep-chip${listingType === t ? " on" : ""}`} onClick={() => { setListingType(t); setProductTypeId(""); }}>{t}</button>
                   ))}
                 </div>
               </div>
@@ -250,19 +255,21 @@ export default function EditProductPage() {
               <div className="ep-grid2">
                 <div className="ep-field">
                   <span className="ep-label">Category *</span>
-                  <select className="ep-select" value={categoryId} onChange={e => { setCategoryId(e.target.value); setSubCategoryId(""); }} required>
+                  <select className="ep-select" value={categoryId} onChange={e => { setCategoryId(e.target.value); setSubCategoryId(""); setProductTypeId(""); }} required>
                     <option value="">Select category</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="ep-field">
                   <span className="ep-label">Subcategory *</span>
-                  <select className="ep-select" value={subCategoryId} onChange={e => setSubCategoryId(e.target.value)} disabled={!categoryId} required>
+                  <select className="ep-select" value={subCategoryId} onChange={e => { setSubCategoryId(e.target.value); setProductTypeId(""); }} disabled={!categoryId} required>
                     <option value="">Select subcategory</option>
                     {filteredSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               </div>
+
+              <ProductTypeSelect listingType={listingType} subcategoryId={subCategoryId} productTypes={productTypes} value={productTypeId} onChange={setProductTypeId} className="ep-select" />
 
               <div className="ep-field">
                 <span className="ep-label">Description * (min {MIN_DESCRIPTION_WORDS} words)</span>

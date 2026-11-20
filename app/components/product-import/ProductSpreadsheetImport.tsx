@@ -272,12 +272,20 @@ export default function ProductSpreadsheetImport({ mode }: { mode: "vendor" | "a
       <details><summary>Columns and import rules</summary>
         <ul>
           <li>Required: title, listing_type, category_slug, price_type. Fixed Price and Starts From also need a price.</li>
-          <li>Use category slugs and subcategory/tag names from the catalog. Separate list values with semicolons.</li>
+          <li>Use category slugs and matching subcategory, product type, and tag names from the catalog. Product types are optional for Product listings.</li>
           <li>Up to five optional photos: put exact filenames in image_1 through image_5. The first is the cover.</li>
           <li>Plain values only. No formulas, updates to existing products, URLs, approval fields or specification columns.</li>
           <li>Spreadsheet limit: 10 MB, 100 products. Each batch belongs to one vendor.</li>
         </ul>
-        {masters && <div className={styles.reference}><table><thead><tr><th>Category</th><th>Slug</th><th>Subcategories</th></tr></thead><tbody>{masters.catalog.categories.map(category => <tr key={category.id}><td>{category.name}</td><td>{category.slug}</td><td>{masters.catalog.subcategories.filter(sub => sub.categoryId === category.id).map(sub => sub.name).join("; ") || "—"}</td></tr>)}</tbody></table><p>Available tags: {masters.catalog.tags.map(tag => tag.name).join("; ") || "None"}</p></div>}
+        {masters && <div className={styles.reference}>
+          <table><thead><tr><th>Category</th><th>Slug</th><th>Subcategory</th><th>Product types</th></tr></thead>
+            <tbody>{masters.catalog.categories.flatMap(category => {
+              const subs = masters.catalog.subcategories.filter(sub => sub.categoryId === category.id);
+              return subs.length ? subs.map(sub => <tr key={sub.id}><td>{category.name}</td><td>{category.slug}</td><td>{sub.name}</td><td>{masters.catalog.productTypes.filter(type => type.subcategoryId === sub.id).map(type => type.name).join("; ") || "—"}</td></tr>) :
+                [<tr key={category.id}><td>{category.name}</td><td>{category.slug}</td><td>—</td><td>—</td></tr>];
+            })}</tbody>
+          </table><p>Available tags: {masters.catalog.tags.map(tag => tag.name).join("; ") || "None"}</p>
+        </div>}
       </details>
       {mode === "admin" && <label className={styles.field}>Vendor for this entire batch
         <select value={vendorId} disabled={locked || Boolean(editingId)} onChange={event => { setVendorId(event.target.value); setConfirming(false); }}>
