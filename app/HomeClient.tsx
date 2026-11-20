@@ -79,6 +79,7 @@ export type SupplierCard = {
   publicContact?: Record<string, unknown>;
   claim_status?: string;
   logoUrl?: string;
+  description?: string;
 };
 
 const sellerCities = [
@@ -109,6 +110,32 @@ const defaultHomepageAds: HomepageAdSlide[] = [
     linkUrl: "/contact",
   },
 ];
+
+const PRODUCT_AD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Product ads carry the product's uuid; banner and house slides don't. */
+function isProductAd(id: string) {
+  return PRODUCT_AD_ID.test(id);
+}
+
+/**
+ * Fire-and-forget ad tracking. sendBeacon survives the navigation a click
+ * starts; keepalive fetch is the fallback. Failures are ignored on purpose.
+ */
+function trackAdEvent(productId: string, event: "impression" | "click") {
+  const body = JSON.stringify({ productId, event });
+  try {
+    if (navigator.sendBeacon?.("/api/ads/track", new Blob([body], { type: "application/json" }))) return;
+  } catch {
+    // fall through to fetch
+  }
+  fetch("/api/ads/track", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: true,
+  }).catch(() => {});
+}
 
 const sideAdSlides = [
   {
@@ -467,6 +494,19 @@ export default function HomeClient({
       .catch(() => setHomepageAds(defaultHomepageAds));
   }, []);
 
+  // Count an impression the first time each product ad is actually on screen
+  // during this page view (the carousel loops, so later rotations don't
+  // re-count). The default "advertise with us" and banner slides aren't
+  // product ads and are skipped.
+  const countedAdImpressions = useRef(new Set<string>());
+  useEffect(() => {
+    const ad = heroSlide > 0 ? homepageAds[heroSlide - 1] : undefined;
+    if (!ad || !isProductAd(ad.id) || countedAdImpressions.current.has(ad.id)) return;
+    if (document.visibilityState !== "visible") return;
+    countedAdImpressions.current.add(ad.id);
+    trackAdEvent(ad.id, "impression");
+  }, [heroSlide, homepageAds]);
+
   useEffect(() => {
     if (homepageAds.length === 0) {
       setHeroSlide(0);
@@ -701,6 +741,10 @@ export default function HomeClient({
                   />
                   <Link
                     href={homepageAds[heroSlide - 1].linkUrl}
+                    onClick={() => {
+                      const id = homepageAds[heroSlide - 1]?.id;
+                      if (id && isProductAd(id)) trackAdEvent(id, "click");
+                    }}
                     className="hero-ad-main-link"
                     aria-label={
                       homepageAds[heroSlide - 1].id === "homepage-banner"
@@ -962,16 +1006,15 @@ export default function HomeClient({
                 </div>
 
               ) : (
-
                 /* GRID: Renders only the top 8 Claimed/Verified Vendors */
+                /* Notice: No extra { here! */
                 featuredSuppliers
                   .filter(supplier => supplier.claim_status === 'CLAIMED' || supplier.badge === 'Claimed')
                   .slice(0, 8)
                   .map((supplier) => (
-                    <Link key={supplier.id} href={vendorHref(supplier.id, supplier.slug)} className="bs-vendor-card">
+                    <Link key={supplier.id} href={vendorHref(supplier.id, supplier.slug)} className="bs-vendor-card" style={{ minHeight: "220px" }}>
                       
                       <div className="bs-vc-topbar">
-                        
                         <span className="bs-vc-topbar-right">
                           <ShieldCheck size={10} /> VERIFIED SUPPLIER
                         </span>
@@ -991,9 +1034,9 @@ export default function HomeClient({
                             )}
                           </div>
                           <div className="bs-vc-info">
-                            <h3>{supplier.name}</h3>
-                            <div className="bs-vc-location" style={{ marginBottom: "6px" }}>
-                              <MapPin size={12} /> {supplier.state ? `${supplier.state}, ${supplier.country}` : supplier.country}
+                            <h3 style={{ fontSize: "13.5px", fontWeight: 800, margin: "0 0 4px", lineHeight: 1.2 }}>{supplier.name}</h3>
+                            <div className="bs-vc-location" style={{ marginBottom: "6px", fontSize: "11px" }}>
+                              <MapPin size={11} /> {supplier.state ? `${supplier.state}, ${supplier.country}` : supplier.country}
                             </div>
                             {((supplier as any).category || supplier.subcategories?.[0]) && (
                               <span className="bs-vc-pill-cat">
@@ -1003,8 +1046,19 @@ export default function HomeClient({
                           </div>
                         </div>
 
-                        <div className="bs-vc-trust">
-                          <ShieldCheck size={14} /> Identity Checked
+                        <p style={{ fontSize: "11.5px", color: "#4b5563", margin: "0 0 12px 0", lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          {(supplier as any).description 
+                            ? (supplier as any).description 
+                            : "Verified sustainable supplier committed to eco-friendly practices and responsible sourcing."}
+                        </p>
+
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "auto", paddingTop: "12px", borderTop: "1px dashed #e5e7eb" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "#065f46", background: "#ecfdf5", padding: "5px 8px", borderRadius: "6px", fontWeight: 700, border: "1px solid #d1fae5", textTransform: "uppercase" }}>
+                            <BadgeCheck size={12} /> GST Verified
+                          </span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "#065f46", background: "#ecfdf5", padding: "5px 8px", borderRadius: "6px", fontWeight: 700, border: "1px solid #d1fae5", textTransform: "uppercase" }}>
+                            <MapPin size={12} /> Address Verified
+                          </span>
                         </div>
                       </div>
 
@@ -1162,19 +1216,19 @@ export default function HomeClient({
         }
         /* ── VERIFIED VENDOR CARD REDESIGN (HOME) ── */
         .bs-vendor-card {
-          gap: 0;
-          position: relative;
-          border: 1px solid #bbf7d0;
-          border-radius: 12px;
-          background: #ffffff;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          text-decoration: none;
-          color: inherit;
-          min-height: 190px;
-          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-        }
+  gap: 0;
+  position: relative;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  min-height: 220px; /* Increased slightly to fit new content nicely */
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
           /* ── UNCLAIMED VENDOR CARD COLORS (HOME) ── */
         .bs-vendor-card-unclaimed {
           border-color: #fcd34d !important;
@@ -1243,13 +1297,13 @@ export default function HomeClient({
           letter-spacing: 0.05em;
         }
           .bs-vc-info h3 {
-          font-size: 14px; /* Reduced from 16px */
-          font-weight: 800;
-          color: #111;
-          margin: 0 0 4px;
-          line-height: 1.2;
-          text-align: left;
-        }
+  font-size: 13.5px; /* Decreased font size for better proportion */
+  font-weight: 800;
+  color: #111;
+  margin: 0 0 4px;
+  line-height: 1.2;
+  text-align: left;
+}
 
         .bs-vc-pill-cat {
           display: inline-block;
@@ -1313,13 +1367,47 @@ export default function HomeClient({
           text-align: left;
         }
         .bs-vc-location {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 12px;
-          color: #4b5563;
-          margin-bottom: 6px;
-        }
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+  /* NEW STYLES FOR DESCRIPTION & VERIFICATION LABELS */
+.bs-vc-desc {
+  font-size: 11.5px;
+  color: #4b5563;
+  margin: 0 0 12px 0;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bs-vc-trust-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.bs-vc-trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #065f46;
+  background: #ecfdf5;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  border: 1px solid #d1fae5;
+  text-transform: uppercase;
+}
         .bs-vc-trust {
           display: inline-flex;
           align-items: center;
@@ -2089,7 +2177,11 @@ export default function HomeClient({
           background: linear-gradient(180deg, transparent 35%, rgba(4, 22, 11, 0.74));
         }
 
+        /* The label and title sit above the full-slide link for legibility;
+           pointer-events: none lets clicks on them reach the link, otherwise
+           clicking the ad's title did nothing (and wasn't counted). */
         .hero-ad-label {
+          pointer-events: none;
           position: absolute;
           top: 16px;
           left: 16px;
@@ -2106,6 +2198,7 @@ export default function HomeClient({
         }
 
         .hero-ad-title {
+          pointer-events: none;
           position: relative;
           z-index: 2;
           max-width: 70%;

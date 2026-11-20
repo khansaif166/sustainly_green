@@ -36,14 +36,15 @@ const getVendorData = cache(async (vendorId: string) => {
   }
 });
 
+// Index a vendor page when it has real content: a description and at least one
+// live product. A certification is not required: it said nothing about page
+// quality and kept 25 of 26 vendors with products out of Google, so searches
+// for a vendor's name landed on the /find-vendors directory instead.
+// Must stay in step with vendorSitemapEntries() in lib/seoSitemaps.ts.
 function isCompleteVendor(
   data: NonNullable<Awaited<ReturnType<typeof getVendorData>>>,
 ) {
-  return Boolean(
-    data.vendor.description?.trim() &&
-      data.vendor.certifications?.length &&
-      data.products.length,
-  );
+  return Boolean(data.vendor.description?.trim() && data.products.length);
 }
 
 export async function generateMetadata({
