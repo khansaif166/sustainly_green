@@ -1,11 +1,13 @@
 import { revalidatePath } from "next/cache";
 import { apiError, apiOk } from "@/lib/apiResponse";
 import { ProductSpecificationValidationError } from "@/lib/productSpecifications";
+import { ProductTypeValidationError, validateProductTypeSelection } from "@/lib/productTypeValidation";
 import { productHref } from "@/lib/slug";
 import { descriptionError } from "@/lib/productSeo";
 import {
   requireRole,
   supabaseServiceFetch,
+  SupabaseHttpError,
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
@@ -98,6 +100,7 @@ export async function PUT(
     if (!vendor) return apiError("Vendor profile not found.", 404);
 
     const body = await request.json();
+    await validateProductTypeSelection(body, existing.product_type_id);
     const payload = buildProductPayload(body, vendor);
 
     // Untouched legacy descriptions may stay so vendors can still update stock
@@ -133,6 +136,8 @@ export async function PUT(
     const configError = toConfigError(error);
     if (configError) return apiError(configError.message, configError.status);
     if (error instanceof ProductSpecificationValidationError) return apiError(error.message, 400, { issues: error.issues });
+    if (error instanceof ProductTypeValidationError) return apiError(error.message, 400);
+    if (error instanceof SupabaseHttpError && error.code === "23514") return apiError("Product type no longer matches this listing. Choose an active type and retry.", 400);
     if (error instanceof Error && error.message === "Listing title is required.") {
       return apiError(error.message, 400);
     }

@@ -41,7 +41,11 @@ type SupabaseProductRow = {
   specifications?: unknown;
   listing_type: string | null;
   category_id: string | null;
+  subcategory_id: string | null;
+  product_type_id: string | null;
   category?: { name: string | null; slug: string | null } | null;
+  subcategory?: { name: string | null } | null;
+  product_type?: { name: string | null } | null;
   available_for: string[] | null;
   price_type: string | null;
   price: number | string | null;
@@ -115,6 +119,9 @@ export type PublicCategory = {
   sortOrder?: number;
 };
 
+export type PublicSubcategory = { id: string; name: string; categoryId: string };
+export type PublicProductType = { id: string; name: string; subcategoryId: string };
+
 export type PublicProduct = {
   id: string;
   vendorId: string;
@@ -131,6 +138,10 @@ export type PublicProduct = {
   categoryId?: string;
   categoryName?: string;
   categorySlug?: string;
+  subcategoryId?: string;
+  subcategoryName?: string;
+  productTypeId?: string;
+  productTypeName?: string;
   priceType?: string;
   price?: number;
   currency: string;
@@ -212,6 +223,8 @@ const PRODUCT_SELECT = [
   "listing_type",
   "available_for",
   "category_id",
+  "subcategory_id",
+  "product_type_id",
   "price_type",
   "price",
   "currency",
@@ -225,6 +238,8 @@ const PRODUCT_SELECT = [
   "product_images(url,sort_order)",
   "vendor:vendors(slug)",
   "category:categories(name,slug)",
+  "subcategory:subcategories(name)",
+  "product_type:product_types(name)",
 ].join(",");
 
 function requireSupabaseConfig() {
@@ -389,6 +404,10 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
     categoryId: stringValue(row.category_id) || undefined,
     categoryName: stringValue(row.category?.name) || undefined,
     categorySlug: stringValue(row.category?.slug) || undefined,
+    subcategoryId: stringValue(row.subcategory_id) || undefined,
+    subcategoryName: stringValue(row.subcategory?.name) || undefined,
+    productTypeId: stringValue(row.product_type_id) || undefined,
+    productTypeName: stringValue(row.product_type?.name) || undefined,
     priceType: stringValue(row.price_type) || undefined,
     price: numberValue(row.price),
     currency: stringValue(row.currency) || "INR",
@@ -452,7 +471,7 @@ export async function fetchApprovedVendors(limit = 20_000): Promise<PublicVendor
 
 export type PagedResult<T> = { items: T[]; total: number };
 
-export type VendorBadgeFilter = "" | "verified" | "approved" | "listed" | "claim_requested";
+export type VendorBadgeFilter = "" | "verified" | "approved" | "listed" | "unclaimed" | "claim_requested";
 
 export type VendorPageQuery = {
   page?: number;
@@ -469,6 +488,8 @@ export type ProductPageQuery = {
   pageSize?: number;
   listingType?: string;
   categoryId?: string;
+  subcategoryId?: string;
+  productTypeId?: string;
   search?: string;
   ecoVerifiedOnly?: boolean;
   sort?: string;
@@ -494,7 +515,8 @@ function vendorBadgeConditions(badge: string | undefined) {
   const notClaimFlow = "or(claim_status.is.null,claim_status.not.in.(UNCLAIMED,CLAIM_REQUESTED))";
   switch (badge) {
     case "claim_requested": return ["claim_status.eq.CLAIM_REQUESTED"];
-    case "listed": return ["claim_status.eq.UNCLAIMED"];
+    case "listed":
+    case "unclaimed": return ["claim_status.eq.UNCLAIMED"];
     case "verified": return [notClaimFlow, "listing_verified.is.true"];
     case "approved": return [notClaimFlow, "or(listing_verified.is.null,listing_verified.is.false)"];
     default: return [];
@@ -561,7 +583,9 @@ export async function fetchApprovedVendorsPage(
     approved: "eq.true",
     order: query.sort === "eco_score"
       ? "eco_score.desc.nullslast,company_name.asc,id.asc"
-      : "company_name.asc,id.asc",
+      : query.sort === "newest"
+        ? "created_at.desc,id.desc"
+        : "company_name.asc,id.asc",
   });
   
   if (conditions.length) params.set("and", `(${conditions.join(",")})`);
@@ -590,6 +614,8 @@ export async function fetchApprovedProductsPage(
   });
   if (query.listingType) params.set("listing_type", `eq.${query.listingType}`);
   if (query.categoryId) params.set("category_id", `eq.${query.categoryId}`);
+  if (query.subcategoryId) params.set("subcategory_id", `eq.${query.subcategoryId}`);
+  if (query.productTypeId) params.set("product_type_id", `eq.${query.productTypeId}`);
   if (query.ecoVerifiedOnly) params.set("eco_verified", "is.true");
   if (conditions.length) params.set("and", `(${conditions.join(",")})`);
 
@@ -683,6 +709,28 @@ export async function fetchActiveCategories(limit: number | "all" = 100): Promis
     if (limit !== "all" || page.length === 0) break;
   } while (true);
   return rows.map(mapCategory);
+}
+
+export async function fetchActiveSubcategories(categoryId: string): Promise<PublicSubcategory[]> {
+  const rows: Array<{ id: string; name: string; category_id: string }> = [];
+  for (let offset = 0; ; offset += 1000) {
+    const params = new URLSearchParams({ select: "id,name,category_id", category_id: `eq.${categoryId}`, active: "eq.true", order: "name.asc,id.asc", limit: "1000", offset: String(offset) });
+    const page = await supabaseGet<typeof rows>(`subcategories?${params}`);
+    rows.push(...page);
+    if (page.length < 1000) break;
+  }
+  return rows.map(row => ({ id: row.id, name: row.name, categoryId: row.category_id }));
+}
+
+export async function fetchActiveProductTypes(subcategoryId: string): Promise<PublicProductType[]> {
+  const rows: Array<{ id: string; name: string; subcategory_id: string }> = [];
+  for (let offset = 0; ; offset += 1000) {
+    const params = new URLSearchParams({ select: "id,name,subcategory_id", subcategory_id: `eq.${subcategoryId}`, active: "eq.true", order: "name.asc,id.asc", limit: "1000", offset: String(offset) });
+    const page = await supabaseGet<typeof rows>(`product_types?${params}`);
+    rows.push(...page);
+    if (page.length < 1000) break;
+  }
+  return rows.map(row => ({ id: row.id, name: row.name, subcategoryId: row.subcategory_id }));
 }
 
 export async function fetchApprovedProducts(options: {

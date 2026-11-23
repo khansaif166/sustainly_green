@@ -1,0 +1,17 @@
+.breadcrumbLink {
+  color: #047857;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.breadcrumbLink:hover {
+  color: #064e3b;
+  text-decoration: underline;
+  text-decoration-color: #6ee7b7;
+  text-underline-offset: 4px;
+}
+
+.breadcrumbLink:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 3px;
+}

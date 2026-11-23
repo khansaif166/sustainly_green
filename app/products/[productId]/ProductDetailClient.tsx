@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   BadgeCheck,
   CheckCircle2,
+  ChevronRight,
   Globe2,
   MessageSquareText,
   Package,
@@ -17,8 +18,9 @@ import Footer from "@/app/components/layouts/Footer";
 import BuyerRFQModal from "../../components/ContactVendorModal";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import type { PublicProduct } from "@/lib/supabasePublic";
-import { productHref, vendorHref } from "@/lib/slug";
+import { categoryHref, productHref, vendorHref } from "@/lib/slug";
 import ProductSpecificationsTable from "@/app/components/product-specifications/ProductSpecificationsTable";
+import styles from "./ProductDetailClient.module.css";
 
 type Product = PublicProduct;
 
@@ -47,6 +49,35 @@ export default function ProductDetailClient({
     typeof product.price === "number" &&
     product.price > 0 &&
     product.priceType !== "Price on Request";
+
+  const categoryBreadcrumbs: Array<{ label: string; href?: string }> = [];
+  if (product.categoryName) {
+    const hasCategoryLink = Boolean(product.categorySlug || product.categoryId);
+    const params = new URLSearchParams(
+      hasCategoryLink ? categoryHref(product.categoryId || "", product.categorySlug).split("?")[1] : "",
+    );
+    if (listingLabel === "Service") params.set("type", "service");
+    categoryBreadcrumbs.push({
+      label: product.categoryName,
+      href: hasCategoryLink ? `/browse?${params}` : undefined,
+    });
+    if (product.subcategoryName) {
+      const hasSubcategoryLink = hasCategoryLink && Boolean(product.subcategoryId);
+      if (hasSubcategoryLink && product.subcategoryId) params.set("subcategory", product.subcategoryId);
+      categoryBreadcrumbs.push({
+        label: product.subcategoryName,
+        href: hasSubcategoryLink ? `/browse?${params}` : undefined,
+      });
+      if (product.productTypeName && listingLabel !== "Service") {
+        const hasProductTypeLink = hasSubcategoryLink && Boolean(product.productTypeId);
+        if (hasProductTypeLink && product.productTypeId) params.set("product_type", product.productTypeId);
+        categoryBreadcrumbs.push({
+          label: product.productTypeName,
+          href: hasProductTypeLink ? `/browse?${params}` : undefined,
+        });
+      }
+    }
+  }
 
   return (
     <>
@@ -129,7 +160,27 @@ export default function ProductDetailClient({
                   )}
                 </div>
 
-                <h1 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-gray-950 sm:text-4xl">
+                {categoryBreadcrumbs.length > 0 && (
+                  <nav aria-label="Product categories" className="mt-4">
+                    <ol className="m-0 flex list-none flex-wrap items-center gap-x-1.5 gap-y-1 p-0 text-xs leading-5 sm:text-[13px]">
+                      {categoryBreadcrumbs.map((item, index) => (
+                        <li key={index} className="flex min-w-0 max-w-full items-center gap-1.5">
+                          {index > 0 && <ChevronRight className="h-3 w-3 shrink-0 text-gray-400" aria-hidden="true" />}
+                          {item.href ? (
+                            <Link
+                              href={item.href}
+                              className={`${styles.breadcrumbLink} inline-flex min-h-8 min-w-0 items-center rounded-sm py-1 font-medium [overflow-wrap:anywhere] pointer-coarse:min-h-11`}
+                            >
+                              {item.label}
+                            </Link>
+                          ) : <span className="min-w-0 py-1 text-gray-500 [overflow-wrap:anywhere]">{item.label}</span>}
+                        </li>
+                      ))}
+                    </ol>
+                  </nav>
+                )}
+
+                <h1 className={`${categoryBreadcrumbs.length > 0 ? "mt-2" : "mt-4"} text-3xl font-bold leading-tight tracking-tight text-gray-950 sm:text-4xl`}>
                   {product.title}
                 </h1>
                 <p className="mt-2 text-sm text-gray-500">

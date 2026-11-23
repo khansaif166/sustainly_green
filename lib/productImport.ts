@@ -2,7 +2,7 @@
 export const MAX_IMPORT_ROWS = 100;
 export const MAX_SPREADSHEET_BYTES = 10 * 1024 * 1024;
 export const IMPORT_COLUMNS = [
-  "title", "description", "listing_type", "category_slug", "subcategory_name",
+  "title", "description", "listing_type", "category_slug", "subcategory_name", "product_type_name",
   "available_for", "price_type", "price", "currency", "moq", "discount",
   "ship_regions", "in_stock", "sustainability_tags", "sustainability_claim",
   "image_1", "image_2", "image_3", "image_4", "image_5",
@@ -13,11 +13,12 @@ export type ImportFields = Partial<Record<ImportColumn, string>>;
 export type ImportCatalog = {
   categories: Array<{ id: string; name: string; slug: string }>;
   subcategories: Array<{ id: string; name: string; categoryId: string }>;
+  productTypes: Array<{ id: string; name: string; subcategoryId: string }>;
   tags: Array<{ id: string; name: string }>;
 };
 export type ImportProduct = {
   title: string; description: string; listingType: string;
-  categoryId: string; subCategoryId: string | null;
+  categoryId: string; subCategoryId: string | null; productTypeId: string | null;
   availableFor: string[]; priceType: string; price: number | null;
   currency: string; moq: number | null; discount: string;
   shipRegions: string[]; inStock: boolean;
@@ -76,6 +77,11 @@ export function validateImportFields(fields: ImportFields, catalog: ImportCatalo
   const subcategoryName = text("subcategory_name", 200);
   const subcategories = catalog.subcategories.filter(subcategory => subcategory.categoryId === categoryId && key(subcategory.name) === key(subcategoryName));
   if (subcategoryName && subcategories.length !== 1) issue("subcategory_name", "Use an active, unambiguous subcategory belonging to the selected category.");
+  const productTypeName = text("product_type_name", 120);
+  if (productTypeName && listingType !== "Product") issue("product_type_name", "Product types are only available for Product listings.");
+  if (productTypeName && !subcategoryName) issue("product_type_name", "Select a subcategory before a product type.");
+  const productTypes = catalog.productTypes.filter(type => type.subcategoryId === subcategories[0]?.id && key(type.name) === key(productTypeName));
+  if (productTypeName && subcategoryName && productTypes.length !== 1) issue("product_type_name", "Use an active, unambiguous product type belonging to the selected subcategory.");
   const priceType = choice("price_type", ["Fixed Price", "Starts From", "Price on Request"], true);
   const price = number("price", Boolean(priceType && priceType !== "Price on Request"));
   const moq = number("moq");
@@ -101,6 +107,7 @@ export function validateImportFields(fields: ImportFields, catalog: ImportCatalo
   const product: ImportProduct = {
     title, description, listingType, categoryId,
     subCategoryId: subcategoryName && subcategories.length === 1 ? subcategories[0].id : null,
+    productTypeId: productTypeName && productTypes.length === 1 && listingType === "Product" ? productTypes[0].id : null,
     availableFor, priceType, price, currency, moq,
     discount: text("discount", 200), shipRegions, inStock: inStock !== "FALSE",
     sustainabilityTagIds: tagIds, sustainabilityClaim: text("sustainability_claim", 1000),

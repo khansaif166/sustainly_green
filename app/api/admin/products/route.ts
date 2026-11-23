@@ -1,9 +1,11 @@
 import { apiError, apiOk } from "@/lib/apiResponse";
 import { ProductSpecificationValidationError } from "@/lib/productSpecifications";
+import { ProductTypeValidationError, validateProductTypeSelection } from "@/lib/productTypeValidation";
 import {
   requireRole,
   supabaseServiceCount,
   supabaseServiceFetch,
+  SupabaseHttpError,
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
@@ -111,6 +113,8 @@ export async function POST(request: Request) {
     const vendor = await loadAdminVendor(vendorId);
     if (!vendor) return apiError("Vendor not found.", 404);
 
+    await validateProductTypeSelection(body);
+
     const payload = buildAdminProductPayload(
       { ...body, status: body.status || "APPROVED", approved: body.approved ?? true },
       vendor,
@@ -139,6 +143,8 @@ export async function POST(request: Request) {
     const configError = toConfigError(error);
     if (configError) return apiError(configError.message, configError.status);
     if (error instanceof ProductSpecificationValidationError) return apiError(error.message, 400, { issues: error.issues });
+    if (error instanceof ProductTypeValidationError) return apiError(error.message, 400);
+    if (error instanceof SupabaseHttpError && error.code === "23514") return apiError("Product type no longer matches this listing. Choose an active type and retry.", 400);
     if (error instanceof Error && error.message === "Listing title is required.") {
       return apiError(error.message, 400);
     }

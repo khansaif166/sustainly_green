@@ -1,7 +1,9 @@
 import { apiError, apiOk } from "@/lib/apiResponse";
+import { revalidatePath } from "next/cache";
 import {
   requireRole,
   supabaseServiceFetch,
+  SupabaseHttpError,
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
@@ -10,6 +12,7 @@ import {
 const RESOURCE_TABLE = {
   categories: "categories",
   subcategories: "subcategories",
+  "product-types": "product_types",
   tags: "sustainability_tags",
 } as const;
 
@@ -31,6 +34,7 @@ function buildPayload(resource: string, body: Record<string, unknown>) {
   if (body.name !== undefined) {
     const name = stringOrNull(body.name);
     if (!name) throw new Error("Name is required.");
+    if (resource === "product-types" && name.length > 120) throw new Error("Product type name must be 120 characters or fewer.");
     payload.name = name;
     if (resource === "categories") payload.slug = stringOrNull(body.slug) || slugify(name);
   }
@@ -43,6 +47,12 @@ function buildPayload(resource: string, body: Record<string, unknown>) {
     const categoryId = stringOrNull(body.categoryId);
     if (!categoryId) throw new Error("Category is required.");
     payload.category_id = categoryId;
+  }
+
+  if (resource === "product-types" && body.subcategoryId !== undefined) {
+    const subcategoryId = stringOrNull(body.subcategoryId);
+    if (!subcategoryId) throw new Error("Subcategory is required.");
+    payload.subcategory_id = subcategoryId;
   }
 
   if (body.active !== undefined) payload.active = Boolean(body.active);
@@ -76,15 +86,19 @@ export async function PATCH(
       },
     );
 
+    if (resource !== "tags") { revalidatePath("/browse"); revalidatePath("/products/[productId]/[productSlug]", "page"); }
+
     return apiOk({ ok: true });
   } catch (error) {
     const authError = toAuthError(error);
     if (authError) return apiError(authError.message, authError.status);
     const configError = toConfigError(error);
     if (configError) return apiError(configError.message, configError.status);
-    if (error instanceof Error && ["Name is required.", "Category is required."].includes(error.message)) {
+    if (error instanceof Error && ["Name is required.", "Category is required.", "Subcategory is required.", "Product type name must be 120 characters or fewer."].includes(error.message)) {
       return apiError(error.message, 400);
     }
+    if (error instanceof SupabaseHttpError && error.code === "23505") return apiError("This name is already in use under the selected parent.", 409);
+    if (error instanceof SupabaseHttpError && ["23503", "23514", "22P02"].includes(error.code || "")) return apiError("This catalog parent cannot be changed while products use it, or the selected parent is invalid.", 400);
     console.error("ADMIN_MASTER_PATCH_API_ERROR", error);
     return apiError("Unable to update master data.", 503);
   }
@@ -105,12 +119,15 @@ export async function DELETE(
       { method: "DELETE", headers: { Prefer: "return=minimal" } },
     );
 
+    if (resource !== "tags") { revalidatePath("/browse"); revalidatePath("/products/[productId]/[productSlug]", "page"); }
+
     return apiOk({ ok: true });
   } catch (error) {
     const authError = toAuthError(error);
     if (authError) return apiError(authError.message, authError.status);
     const configError = toConfigError(error);
     if (configError) return apiError(configError.message, configError.status);
+    if (error instanceof SupabaseHttpError && error.code === "23503") return apiError("This item is used by products or child catalog items and cannot be deleted.", 409);
     console.error("ADMIN_MASTER_DELETE_API_ERROR", error);
     return apiError("Unable to delete master data.", 503);
   }

@@ -1,0 +1,167 @@
+{
+  "date": "2026-11-16",
+  "suites": {
+    "db": {
+      "pass": 28,
+      "fail": 1,
+      "total": 29
+    },
+    "api": {
+      "pass": 21,
+      "fail": 1,
+      "total": 22
+    },
+    "browse": {
+      "pass": 10,
+      "fail": 0,
+      "total": 10
+    },
+    "spreadsheet": {
+      "pass": 9,
+      "fail": 0,
+      "total": 9
+    },
+    "interaction": {
+      "pass": 49,
+      "fail": 0,
+      "total": 49
+    }
+  },
+  "responsiveLayouts": {
+    "pass": 18,
+    "fail": 0
+  },
+  "detailRenderingCases": {
+    "pass": 7,
+    "fail": 0
+  },
+  "typecheck": "PASS",
+  "productionBuild": "PASS",
+  "focusedLint": "FAIL: pre-existing contact effect error; four pre-existing img warnings; confirmed against HEAD",
+  "confirmedFeatureDefectsFromIsolatedChecks": 1,
+  "originalPoint2": {
+    "classification": "Not a confirmed issue on current deployment",
+    "userObservedMessage": "This item is used by products or child catalog items and cannot be deleted.",
+    "recheck": "Actual handler returns 409 and exact expected message for code 23503; focused test passes.",
+    "isolatedCompatibilityConcern": "Code 23001 still produces 503 in the mocked route test; not observed in a live deletion response."
+  },
+  "point3Fix": {
+    "status": "FIXED",
+    "change": "Top tabs and sidebar share changeBrowseType: clear subcategory/product_type/badge/loc and reset pagination; preserve category/search/sort.",
+    "browserInteractions": {
+      "pass": 49,
+      "fail": 0,
+      "widths": [
+        375,
+        768,
+        1440
+      ],
+      "mode": "Actual components with mocked HTTP/auth"
+    },
+    "browseServerChecks": {
+      "pass": 10,
+      "fail": 0
+    },
+    "typecheck": "PASS",
+    "lint": "10 errors and 12 warnings identical to pre-fix source; no new findings",
+    "productionBuild": "Previous verification passed; not rerun for this focused fix",
+    "supersededBy": "browseFilterFixes: tab changes now reset every filter including category/search/sort."
+  },
+  "browseFilterFixes": {
+    "status": "IMPLEMENTED",
+    "behavior": "Changing type resets all filters and search; current tab is a no-op.",
+    "unitTests": {
+      "pass": 12,
+      "fail": 0
+    },
+    "serverChecks": {
+      "pass": 21,
+      "fail": 0
+    },
+    "browserFixtures": {
+      "pass": 61,
+      "fail": 0,
+      "widths": [
+        375,
+        768,
+        1440
+      ]
+    },
+    "livePublicCatalog": {
+      "pass": 4,
+      "fail": 0,
+      "widths": [
+        375,
+        1440
+      ],
+      "serviceCount": 5,
+      "vendorCount": 3,
+      "readOnly": true
+    },
+    "typecheck": "PASS",
+    "focusedNewModuleLint": "PASS",
+    "existingBrowseClientLint": "6 existing errors and 12 warnings remain; reduced from 10 errors/12 warnings before the filter fixes.",
+    "productionBuild": "PASS \u2014 final source including mobile search layout"
+  },
+  "filterRemovalFix": {
+    "status": "IMPLEMENTED",
+    "behavior": "Submitted filters and loader update immediately; input drafts remain separate; badge centered at 20px.",
+    "unitTests": {
+      "pass": 18,
+      "fail": 0
+    },
+    "browserFixtures": {
+      "pass": 79,
+      "fail": 0,
+      "widths": [
+        375,
+        768,
+        1440
+      ],
+      "delayedResponseChecks": true,
+      "mockedAuthAndHttp": true
+    },
+    "typecheck": "PASS",
+    "focusedNewModuleLint": "PASS",
+    "existingBrowseClientLint": "6 prior errors and 12 prior warnings remain; no new findings.",
+    "productionBuild": "Not rerun for this follow-up",
+    "report": "filter-removal-fix.md"
+  },
+  "filterIndependentRecheck": {
+    "status": "PASS",
+    "applicationCodeChanged": false,
+    "unitTests": {
+      "pass": 18,
+      "fail": 0
+    },
+    "serverChecks": {
+      "pass": 21,
+      "fail": 0
+    },
+    "componentBrowserChecks": {
+      "pass": 79,
+      "fail": 0
+    },
+    "realAppChecks": {
+      "pass": 25,
+      "fail": 0,
+      "origin": "http://127.0.0.1:3101",
+      "readOnly": true,
+      "heldRealResponses": true,
+      "widths": [
+        375,
+        768,
+        1440
+      ],
+      "publicCounts": {
+        "Product": 12,
+        "Service": 5,
+        "Vendor": 3
+      }
+    },
+    "typecheck": "PASS",
+    "focusedLint": "No new findings; existing BrowseClient 6 errors and 12 warnings remain.",
+    "productionBuild": "Not rerun; verification-only task.",
+    "report": "filter-final-recheck.md"
+  }
+}

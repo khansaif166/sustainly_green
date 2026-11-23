@@ -1,0 +1,8 @@
+{
+  "app/browse/BrowseClient.tsx": "250ce5961b376f1dba8e9f52b6568ac86a064efc1ad49665141876c8641df4b0",
+  "app/browse/useBrowseNavigation.ts": "fe495b80e7fc5a2401fc8824ccd049d0aa4bfb5b246d9ae2ce271cc5ef87bf2b",
+  "app/browse/page.tsx": "cafdf2cc6609bab9e2dceb1cdca17e78cb7ce2bbd683552f2f47f071c70e7adb",
+  "lib/browseFilters.ts": "cfd5258c06224b9cc84e7ab525bacb9299d3cc32a947cf0037168baa3d46aa14",
+  "lib/browseNavigation.ts": "bdf2babd05f36cae6df836bc9b6699fa83cd7b8dc4c7c44f1156cfbcef8178b5",
+  "lib/supabasePublic.ts": "374b6309ad53dbed0a8d0fbea46c3f986144602948f3f1d47192b40b0cd0b8ba"
+}

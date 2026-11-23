@@ -1,0 +1,20 @@
+
+> sustainly-marketplace@0.1.0 test:browse-filters
+> node scripts/test-browse-filters.mjs
+
+TAP version 13
+# Subtest: /tmp/sustainly-browse-filters-xoqTOq/tests/browseFilters.test.js
+ok 1 - /tmp/sustainly-browse-filters-xoqTOq/tests/browseFilters.test.js
+  ---
+  duration_ms: 3676.552005
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3703.020601

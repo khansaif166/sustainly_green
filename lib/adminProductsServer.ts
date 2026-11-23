@@ -27,6 +27,8 @@ type SubcategoryRow = {
   category_id: string;
 };
 
+type ProductTypeRow = { id: string; name: string; subcategory_id: string; active: boolean };
+
 type TagRow = {
   id: string;
   name: string;
@@ -124,14 +126,15 @@ export async function getAdminCategoryMap() {
 }
 
 export async function getAdminProductMasters() {
-  const [vendors, categories, subcategories, tags] = await Promise.all([
+  const [vendors, categories, subcategories, productTypes, tags] = await Promise.all([
     supabaseServiceFetchAll<VendorRow>("/rest/v1/vendors?select=id,company_name&order=company_name.asc,id.asc"),
     supabaseServiceFetch<CategoryRow[]>("/rest/v1/categories?select=id,name&order=name.asc&limit=10000"),
     supabaseServiceFetch<SubcategoryRow[]>("/rest/v1/subcategories?select=id,name,category_id&order=name.asc&limit=10000"),
+    supabaseServiceFetch<ProductTypeRow[]>("/rest/v1/product_types?select=id,name,subcategory_id,active&order=name.asc&limit=10000"),
     supabaseServiceFetch<TagRow[]>("/rest/v1/sustainability_tags?select=id,name&order=name.asc&limit=10000"),
   ]);
 
-  return { vendors, categories, subcategories, tags };
+  return { vendors, categories, subcategories, productTypes, tags };
 }
 
 export function mapMastersForForms(masters: Awaited<ReturnType<typeof getAdminProductMasters>>) {
@@ -147,6 +150,7 @@ export function mapMastersForForms(masters: Awaited<ReturnType<typeof getAdminPr
       name: subcategory.name,
       categoryId: subcategory.category_id,
     })),
+    productTypes: masters.productTypes.map((item) => ({ id: item.id, name: item.name, subcategoryId: item.subcategory_id, active: item.active })),
     tags: masters.tags,
   };
 }
@@ -210,6 +214,7 @@ export function buildAdminProductPayload(
     available_for: stringArray(body.availableFor),
     category_id: stringOrNull(body.categoryId),
     subcategory_id: stringOrNull(body.subCategoryId),
+    product_type_id: stringOrNull(body.productTypeId),
     price_type: stringOrNull(body.priceType),
     price: numberOrNull(body.price),
     currency: stringOrNull(body.currency) || "INR",

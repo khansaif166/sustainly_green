@@ -1,7 +1,9 @@
 import { apiError, apiOk } from "@/lib/apiResponse";
+import { revalidatePath } from "next/cache";
 import {
   requireRole,
   supabaseServiceFetch,
+  SupabaseHttpError,
   toAuthError,
   toConfigError,
 } from "@/lib/supabaseServer";
@@ -10,6 +12,7 @@ import {
 const RESOURCE_TABLE = {
   categories: "categories",
   subcategories: "subcategories",
+  "product-types": "product_types",
   tags: "sustainability_tags",
 } as const;
 
@@ -48,6 +51,13 @@ function buildPayload(resource: string, body: Record<string, unknown>) {
     };
   }
 
+  if (resource === "product-types") {
+    if (name.length > 120) throw new Error("Product type name must be 120 characters or fewer.");
+    const subcategoryId = stringOrNull(body.subcategoryId);
+    if (!subcategoryId) throw new Error("Subcategory is required.");
+    return { name, subcategory_id: subcategoryId, active: body.active !== false };
+  }
+
   return {
     name,
     active: body.active !== false,
@@ -74,6 +84,10 @@ function mapRow(resource: string, row: Record<string, any>) {
     };
   }
 
+  if (resource === "product-types") {
+    return { id: row.id, name: row.name, subcategoryId: row.subcategory_id, active: Boolean(row.active) };
+  }
+
   return {
     id: row.id,
     name: row.name,
@@ -84,6 +98,7 @@ function mapRow(resource: string, row: Record<string, any>) {
 function selectFor(resource: string) {
   if (resource === "categories") return "id,name,slug,image_url,active";
   if (resource === "subcategories") return "id,name,category_id,active";
+  if (resource === "product-types") return "id,name,subcategory_id,active";
   return "id,name,active";
 }
 
@@ -131,15 +146,19 @@ export async function POST(
       body: JSON.stringify(payload),
     });
 
+    if (resource !== "tags") { revalidatePath("/browse"); revalidatePath("/products/[productId]/[productSlug]", "page"); }
+
     return apiOk({ ok: true }, 201);
   } catch (error) {
     const authError = toAuthError(error);
     if (authError) return apiError(authError.message, authError.status);
     const configError = toConfigError(error);
     if (configError) return apiError(configError.message, configError.status);
-    if (error instanceof Error && ["Name is required.", "Category is required."].includes(error.message)) {
+    if (error instanceof Error && ["Name is required.", "Category is required.", "Subcategory is required.", "Product type name must be 120 characters or fewer."].includes(error.message)) {
       return apiError(error.message, 400);
     }
+    if (error instanceof SupabaseHttpError && error.code === "23505") return apiError("This name is already in use under the selected parent.", 409);
+    if (error instanceof SupabaseHttpError && ["23503", "23514", "22P02"].includes(error.code || "")) return apiError("Choose a valid catalog parent.", 400);
     console.error("ADMIN_MASTER_POST_API_ERROR", error);
     return apiError("Unable to save master data.", 503);
   }

@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Browse server passes full hierarchy and pagination to the database query",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse supports category UUID and case-insensitive slugs",
+    "status": "PASS"
+  },
+  {
+    "name": "Invalid hierarchy URLs return zero results without querying products",
+    "status": "PASS"
+  },
+  {
+    "name": "Service browse permits subcategory and no product type",
+    "status": "PASS"
+  },
+  {
+    "name": "Unfiltered browse preserves products with no assigned type",
+    "status": "PASS"
+  },
+  {
+    "name": "Filtered browse is noindex; invalid page defaults safely",
+    "status": "PASS"
+  },
+  {
+    "name": "Public product query sends exact three SQL filters and page range",
+    "status": "PASS"
+  },
+  {
+    "name": "Pagination past the end clamps to the final filtered page",
+    "status": "PASS"
+  },
+  {
+    "name": "Empty filtered results return page one",
+    "status": "PASS"
+  },
+  {
+    "name": "Active product types query filters by selected parent",
+    "status": "PASS"
+  }
+]

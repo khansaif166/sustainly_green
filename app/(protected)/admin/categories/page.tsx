@@ -103,20 +103,22 @@ export default function AdminCategoriesPage() {
         .acc-cancel{padding:9px 18px;border-radius:50px;font-size:13px;font-weight:700;border:1.5px solid rgba(0,0,0,.1);background:#fff;color:#374151;cursor:pointer;font-family:inherit;transition:all .15s}
         .acc-cancel:hover{background:#f9fafb}
 
-        .acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-        .acc-item{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
-        .acc-item-left{display:flex;align-items:center;gap:12px}
-        .acc-item-img{width:44px;height:44px;border-radius:12px;object-fit:cover;border:1px solid rgba(0,0,0,.07)}
-        .acc-item-name{font-size:13.5px;font-weight:700;color:#111;margin:0 0 3px}
+        .acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:12px}
+        .acc-item{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:16px;padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+        .acc-item-left{display:flex;flex:1 1 100px;min-width:0;align-items:center;gap:12px}
+        .acc-item-left>div{min-width:0}
+        .acc-item-img{width:44px;height:44px;flex-shrink:0;border-radius:12px;object-fit:cover;border:1px solid rgba(0,0,0,.07)}
+        .acc-item-name{font-size:13.5px;font-weight:700;color:#111;margin:0 0 3px;overflow-wrap:anywhere}
         .acc-active-badge{display:inline-block;padding:2px 9px;border-radius:50px;font-size:11px;font-weight:700;background:#f0fdf4;color:#15803d}
         .acc-inactive-badge{display:inline-block;padding:2px 9px;border-radius:50px;font-size:11px;font-weight:700;background:#fef2f2;color:#dc2626}
-        .acc-item-actions{display:flex;gap:8px;align-items:center}
-        .acc-act-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 11px;border-radius:50px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid transparent;transition:all .15s}
+        .acc-item-actions{display:flex;flex:0 0 auto;flex-wrap:wrap;gap:8px;align-items:center;max-width:100%;margin-left:auto}
+        .acc-act-btn{display:inline-flex;flex-shrink:0;align-items:center;gap:4px;padding:6px 11px;border-radius:50px;font-size:11.5px;font-weight:600;white-space:nowrap;cursor:pointer;font-family:inherit;border:1.5px solid transparent;transition:all .15s}
+        .acc-act-btn svg{flex-shrink:0}
         .acc-act-edit{background:#eff6ff;color:#3b82f6;border-color:rgba(59,130,246,.15)}
         .acc-act-edit:hover{background:#dbeafe}
         .acc-act-toggle-on{background:#f0fdf4;color:#15803d;border-color:rgba(22,163,74,.15)}
         .acc-act-toggle-off{background:#fefce8;color:#92400e;border-color:rgba(245,158,11,.15)}
-        .acc-act-del{width:30px;height:30px;padding:0;border-radius:50%;background:#fef2f2;color:#dc2626;border:1.5px solid rgba(220,38,38,.12)}
+        .acc-act-del{width:30px;height:30px;flex:0 0 30px;justify-content:center;padding:0;border-radius:50%;background:#fef2f2;color:#dc2626;border:1.5px solid rgba(220,38,38,.12)}
         .acc-act-del:hover{background:#fee2e2}
 
         .acc-empty{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:16px;padding:32px 24px;text-align:center;font-size:13.5px;color:#9ca3af}
@@ -183,7 +185,7 @@ export default function AdminCategoriesPage() {
                     {c.active ? <ToggleRight size={13} /> : <ToggleLeft size={13} />}
                     {c.active ? "Disable" : "Enable"}
                   </button>
-                  <button onClick={() => deleteCategory(c.id)} className="acc-act-btn acc-act-del"><Trash2 size={12} /></button>
+                  <button onClick={() => deleteCategory(c.id)} className="acc-act-btn acc-act-del" aria-label={`Delete ${c.name}`} title={`Delete ${c.name}`}><Trash2 size={12} aria-hidden="true" /></button>
                 </div>
               </div>
             ))}

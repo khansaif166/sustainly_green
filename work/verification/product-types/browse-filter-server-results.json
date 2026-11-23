@@ -1,0 +1,86 @@
+[
+  {
+    "name": "Browse server passes full hierarchy and pagination to the database query",
+    "status": "PASS"
+  },
+  {
+    "name": "Browse supports category UUID and case-insensitive slugs",
+    "status": "PASS"
+  },
+  {
+    "name": "Invalid hierarchy URLs return zero results without querying products",
+    "status": "PASS"
+  },
+  {
+    "name": "Service browse permits subcategory and no product type",
+    "status": "PASS"
+  },
+  {
+    "name": "Unfiltered browse preserves products with no assigned type",
+    "status": "PASS"
+  },
+  {
+    "name": "Filtered browse is noindex; invalid page defaults safely",
+    "status": "PASS"
+  },
+  {
+    "name": "Public product query sends exact three SQL filters and page range",
+    "status": "PASS"
+  },
+  {
+    "name": "Pagination past the end clamps to the final filtered page",
+    "status": "PASS"
+  },
+  {
+    "name": "Empty filtered results return page one",
+    "status": "PASS"
+  },
+  {
+    "name": "Active product types query filters by selected parent",
+    "status": "PASS"
+  },
+  {
+    "name": "Unclaimed and legacy listed badges use the same database condition",
+    "status": "PASS"
+  },
+  {
+    "name": "Verified badge and claim status are explicit intersecting filters",
+    "status": "PASS"
+  },
+  {
+    "name": "Vendor Newest First and Name A-Z produce their advertised SQL order",
+    "status": "PASS"
+  },
+  {
+    "name": "Product and Service sorts preserve exact SQL filtering",
+    "status": "PASS"
+  },
+  {
+    "name": "Legacy Eco Score browse URLs normalize to Newest First for every type",
+    "status": "PASS"
+  },
+  {
+    "name": "Vendor categories and non-vendor location/status are excluded from effective filters",
+    "status": "PASS"
+  },
+  {
+    "name": "Product/Service and Vendor fetch failures become explicit load errors",
+    "status": "PASS"
+  },
+  {
+    "name": "Category, subcategory and product type fetch failures are not empty matches",
+    "status": "PASS"
+  },
+  {
+    "name": "Invalid hierarchy is empty without a fetch error",
+    "status": "PASS"
+  },
+  {
+    "name": "Optional vendor summaries failing do not hide existing products",
+    "status": "PASS"
+  },
+  {
+    "name": "Claim-status-filtered vendor pages are noindex",
+    "status": "PASS"
+  }
+]

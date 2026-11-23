@@ -2,6 +2,8 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import {
   fetchActiveCategories,
+  fetchActiveSubcategories,
+  fetchActiveProductTypes,
   fetchApprovedProductsPage,
   fetchApprovedVendorsPage,
   fetchVendorSummaries,
@@ -9,6 +11,8 @@ import {
   type PublicVendor,
 } from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
+import { resolveBrowseTaxonomy } from "@/lib/productTaxonomy";
+import { browseSort, browseType, normalizeBrowseParams } from "@/lib/browseFilters";
 import BrowseClient from "./BrowseClient";
 
 export const revalidate = 900;
@@ -26,6 +30,8 @@ function first(value: string | string[] | undefined) {
 type BrowseQuery = {
   type: string;
   category: string;
+  subcategory: string;
+  productType: string;
   q: string;
   page: number;
   badge: string;
@@ -35,87 +41,81 @@ type BrowseQuery = {
 };
 
 function readQuery(values: Record<string, string | string[] | undefined>): BrowseQuery {
+  const raw = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) {
+    const text = first(value);
+    if (text) raw.set(key, text);
+  }
+  const params = normalizeBrowseParams(raw);
   return {
-    type: first(values.type) || "product",
-    category: first(values.category),
-    q: first(values.q),
-    page: pageNumber(first(values.page)),
-    badge: first(values.badge),
-    loc: first(values.loc),
-    sort: first(values.sort),
-    claimStatus: first(values.claim_status),
+    type: params.get("type") || "product",
+    category: params.get("category") || "",
+    subcategory: params.get("subcategory") || "",
+    productType: params.get("product_type") || "",
+    q: params.get("q") || "",
+    page: pageNumber(params.get("page") || ""),
+    badge: params.get("badge") || "",
+    loc: params.get("loc") || "",
+    sort: browseSort(params.get("sort")),
+    claimStatus: params.get("claim_status") || "",
   };
 }
 
 // Only the rows on the requested page come back from the database, along
 // with the total count used to build the page links.
 const getBrowseData = cache(
-  async (typeValue: string, categoryValue: string, searchValue: string, page: number, badge: string, loc: string, sort: string, claimStatus: string) => {
-    const type =
-      typeValue.toLowerCase() === "vendor"
-        ? "Vendor"
-        : typeValue.toLowerCase() === "service"
-          ? "Service"
-          : "Product";
-    const categories = await fetchActiveCategories().catch(() => []);
-    const selectedCategory = categories.find(
-      (item) =>
-        item.id === categoryValue ||
-        item.slug?.toLowerCase() === categoryValue.toLowerCase(),
-    );
-    const categoryId = selectedCategory?.id || categoryValue || undefined;
-    const empty = { items: [], total: 0, page: 1 };
-
-    if (type === "Vendor") {
-      const result = await fetchApprovedVendorsPage({
-        page,
-        pageSize: BROWSE_PAGE_SIZE,
-        search: searchValue,
-        badge,
-        location: loc,
-        sort,
-        claimStatus,
-      }).catch(() => empty);
-      return {
-        type,
-        categories,
-        selectedCategory,
-        products: [] as PublicProduct[],
-        vendors: result.items as PublicVendor[],
-        total: result.total,
-        page: result.page,
-        vendorSummaries: [],
-      };
-    }
-
-    const result = await fetchApprovedProductsPage({
-      page,
-      pageSize: BROWSE_PAGE_SIZE,
-      listingType: type,
-      categoryId,
-      search: searchValue,
-      ecoVerifiedOnly: badge === "eco_verified",
-      sort,
-    }).catch(() => empty);
-    const products = result.items as PublicProduct[];
-    // Vendor name + state for just the cards on this page.
-    const vendorSummaries = await fetchVendorSummaries(products.map((product) => product.vendorId)).catch(() => []);
-
-    return {
+  async (typeValue: string, categoryValue: string, subcategoryValue: string, productTypeValue: string, searchValue: string, page: number, badge: string, loc: string, sort: string, claimStatus: string) => {
+    const type = browseType(typeValue);
+    const data = {
       type,
-      categories,
-      selectedCategory,
-      products,
+      categories: [] as Awaited<ReturnType<typeof fetchActiveCategories>>,
+      subcategories: [] as Awaited<ReturnType<typeof fetchActiveSubcategories>>,
+      productTypes: [] as Awaited<ReturnType<typeof fetchActiveProductTypes>>,
+      selectedCategory: undefined as ReturnType<typeof resolveBrowseTaxonomy>["category"],
+      products: [] as PublicProduct[],
       vendors: [] as PublicVendor[],
-      total: result.total,
-      page: result.page,
-      vendorSummaries,
+      total: 0,
+      page: 1,
+      vendorSummaries: [] as Awaited<ReturnType<typeof fetchVendorSummaries>>,
+      loadError: false,
     };
+    try {
+      data.categories = await fetchActiveCategories();
+      const requestedCategory = categoryValue ? data.categories.find(item => item.id === categoryValue || item.slug?.toLowerCase() === categoryValue.toLowerCase()) : undefined;
+      data.subcategories = requestedCategory && type !== "Vendor" ? await fetchActiveSubcategories(requestedCategory.id) : [];
+      const requestedSubcategory = data.subcategories.find(item => item.id === subcategoryValue);
+      data.productTypes = requestedSubcategory && type === "Product" ? await fetchActiveProductTypes(requestedSubcategory.id) : [];
+      const hierarchy = resolveBrowseTaxonomy(type, { category: categoryValue, subcategory: subcategoryValue, productType: productTypeValue }, data.categories, data.subcategories, data.productTypes);
+      data.selectedCategory = hierarchy.category;
+      // An invalid hierarchy is a genuine no-match URL, not a fetch error.
+      if (!hierarchy.valid) return data;
+
+      if (type === "Vendor") {
+        const result = await fetchApprovedVendorsPage({
+          page, pageSize: BROWSE_PAGE_SIZE, search: searchValue,
+          badge, location: loc, sort, claimStatus,
+        });
+        return { ...data, vendors: result.items, total: result.total, page: result.page };
+      }
+
+      const result = await fetchApprovedProductsPage({
+        page, pageSize: BROWSE_PAGE_SIZE, listingType: type,
+        categoryId: hierarchy.category?.id, subcategoryId: hierarchy.subcategory?.id,
+        productTypeId: hierarchy.productType?.id, search: searchValue,
+        ecoVerifiedOnly: badge === "eco_verified", sort,
+      });
+      // Missing optional vendor summaries must not hide otherwise valid products.
+      const vendorSummaries = await fetchVendorSummaries(result.items.map(product => product.vendorId)).catch(() => []);
+      return { ...data, products: result.items, total: result.total, page: result.page, vendorSummaries };
+    } catch (error) {
+      console.error("BROWSE_DATA_ERROR", error);
+      return { ...data, loadError: true };
+    }
   },
 );
 
 function loadBrowseData(query: BrowseQuery) {
-  return getBrowseData(query.type, query.category, query.q, query.page, query.badge, query.loc, query.sort, query.claimStatus);
+  return getBrowseData(query.type, query.category, query.subcategory, query.productType, query.q, query.page, query.badge, query.loc, query.sort, query.claimStatus);
 }
 
 function pageNumber(value: string) {
@@ -147,7 +147,7 @@ export async function generateMetadata({
 }: BrowsePageProps): Promise<Metadata> {
   const query = readQuery(await searchParams);
   const data = await loadBrowseData(query);
-  const filtered = Boolean(query.q || query.badge || query.loc || query.sort);
+  const filtered = Boolean(query.q || query.badge || query.loc || query.sort !== "newest" || query.subcategory || query.productType || query.claimStatus);
   // ?category=<uuid> and ?category=<slug> render the same page; both declare
   // the slug form canonical, matching the sitemap and internal links.
   const canonical = browseCanonical(
@@ -200,10 +200,13 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       initialProducts={data.products}
       initialVendors={data.vendors}
       initialCategories={data.categories}
+      initialSubcategories={data.subcategories}
+      initialProductTypes={data.productTypes}
       totalCount={data.total}
       page={data.page}
       pageSize={BROWSE_PAGE_SIZE}
       vendorSummaries={data.vendorSummaries}
+      loadError={data.loadError}
     />
   );
 }
