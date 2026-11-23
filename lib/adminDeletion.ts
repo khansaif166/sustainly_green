@@ -1,6 +1,7 @@
 import "server-only";
 
 import { supabaseServiceFetch } from "@/lib/supabaseServer";
+import { deleteRichVendorFiles } from "@/lib/richVendorServer";
 
 type VendorFilesRow = {
   id?: string;
@@ -63,6 +64,7 @@ export async function deleteVendorStorageFiles(vendorId: string) {
   );
   const vendor = vendors[0];
   if (!vendor) return 0;
+  await deleteRichVendorFiles(vendorId);
 
   const products = await supabaseServiceFetch<ProductWithImagesRow[]>(
     `/rest/v1/products?${new URLSearchParams({

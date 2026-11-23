@@ -13,6 +13,7 @@ import { Input, Select, TextArea, MultiSelect, Toggle, FileUpload } from "../../
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
 import { getVendorBadgeMeta, VENDOR_BADGES, type VendorBadgeType } from "@/lib/vendorBadges";
+import RichProfileEditor from "@/app/components/rich-vendor/RichProfileEditor";
 
 export default function AdminVendorDetailsPage() {
   const router = useRouter();
@@ -240,6 +241,8 @@ export default function AdminVendorDetailsPage() {
             </div>
           </div>
         </div>
+
+        <RichProfileEditor key={`${vendorData.id}:${vendorData.approved}`} adminVendorId={vendorData.id} />
 
         {/* Main grid */}
         <FormProvider {...methods}>

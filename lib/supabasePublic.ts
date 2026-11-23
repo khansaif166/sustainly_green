@@ -468,6 +468,7 @@ export type ProductPageQuery = {
   page?: number;
   pageSize?: number;
   listingType?: string;
+  vendorId?: string;
   categoryId?: string;
   search?: string;
   ecoVerifiedOnly?: boolean;
@@ -589,6 +590,16 @@ export async function fetchApprovedProductsPage(
     order: query.sort === "name_az" ? "title.asc,id.asc" : "created_at.desc,id.desc",
   });
   if (query.listingType) params.set("listing_type", `eq.${query.listingType}`);
+  if (query.vendorId) {
+    params.set("vendor_id", `eq.${query.vendorId}`);
+    // Older product rows can have a blank or missing type.
+    if (query.listingType === "Product") {
+      params.delete("listing_type");
+      conditions.push("or(listing_type.is.null,listing_type.not.ilike.Service)");
+    } else if (query.listingType === "Service") {
+      params.set("listing_type", "ilike.Service");
+    }
+  }
   if (query.categoryId) params.set("category_id", `eq.${query.categoryId}`);
   if (query.ecoVerifiedOnly) params.set("eco_verified", "is.true");
   if (conditions.length) params.set("and", `(${conditions.join(",")})`);

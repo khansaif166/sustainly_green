@@ -184,6 +184,19 @@ export async function supabaseServiceFetch<T>(
   return parseSupabaseResponse<T>(response);
 }
 
+export function fetchPrivateStorage(path: string, options: RequestInit = {}) {
+  const key = requireServiceRoleKey();
+  const headers = new Headers(options.headers);
+  headers.set("apikey", key);
+  headers.set("Authorization", `Bearer ${key}`);
+  return fetch(`${requireSupabaseUrl()}/storage/v1/${path}`, {
+    ...options,
+    headers,
+    cache: "no-store",
+    signal: options.signal || AbortSignal.timeout(30_000),
+  });
+}
+
 // Supabase returns at most 1000 rows per request, whatever `limit` says, so
 // lists that can grow past that are read page by page. The path must carry a
 // stable `order` so pages never overlap or skip rows.
