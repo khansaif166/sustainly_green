@@ -3,11 +3,14 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
   fetchApprovedProducts,
+  fetchApprovedProductsPage,
   fetchApprovedVendorById,
 } from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME } from "@/lib/site";
 import { fitTitle } from "@/lib/seoTitle";
 import { vendorHref } from "@/lib/slug";
+import { isRichVendorActive, loadPublicRichProfile } from "@/lib/richVendorServer";
+import RichVendorProfile from "./RichVendorProfile";
 import VendorProfileClient from "./VendorProfileClient";
 
 export const revalidate = 900;
@@ -116,6 +119,25 @@ export default async function VendorPage({ params }: VendorPageProps) {
   if (data.vendor.slug && decodeURIComponent(vendorId) !== data.vendor.slug) {
     permanentRedirect(href);
   }
+
+  // Read activation on the server for each request. A cached vendor page
+  // could otherwise continue showing Rich content after an admin disables it.
+  const rich = await (async () => {
+    try {
+      const vendor = data.vendor;
+      if (!(await isRichVendorActive(vendor.id))) return null;
+      const [profile, products, services] = await Promise.all([
+        loadPublicRichProfile(vendor),
+        fetchApprovedProductsPage({ vendorId: vendor.id, listingType: "Product" }),
+        fetchApprovedProductsPage({ vendorId: vendor.id, listingType: "Service" }),
+      ]);
+      return profile ? { profile, products, services } : null;
+    } catch (error) {
+      console.error("PUBLIC_RICH_VENDOR_ERROR", error);
+      return null;
+    }
+  })();
+  if (rich) return <RichVendorProfile {...rich} />;
 
   return (
     <VendorProfileClient

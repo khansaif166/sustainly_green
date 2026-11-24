@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Package, User, Menu, MessageSquareText,
-  X, BarChart3, LogOut, Home,
+  X, BarChart3, LogOut, Home, LayoutTemplate,
 } from "lucide-react";
 import { fetchCurrentProfile, getCurrentUser, signOutSupabase } from "@/lib/supabaseAuth";
 import SessionTimeoutNotice from "@/app/components/SessionTimeoutNotice";
@@ -22,6 +22,7 @@ const NAV = [
   { name: "Products",   href: "/vendor/products",    icon: Package },
   { name: "Reports",    href: "/vendor/reports",     icon: BarChart3 },
   { name: "Profile",    href: "/vendor/profile",     icon: User },
+  { name: "Rich Profile", href: "/vendor/rich-profile", icon: LayoutTemplate },
 ];
 
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
