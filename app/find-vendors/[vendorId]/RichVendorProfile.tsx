@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { Inter } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
-import { ArrowRight, ArrowUpRight, Award, Building2, CalendarDays, CheckCircle2, ChevronRight, Clock, Download, Factory, FileBadge, FileText, Globe, Handshake, Leaf, Mail, MapPin, MessageCircle, Phone, Share2, ShieldCheck, Trophy, UserRound, type LucideIcon } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Building2, CalendarDays, CheckCircle2, ChevronRight, Clock, Download, Factory, FileBadge, FileText, Globe, Handshake, Leaf, Mail, MapPin, MessageCircle, Phone, Share2, ShieldCheck, Trophy, UserRound, type LucideIcon } from "lucide-react";
 import type { IconType } from "react-icons";
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaXTwitter, FaYoutube } from "react-icons/fa6";
 import Header from "@/app/components/Header";
@@ -12,7 +12,7 @@ import { formatBusinessHoursForDisplay } from "@/lib/businessHours";
 import type { PublicRichProfile } from "@/lib/richVendorServer";
 import type { fetchApprovedProductsPage } from "@/lib/supabasePublic";
 import {
-  AboutBusiness, BannerAds, CatalogGrid, CatalogueDownload, ClaimBusiness, CredentialCarousel, Gallery, LatestNews, ProfileNavigation, ProfileVideos, PromotionalVideos, QuoteForm, ShareProfile,
+  AboutBusiness, BannerAds, CatalogGrid, CatalogueDownload, ClaimBusiness, CredentialCarousel, CredentialDetails, Gallery, LatestNews, ProfileNavigation, ProfileVideos, PromotionalVideos, QuoteForm, ShareProfile,
 } from "./RichProfileInteractions";
 import styles from "./richProfile.module.css";
 
@@ -83,10 +83,10 @@ function certificateDate(value?: string) {
   if (Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value) return date;
 }
 
-function CertificateCard({ certificate, today, report = false }: {
+function CertificateCard({ certificate, today, kind = "certificate" }: {
   certificate: Pick<PublicRichProfile["certificates"][number], "name"> & Partial<PublicRichProfile["certificates"][number]>;
   today: Date;
-  report?: boolean;
+  kind?: "certificate" | "document" | "report";
 }) {
   const { name, issuer, scope, number, issued, expires, documentUrl, proofUrl } = certificate;
   const expiryDate = certificateDate(expires);
@@ -96,34 +96,41 @@ function CertificateCard({ certificate, today, report = false }: {
     { label: "Issued", value: issued, date: certificateDate(issued) },
     { label: "Expires", value: expires, date: expiryDate },
   ].filter(field => field.value);
-  const Icon = report ? FileText : Award;
+  const Icon = kind === "certificate" ? FileBadge : FileText;
+  const report = kind === "report";
+  const documentLabel = report ? "View PDF" : "View document";
+  const actionUrl = documentUrl || proofUrl;
+  const actionLabel = documentUrl ? documentLabel : "Verify certificate";
+  const hasDetails = fields.length > 0;
+  const verification = documentUrl && proofUrl && <a href={proofUrl} target="_blank" rel="noreferrer"
+    className={hasDetails ? `${styles.button} ${styles.credentialProof}` : `${styles.credentialAction} ${styles.credentialSecondary}`}
+    aria-label={`Verify certificate ${name} (opens in a new tab)`}>
+    {hasDetails ? "Verify certificate" : "Verify"} <ArrowUpRight size={14} aria-hidden="true" />
+  </a>;
 
-  return <article className={styles.certificate}>
-    <div className={styles.credentialIdentity}>
-      <span className={styles.iconTile}><Icon size={17} aria-hidden="true" /></span>
-      <div>
-        <div className={styles.certificateTitle}>
-          <h3>{name}</h3>
-          {expiryDate && expiryDate < today && <span className={styles.expiredCertificate}>Expired</span>}
-        </div>
-        {(report || issuer) && <p>{report ? "Sustainability report or policy" : issuer}</p>}
-      </div>
+  return <article className={styles.certificate} data-kind={kind}>
+    <div className={styles.credentialArtwork}>
+      <span className={styles.credentialIcon}><Icon size={22} aria-hidden="true" /></span>
+      {expiryDate && expiryDate < today && <span className={styles.expiredCertificate}>Expired</span>}
     </div>
-    {fields.length > 0 && <dl className={styles.certificateFacts}>
-      {fields.map(({ label, value, date }) => <div key={label}>
-        <dt>{label}</dt>
-        <dd>{date ? <time dateTime={value}>{certificateDateFormat.format(date)}</time> : value}</dd>
-      </div>)}
-    </dl>}
-    {(documentUrl || proofUrl) && <div className={styles.documentActions}>
-      {documentUrl && <a href={documentUrl} target="_blank" rel="noreferrer"
-        className={`${styles.button} ${styles.tint} ${styles.credentialAction}`} aria-label={`${report ? "View PDF" : "View document for"} ${name} (opens in a new tab)`}>
-        {report ? "View PDF" : "View document"} <ArrowUpRight size={14} aria-hidden="true" />
+    <div className={styles.credentialIdentity}>
+      <h3>{name}</h3>
+      {(report || issuer) && <p>{report ? "Sustainability report or policy" : issuer}</p>}
+    </div>
+    {(actionUrl || hasDetails) && <div className={styles.documentActions}>
+      {actionUrl && <a href={actionUrl} target="_blank" rel="noreferrer" className={styles.credentialAction}
+        aria-label={`${actionLabel} for ${name} (opens in a new tab)`}>
+        {actionLabel} <ArrowUpRight size={15} aria-hidden="true" />
       </a>}
-      {proofUrl && <a href={proofUrl} target="_blank" rel="noreferrer"
-        className={`${styles.button} ${styles.credentialAction}`} aria-label={`Verify certificate ${name} (opens in a new tab)`}>
-        Verify certificate <ArrowUpRight size={14} aria-hidden="true" />
-      </a>}
+      {hasDetails ? <CredentialDetails title={name}>
+        <dl className={styles.certificateFacts}>
+          {fields.map(({ label, value, date }) => <div key={label}>
+            <dt>{label}</dt>
+            <dd>{date ? <time dateTime={value}>{certificateDateFormat.format(date)}</time> : value}</dd>
+          </div>)}
+        </dl>
+        {verification}
+      </CredentialDetails> : verification}
     </div>}
   </article>;
 }
@@ -150,7 +157,8 @@ function Credentials({ profile }: { profile: PublicRichProfile }) {
         <CertificateCard certificate={certificate} today={today} />
       </li>)}
       {files.map(item => <li key={item.id}>
-        <CertificateCard certificate={{ name: item.title, documentUrl: item.url }} today={today} report={item.purpose === "report"} />
+        <CertificateCard certificate={{ name: item.title, documentUrl: item.url }} today={today}
+          kind={item.purpose === "report" ? "report" : "document"} />
       </li>)}
     </CredentialCarousel>
   </section>;

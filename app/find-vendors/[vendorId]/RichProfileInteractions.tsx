@@ -520,6 +520,29 @@ export function CredentialCarousel({ count, heading, children }: { count: number
   </div>;
 }
 
+export function CredentialDetails({ title, children }: { title: string; children: ReactNode }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+
+  return <>
+    <button ref={trigger} type="button" className={`${styles.credentialAction} ${styles.credentialSecondary}`}
+      aria-haspopup="dialog" aria-label={`Details for ${title}`} onClick={() => dialog.current?.showModal()}>
+      Details
+    </button>
+    <dialog ref={dialog} className={`${styles.dialog} ${styles.credentialDialog}`} aria-labelledby={titleId}
+      onClose={() => trigger.current?.focus({ preventScroll: true })}>
+      <div className={styles.credentialDialogHeader}>
+        <h2 id={titleId}>{title}</h2>
+        <button type="button" className={styles.galleryClose} aria-label="Close certificate details" onClick={() => dialog.current?.close()}>
+          <X size={19} aria-hidden="true" />
+        </button>
+      </div>
+      {children}
+    </dialog>
+  </>;
+}
+
 export function Gallery({ images }: { images: { id: string; title: string; url: string }[] }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);

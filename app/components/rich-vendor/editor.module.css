@@ -155,7 +155,7 @@
   list-style: none;
 }
 .adminEditor .group > summary::-webkit-details-marker { display: none; }
-.adminEditor .group > summary::after {
+.adminEditor .group:not(.credentialRecord) > summary::after {
   content: "";
   flex: none;
   width: 7px;
@@ -165,7 +165,7 @@
   border-width: 0 2px 2px 0;
   transform: translateY(-2px) rotate(45deg);
 }
-.adminEditor .group[open] > summary::after { transform: translateY(2px) rotate(225deg); }
+.adminEditor .group:not(.credentialRecord)[open] > summary::after { transform: translateY(2px) rotate(225deg); }
 .adminEditor .group > summary:hover { color: #165740; }
 .adminEditor .fields { align-items: start; }
 .adminEditor .fields > label:has(textarea) { grid-column: 1 / -1; }
