@@ -1,5 +1,6 @@
 import { supabaseServiceFetch } from "@/lib/supabaseServer";
 import { productSpecificationsPayload, readProductSpecifications } from "@/lib/productSpecifications";
+import { productMoqPayload, type MoqUnit } from "@/lib/productMoq";
 
 export type ProductImageRow = {
   url: string | null;
@@ -27,6 +28,7 @@ export type ProductRow = {
   price: number | string | null;
   currency: string;
   moq: number | string | null;
+  moq_unit: MoqUnit | null;
   discount: string | null;
   ship_regions: string[];
   in_stock: boolean;
@@ -68,6 +70,7 @@ export const PRODUCT_SELECT = [
   "price",
   "currency",
   "moq",
+  "moq_unit",
   "discount",
   "ship_regions",
   "in_stock",
@@ -130,6 +133,7 @@ export function mapProduct(row: ProductRow) {
     price: row.price === null ? "" : String(row.price),
     currency: row.currency || "INR",
     moq: row.moq === null ? "" : String(row.moq),
+    moqUnit: row.moq_unit ?? null,
     discount: row.discount || "",
     shipRegions: row.ship_regions || [],
     inStock: row.in_stock,
@@ -186,7 +190,7 @@ export function buildProductPayload(
     price_type: stringOrNull(body.priceType),
     price: numberOrNull(body.price),
     currency: stringOrNull(body.currency) || "INR",
-    moq: numberOrNull(body.moq),
+    ...productMoqPayload(body, numberOrNull(body.moq)),
     discount: stringOrNull(body.discount),
     ship_regions: stringArray(body.shipRegions),
     in_stock: body.inStock !== false,

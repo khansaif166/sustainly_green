@@ -7,6 +7,7 @@ import {
   fetchPublishedBlogs,
 } from "@/lib/supabasePublic";
 import { getSiteUrl, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
+import { formatMoq } from "@/lib/productMoq";
 import HomeClient, {
   type BlogCard,
   type CategoryItem,
@@ -180,22 +181,26 @@ const getHomepageData = cache(async () => {
     });
 
     if (products.length > 0) {
-      const cards = products.map((product, index) => ({
-        id: product.id,
-        title: product.title || `Product ${index + 1}`,
-        price:
-          product.priceType === "Price on Request" ||
-          product.price === undefined ||
-          product.price <= 0
-            ? "Price on request"
-            : product.currency === "INR"
-              ? `₹${product.price.toLocaleString("en-IN")}`
-              : `${product.currency} ${product.price.toLocaleString()}`,
-        unit: product.moq ? `MOQ ${product.moq}` : "Unit",
-        vendor: product.vendorName,
-        image: product.images[0] || undefined,
-        ecoVerified: product.ecoVerified,
-      }));
+      const cards = products.map((product, index) => {
+        const minimumOrder = formatMoq(product.moq, product.moqUnit);
+        return {
+          id: product.id,
+          title: product.title || `Product ${index + 1}`,
+          price:
+            product.priceType === "Price on Request" ||
+            product.price === undefined ||
+            product.price <= 0
+              ? "Price on request"
+              : product.currency === "INR"
+                ? `₹${product.price.toLocaleString("en-IN")}`
+                : `${product.currency} ${product.price.toLocaleString()}`,
+          unit: minimumOrder ? undefined : "Unit",
+          minimumOrder,
+          vendor: product.vendorName,
+          image: product.images[0] || undefined,
+          ecoVerified: product.ecoVerified,
+        };
+      });
 
       initialBestSellers = cards.slice(0, 4);
       initialFeaturedProducts = cards.slice(0, 6);

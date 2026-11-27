@@ -19,7 +19,8 @@ export const MEDIA = {
 } as const;
 export type MediaPurpose = keyof typeof MEDIA;
 export type AssetType = (typeof MEDIA)[MediaPurpose]["type"];
-export const ASSET_LIMIT_MB = { image: 8, pdf: 10, video: 25 } as const;
+export const ASSET_LIMIT_MB = { image: 5, pdf: 5, video: 25 } as const;
+export const PROFILE_ATTACHMENT_BATCH_LIMIT_MB = 25;
 export const ASSET_MIME_TYPES = {
   image: ["image/jpeg", "image/png", "image/webp"],
   pdf: ["application/pdf"],
@@ -159,6 +160,7 @@ export const richContentSchema = z.strictObject({
     .refine(items => new Set(items.map(item => item.id)).size === items.length, "Each update must have a unique ID.")
     .default([]),
   claimStatus: z.enum(CLAIM_STATUSES).optional(),
+  basicPrefillReviewed: z.literal(true).optional(),
 });
 export type RichContent = z.output<typeof richContentSchema>;
 
@@ -168,6 +170,7 @@ export type EditorMedia = {
   title: string;
   sourceUrl: string | null;
   mimeType: string | null;
+  fileVersion?: string | null;
 };
 export type EditorAd = {
   id: string;
@@ -188,6 +191,7 @@ export type EditorData = {
   approved: boolean;
   revision: number;
   content: RichContent;
+  draftContent?: RichContent;
   media: EditorMedia[];
   ads: EditorAd[];
   href: string;

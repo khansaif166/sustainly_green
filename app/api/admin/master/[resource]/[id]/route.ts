@@ -127,7 +127,9 @@ export async function DELETE(
     if (authError) return apiError(authError.message, authError.status);
     const configError = toConfigError(error);
     if (configError) return apiError(configError.message, configError.status);
-    if (error instanceof SupabaseHttpError && error.code === "23503") return apiError("This item is used by products or child catalog items and cannot be deleted.", 409);
+    if (error instanceof SupabaseHttpError && (error.code === "23503" || error.code === "23001")) {
+      return apiError("This item is used by products or child catalog items and cannot be deleted.", 409);
+    }
     console.error("ADMIN_MASTER_DELETE_API_ERROR", error);
     return apiError("Unable to delete master data.", 503);
   }

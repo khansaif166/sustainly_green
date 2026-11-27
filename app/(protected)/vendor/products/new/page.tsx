@@ -8,6 +8,7 @@ import ProductImagePicker from "@/app/components/product-images/ProductImagePick
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
 import ProductTypeSelect, { type ProductTypeOption } from "@/app/components/ProductTypeSelect";
+import ProductMoqFields from "@/app/components/ProductMoqFields";
 import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 import { DESCRIPTION_MAX_CHARS, MIN_DESCRIPTION_WORDS, descriptionError } from "@/lib/productSeo";
 import DescriptionWordHint from "@/app/components/DescriptionWordHint";
@@ -42,6 +43,7 @@ export default function AddProductPage() {
   const [price,              setPrice]              = useState("");
   const [currency,           setCurrency]           = useState("INR");
   const [moq,                setMoq]                = useState("");
+  const [moqUnit, setMoqUnit] = useState("");
   const [discount,           setDiscount]           = useState("");
   const [selectedTags,       setSelectedTags]       = useState<string[]>([]);
   const [sustainabilityClaim,setSustainabilityClaim]= useState("");
@@ -80,6 +82,7 @@ export default function AddProductPage() {
   }
 
   const filteredSubs = subCategories.filter(s => s.categoryId === categoryId);
+  const showsPrice = priceType === "Fixed Price" || priceType === "Starts From";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -96,7 +99,7 @@ export default function AddProductPage() {
       const res = await fetch("/api/vendor/products", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, listingType, availableFor, categoryId, subCategoryId, productTypeId, images: ordered, specifications: specificationValues, priceType, price, currency, moq, discount, shipRegions, inStock, sustainabilityTagIds: selectedTags, sustainabilityClaim }),
+        body: JSON.stringify({ title, description, listingType, availableFor, categoryId, subCategoryId, productTypeId, images: ordered, specifications: specificationValues, priceType, price, currency, moq, moqUnit, discount, shipRegions, inStock, sustainabilityTagIds: selectedTags, sustainabilityClaim }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error?.message || "Failed to create listing.");
@@ -156,8 +159,9 @@ export default function AddProductPage() {
 
         .ap-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
         @media(max-width:500px){.ap-grid2{grid-template-columns:1fr}}
-        .ap-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-        @media(max-width:500px){.ap-grid3{grid-template-columns:1fr}}
+        .ap-commercial-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+        @media(min-width:1024px){.ap-commercial-grid[data-priced="true"]{grid-template-columns:repeat(4,minmax(0,1fr))}}
+        @media(max-width:500px){.ap-commercial-grid{grid-template-columns:1fr}}
 
         .ap-checkbox-row{display:flex;align-items:center;gap:10px;cursor:pointer}
         .ap-checkbox{width:18px;height:18px;border-radius:6px;border:2px solid rgba(0,0,0,.15);appearance:none;cursor:pointer;position:relative;flex-shrink:0;transition:all .15s}
@@ -320,26 +324,34 @@ export default function AddProductPage() {
                 </select>
               </div>
 
-              {(priceType === "Fixed Price" || priceType === "Starts From") && (
-                <div className="ap-grid3">
-                  <div className="ap-field">
-                    <span className="ap-label">Price</span>
-                    <input className="ap-input" type="number" placeholder="e.g. 5000" value={price} onChange={e => setPrice(e.target.value)} />
-                  </div>
-                  <div className="ap-field">
-                    <span className="ap-label">Currency</span>
-                    <select className="ap-select" value={currency} onChange={e => setCurrency(e.target.value)}>
-                      <option value="INR">INR</option>
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                  </div>
-                  <div className="ap-field">
-                    <span className="ap-label">MOQ</span>
-                    <input className="ap-input" placeholder="Min order qty" value={moq} onChange={e => setMoq(e.target.value)} />
-                  </div>
-                </div>
-              )}
+              <div className="ap-commercial-grid" data-priced={showsPrice}>
+                {showsPrice && (
+                  <>
+                    <div className="ap-field">
+                      <span className="ap-label">Price</span>
+                      <input className="ap-input" type="number" placeholder="e.g. 5000" value={price} onChange={e => setPrice(e.target.value)} />
+                    </div>
+                    <div className="ap-field">
+                      <span className="ap-label">Currency</span>
+                      <select className="ap-select" value={currency} onChange={e => setCurrency(e.target.value)}>
+                        <option value="INR">INR</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                <ProductMoqFields
+                  quantity={moq}
+                  unit={moqUnit}
+                  onQuantityChange={setMoq}
+                  onUnitChange={setMoqUnit}
+                  fieldClassName="ap-field"
+                  labelClassName="ap-label"
+                  inputClassName="ap-input"
+                  selectClassName="ap-select"
+                />
+              </div>
 
               <div className="ap-field">
                 <span className="ap-label">Discount / Offer <span style={{ color: "#9ca3af", fontWeight: 500 }}>(optional)</span></span>

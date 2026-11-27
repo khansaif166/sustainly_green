@@ -28,7 +28,7 @@ export const Input: React.FC<InputProps> = ({ name, label, icon: Icon, ...props 
 
   return (
     <div className="space-y-1.5 flex-1">
-      <label className="text-sm font-medium text-gray-700 ml-1">{label}</label>
+      <label htmlFor={props.id} className="text-sm font-medium text-gray-700 ml-1">{label}</label>
       <div className="relative group">
         {Icon && (
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-600 transition-colors">
@@ -52,7 +52,7 @@ export const TextArea: React.FC<TextAreaProps> = ({ name, label, ...props }) => 
 
   return (
     <div className="space-y-1.5 flex-1">
-      <label className="text-sm font-medium text-gray-700 ml-1">{label}</label>
+      <label htmlFor={props.id} className="text-sm font-medium text-gray-700 ml-1">{label}</label>
       <textarea
         {...register(name)}
         {...props}
@@ -69,7 +69,7 @@ export const Select: React.FC<SelectProps> = ({ name, label, options, icon: Icon
 
   return (
     <div className="space-y-1.5 flex-1">
-      <label className="text-sm font-medium text-gray-700 ml-1">{label}</label>
+      <label htmlFor={props.id} className="text-sm font-medium text-gray-700 ml-1">{label}</label>
       <div className="relative group">
         {Icon && (
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-600 transition-colors">

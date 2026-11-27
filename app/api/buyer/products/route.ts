@@ -1,4 +1,5 @@
 import { apiError, apiOk } from "@/lib/apiResponse";
+import type { MoqUnit } from "@/lib/productMoq";
 import {
   requireRole,
   supabaseServiceFetch,
@@ -16,6 +17,7 @@ type ProductRow = {
   price: number | string | null;
   currency: string;
   moq: number | string | null;
+  moq_unit: MoqUnit | null;
   in_stock: boolean;
   product_images: Array<{ url: string | null; sort_order: number | null }> | null;
 };
@@ -28,7 +30,7 @@ export async function GET(request: Request) {
     const search = searchParams.get("q") || "";
 
     const params = new URLSearchParams({
-      select: "id,vendor_id,vendor_name,title,description,category_id,price,currency,moq,in_stock,product_images(url,sort_order)",
+      select: "id,vendor_id,vendor_name,title,description,category_id,price,currency,moq,moq_unit,in_stock,product_images(url,sort_order)",
       approved: "eq.true",
       in_stock: "eq.true",
       order: "created_at.desc",
@@ -58,6 +60,7 @@ export async function GET(request: Request) {
         price: r.price ?? null,
         currency: r.currency || "INR",
         moq: r.moq ?? null,
+        moqUnit: r.moq_unit ?? null,
         inStock: r.in_stock,
         imageUrl:
           r.product_images

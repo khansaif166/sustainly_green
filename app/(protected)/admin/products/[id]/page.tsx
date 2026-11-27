@@ -10,6 +10,7 @@ import ProductImagePicker from "@/app/components/product-images/ProductImagePick
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
 import ProductTypeSelect, { type ProductTypeOption } from "@/app/components/ProductTypeSelect";
+import ProductMoqFields from "@/app/components/ProductMoqFields";
 import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 
 const LISTING_TYPES = ["Product", "Service"];
@@ -48,6 +49,7 @@ export default function AdminEditProductPage() {
   const [price,              setPrice]              = useState("");
   const [currency,           setCurrency]           = useState("INR");
   const [moq,                setMoq]                = useState("");
+  const [moqUnit, setMoqUnit] = useState("");
   const [discount,           setDiscount]           = useState("");
 
   const [selectedTags,         setSelectedTags]         = useState<string[]>([]);
@@ -79,6 +81,7 @@ export default function AdminEditProductPage() {
         setPrice(p.price?.toString() || "");
         setCurrency(p.currency || "INR");
         setMoq(p.moq?.toString() || "");
+        setMoqUnit(p.moqUnit || "");
         setDiscount(p.discount || "");
         setSelectedTags(p.sustainabilityTagIds || p.sustainabilityTags || []);
         setSustainabilityClaim(p.sustainabilityClaim || "");
@@ -105,6 +108,7 @@ export default function AdminEditProductPage() {
   }
 
   const filteredSubCats = subCategories.filter(s => s.categoryId === categoryId);
+  const showsPrice = priceType === "Fixed Price" || priceType === "Starts From";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -126,7 +130,7 @@ export default function AdminEditProductPage() {
           categoryId, subCategoryId, productTypeId,
           images: orderedImages,
           specifications: specificationValues,
-          availableFor, priceType, price, currency, moq, discount,
+          availableFor, priceType, price, currency, moq, moqUnit, discount,
           sustainabilityTagIds: selectedTags,
           sustainabilityClaim, shipRegions, inStock,
         }),
@@ -179,7 +183,9 @@ export default function AdminEditProductPage() {
 
 
         .ape-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-        .ape-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+        .ape-commercial-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+        @media(min-width:1024px){.ape-commercial-grid[data-priced="true"]{grid-template-columns:repeat(4,minmax(0,1fr))}}
+        @media(max-width:500px){.ape-commercial-grid{grid-template-columns:1fr}}
         .ape-checkbox{display:flex;align-items:center;gap:9px;font-size:13px;color:#374151;cursor:pointer}
         .ape-checkbox input{width:16px;height:16px;accent-color:#16a34a;cursor:pointer}
 
@@ -299,22 +305,29 @@ export default function AdminEditProductPage() {
                   {PRICE_TYPES.map(p => <option key={p}>{p}</option>)}
                 </select>
               </div>
-              {(priceType === "Fixed Price" || priceType === "Starts From") && (
-                <div className="ape-3col">
-                  <div>
-                    <p className="ape-label">Price</p>
-                    <input className="ape-input" type="number" placeholder="0" value={price} onChange={e => setPrice(e.target.value)} />
-                  </div>
-                  <div>
-                    <p className="ape-label">Currency</p>
-                    <input className="ape-input" placeholder="INR" value={currency} onChange={e => setCurrency(e.target.value)} />
-                  </div>
-                  <div>
-                    <p className="ape-label">MOQ</p>
-                    <input className="ape-input" placeholder="Optional" value={moq} onChange={e => setMoq(e.target.value)} />
-                  </div>
-                </div>
-              )}
+              <div className="ape-commercial-grid" data-priced={showsPrice}>
+                {showsPrice && (
+                  <>
+                    <div>
+                      <p className="ape-label">Price</p>
+                      <input className="ape-input" type="number" placeholder="0" value={price} onChange={e => setPrice(e.target.value)} />
+                    </div>
+                    <div>
+                      <p className="ape-label">Currency</p>
+                      <input className="ape-input" placeholder="INR" value={currency} onChange={e => setCurrency(e.target.value)} />
+                    </div>
+                  </>
+                )}
+                <ProductMoqFields
+                  quantity={moq}
+                  unit={moqUnit}
+                  onQuantityChange={setMoq}
+                  onUnitChange={setMoqUnit}
+                  labelClassName="ape-label"
+                  inputClassName="ape-input"
+                  selectClassName="ape-select"
+                />
+              </div>
               <div>
                 <p className="ape-label">Discount / Offer</p>
                 <input className="ape-input" placeholder="Eg: 10% off on bulk orders (optional)" value={discount} onChange={e => setDiscount(e.target.value)} />

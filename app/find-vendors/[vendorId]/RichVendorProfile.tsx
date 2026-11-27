@@ -2,16 +2,17 @@
 import Link from "next/link";
 import { Inter } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
-import { ArrowRight, ArrowUpRight, Award, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Clock, Download, Factory, FileBadge, FileText, Globe, Handshake, Leaf, Mail, MapPin, MessageCircle, Phone, Share2, ShieldCheck, Trophy, UserRound, type LucideIcon } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Award, Building2, CalendarDays, CheckCircle2, ChevronRight, Clock, Download, Factory, FileBadge, FileText, Globe, Handshake, Leaf, Mail, MapPin, MessageCircle, Phone, Share2, ShieldCheck, Trophy, UserRound, type LucideIcon } from "lucide-react";
 import type { IconType } from "react-icons";
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaXTwitter, FaYoutube } from "react-icons/fa6";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
 import { safeWebUrl } from "@/lib/richVendorProfile";
+import { formatBusinessHoursForDisplay } from "@/lib/businessHours";
 import type { PublicRichProfile } from "@/lib/richVendorServer";
 import type { fetchApprovedProductsPage } from "@/lib/supabasePublic";
 import {
-  BannerAds, CatalogGrid, ClaimBusiness, CredentialCarousel, Gallery, LatestNews, ProfileNavigation, ProfileVideos, PromotionalVideos, QuoteForm, ShareProfile,
+  AboutBusiness, BannerAds, CatalogGrid, CatalogueDownload, ClaimBusiness, CredentialCarousel, Gallery, LatestNews, ProfileNavigation, ProfileVideos, PromotionalVideos, QuoteForm, ShareProfile,
 } from "./RichProfileInteractions";
 import styles from "./richProfile.module.css";
 
@@ -51,7 +52,7 @@ function SidebarCard({ id, title, icon: Icon, greenHeading = false, children }: 
 }
 
 function BusinessHours({ hours }: { hours: string }) {
-  const lines = hours.split(/\r\n?|\n/).map(line => line.trim()).filter(Boolean);
+  const lines = formatBusinessHoursForDisplay(hours).split(/\r\n?|\n/).map(line => line.trim()).filter(Boolean);
 
   return <ul role="list" className={styles.hoursList}>
     {lines.map((line, index) => {
@@ -74,16 +75,6 @@ function Person({ name, title, role, photo }: {
   </div>;
 }
 
-function FileLink({ href, label, download, className = styles.file }: {
-  href: string; label: string; download?: string; className?: string;
-}) {
-  return (
-    <a href={href} target="_blank" rel="noreferrer" download={download} className={className}>
-      <Download size={18} aria-hidden="true" />{label}
-    </a>
-  );
-}
-
 const certificateDateFormat = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "UTC" });
 
 function certificateDate(value?: string) {
@@ -92,8 +83,10 @@ function certificateDate(value?: string) {
   if (Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value) return date;
 }
 
-function CertificateCard({ certificate, today }: {
-  certificate: PublicRichProfile["certificates"][number]; today: Date;
+function CertificateCard({ certificate, today, report = false }: {
+  certificate: Pick<PublicRichProfile["certificates"][number], "name"> & Partial<PublicRichProfile["certificates"][number]>;
+  today: Date;
+  report?: boolean;
 }) {
   const { name, issuer, scope, number, issued, expires, documentUrl, proofUrl } = certificate;
   const expiryDate = certificateDate(expires);
@@ -103,16 +96,17 @@ function CertificateCard({ certificate, today }: {
     { label: "Issued", value: issued, date: certificateDate(issued) },
     { label: "Expires", value: expires, date: expiryDate },
   ].filter(field => field.value);
+  const Icon = report ? FileText : Award;
 
   return <article className={styles.certificate}>
     <div className={styles.credentialIdentity}>
-      <span className={styles.iconTile}><Award size={17} aria-hidden="true" /></span>
+      <span className={styles.iconTile}><Icon size={17} aria-hidden="true" /></span>
       <div>
         <div className={styles.certificateTitle}>
           <h3>{name}</h3>
           {expiryDate && expiryDate < today && <span className={styles.expiredCertificate}>Expired</span>}
         </div>
-        {issuer && <p>{issuer}</p>}
+        {(report || issuer) && <p>{report ? "Sustainability report or policy" : issuer}</p>}
       </div>
     </div>
     {fields.length > 0 && <dl className={styles.certificateFacts}>
@@ -123,8 +117,8 @@ function CertificateCard({ certificate, today }: {
     </dl>}
     {(documentUrl || proofUrl) && <div className={styles.documentActions}>
       {documentUrl && <a href={documentUrl} target="_blank" rel="noreferrer"
-        className={`${styles.button} ${styles.tint} ${styles.credentialAction}`} aria-label={`View document for ${name} (opens in a new tab)`}>
-        View document <ArrowUpRight size={14} aria-hidden="true" />
+        className={`${styles.button} ${styles.tint} ${styles.credentialAction}`} aria-label={`${report ? "View PDF" : "View document for"} ${name} (opens in a new tab)`}>
+        {report ? "View PDF" : "View document"} <ArrowUpRight size={14} aria-hidden="true" />
       </a>}
       {proofUrl && <a href={proofUrl} target="_blank" rel="noreferrer"
         className={`${styles.button} ${styles.credentialAction}`} aria-label={`Verify certificate ${name} (opens in a new tab)`}>
@@ -146,75 +140,63 @@ function Credentials({ profile }: { profile: PublicRichProfile }) {
   today.setUTCHours(0, 0, 0, 0);
 
   return <section className={styles.panel} id="credentials" aria-labelledby="credentials-title">
-    <div className={styles.iconHeading}>
-      <span className={styles.iconTile}><FileBadge size={17} aria-hidden="true" /></span>
-      <h2 id="credentials-title">Certifications and documents</h2>
-    </div>
-    <CredentialCarousel count={count}>
+    <CredentialCarousel count={count} heading={
+      <div className={styles.iconHeading}>
+        <span className={styles.iconTile}><FileBadge size={17} aria-hidden="true" /></span>
+        <h2 id="credentials-title">Certifications and documents</h2>
+      </div>
+    }>
       {profile.certificates.map((certificate, index) => <li key={`${certificate.name}-${index}`}>
         <CertificateCard certificate={certificate} today={today} />
       </li>)}
       {files.map(item => <li key={item.id}>
-        <a className={styles.credentialDocument} href={item.url} target="_blank" rel="noreferrer"
-          aria-label={`View PDF ${item.title} (opens in a new tab)`}>
-          <div className={styles.credentialIdentity}>
-            <span className={styles.iconTile}><FileText size={17} aria-hidden="true" /></span>
-            <div>
-              <h3>{item.title}</h3>
-              <p>{item.purpose === "report" ? "Sustainability report or policy" : "Certification document"}</p>
-            </div>
-          </div>
-          <span className={styles.credentialDocumentAction}>View PDF <ArrowUpRight size={14} aria-hidden="true" /></span>
-        </a>
+        <CertificateCard certificate={{ name: item.title, documentUrl: item.url }} today={today} report={item.purpose === "report"} />
       </li>)}
     </CredentialCarousel>
   </section>;
 }
 
 function AwardCard({ name, description, issuer, year, imageUrl, proofUrl }: {
-  name?: string; description?: string | null; issuer?: string; year?: string; imageUrl?: string; proofUrl?: string;
+  name: string; description?: string; issuer?: string; year?: string; imageUrl?: string; proofUrl?: string;
 }) {
-  const title = name || (description ? undefined : "Award image");
-
   return <article className={styles.awardCard}>
-    {imageUrl && <a className={styles.awardArtwork} href={imageUrl} target="_blank" rel="noreferrer"
-      aria-label={name ? `View award image for ${name} (opens in a new tab)` : "View award image (opens in a new tab)"}>
+    {imageUrl ? <a className={styles.awardArtwork} href={imageUrl} target="_blank" rel="noreferrer"
+      aria-label={`View award image for ${name} (opens in a new tab)`}>
       <img src={imageUrl} alt="" loading="lazy" decoding="async" />
       <span className={styles.awardArtworkAction}><ArrowUpRight size={16} aria-hidden="true" /></span>
-    </a>}
+    </a> : <div className={`${styles.awardArtwork} ${styles.awardPlaceholder}`} aria-hidden="true"><Trophy size={30} /></div>}
     <div className={styles.awardBody}>
       <div className={styles.awardIdentity}>
-        {!imageUrl && <span className={styles.iconTile}><Award size={17} aria-hidden="true" /></span>}
-        <div>
-          {(title || year) && <div className={styles.awardTitle}>
-            {title && <h3>{title}</h3>}
-            {year && <span className={styles.awardYear}>{year}</span>}
-          </div>}
-          {issuer && <p className={styles.awardIssuer}>{issuer}</p>}
-          {description && <p className={styles.awardDescription}>{description}</p>}
+        <div className={styles.awardTitle}>
+          <h3>{name}</h3>
+          {year && <span className={styles.awardYear}>{year}</span>}
         </div>
+        {issuer && <p className={styles.awardIssuer}>{issuer}</p>}
+        {description && <p className={styles.awardDescription}>{description}</p>}
       </div>
       {proofUrl && <a className={`${styles.button} ${styles.tint} ${styles.awardProof}`} href={proofUrl} target="_blank" rel="noreferrer"
-        aria-label={`View proof for ${title} (opens in a new tab)`}>
+        aria-label={`View proof for ${name} (opens in a new tab)`}>
         View proof <ArrowUpRight size={14} aria-hidden="true" />
       </a>}
     </div>
   </article>;
 }
 
-function Awards({ profile }: { profile: PublicRichProfile }) {
-  const otherImages = profile.media.filter(item => item.purpose === "award" && !profile.awards.some(award => award.imageUrl === item.url));
+function Awards({ profile, id }: { profile: PublicRichProfile; id?: string }) {
   const hasLegacyAward = profile.legacyAward || profile.legacyAwardImage;
+  const [legacyName, ...legacyDescription] = profile.legacyAward?.trim().split(/\r?\n/) ?? [];
+  const otherImages = profile.media.filter(item => item.purpose === "award" && item.url !== profile.legacyAwardImage &&
+    !profile.awards.some(award => award.imageUrl === item.url));
   if (!profile.awards.length && !hasLegacyAward && !otherImages.length) return null;
 
-  return <section className={styles.panel} aria-labelledby="awards-title">
+  return <section id={id} className={styles.panel} aria-labelledby="awards-title">
     <div className={styles.iconHeading}>
       <span className={styles.iconTile}><Trophy size={17} aria-hidden="true" /></span>
       <h2 id="awards-title">Awards and recognition</h2>
     </div>
     <div className={styles.awardsGrid}>
       {profile.awards.map((award, index) => <AwardCard key={`${award.name}-${index}`} {...award} />)}
-      {hasLegacyAward && <AwardCard imageUrl={profile.legacyAwardImage} description={profile.legacyAward} />}
+      {hasLegacyAward && <AwardCard name={legacyName || "Award image"} imageUrl={profile.legacyAwardImage} description={legacyDescription.join("\n").trim()} />}
       {otherImages.map(item => <AwardCard key={item.id} name={item.title} imageUrl={item.url} />)}
     </div>
   </section>;
@@ -236,7 +218,9 @@ export default function RichVendorProfile({ profile, products, services }: {
   const banners = profile.ads.filter(ad => ad.kind === "banner");
   const hasBanners = banners.length > 0;
   const videoAds = profile.ads.filter(ad => ad.kind === "video");
-  const credentials = Boolean(profile.certificates.length || profile.media.some(item => item.purpose === "credential" || item.purpose === "report"));
+  const hasCertificates = profile.certificates.length > 0 || profile.media.some(item => item.purpose === "credential" || item.purpose === "report");
+  const hasAwards = Boolean(profile.awards.length || profile.legacyAward || profile.legacyAwardImage || profile.media.some(item => item.purpose === "award"));
+  const hasMemberships = profile.memberships.length > 0;
   const contactMethods = [
     { label: "Phone", value: profile.phone, href: `tel:${profile.phone}`, icon: Phone },
     { label: "Email", value: profile.email, href: `mailto:${profile.email}`, icon: Mail },
@@ -261,7 +245,7 @@ export default function RichVendorProfile({ profile, products, services }: {
     { title: "Promotional videos", id: "promotional-videos", visible: Boolean(videoAds.length) },
     { title: "Gallery", id: "gallery", visible: Boolean(gallery.length) },
     { title: "Videos", id: "videos", visible: Boolean(introduction.length || productVideos.length) },
-    { title: "Credentials", id: "credentials", visible: credentials },
+    { title: "Credentials", id: "credentials", visible: hasCertificates || hasAwards || hasMemberships },
     { title: "Contact", id: contactSection ?? "contact", visible: Boolean(contactSection) },
   ].filter(section => section.visible);
   const leadFacts = [
@@ -271,6 +255,12 @@ export default function RichVendorProfile({ profile, products, services }: {
     profile.companyData.find(item => item.label === "Business type"),
   ].filter((item): item is { label: string; value: string } => Boolean(item));
   const remainingFacts = profile.companyData.filter(item => !leadFacts.some(fact => fact.label === item.label));
+  const businessFactIcons: Record<string, LucideIcon> = {
+    Industry: Factory,
+    Location: MapPin,
+    Established: CalendarDays,
+    "Business type": Building2,
+  };
   const sustainabilityStatus = profile.sustainability.find(item => item.label === "Claim status");
   const sustainabilityFacts = profile.sustainability.filter(item => item !== sustainabilityStatus);
 
@@ -286,9 +276,9 @@ export default function RichVendorProfile({ profile, products, services }: {
         <header className={styles.hero} data-cover={!hasBanners && Boolean(cover || coverHeading)}>
           {hasBanners ? <BannerAds ads={banners} /> : (cover || coverHeading) && <div className={styles.cover} data-image={Boolean(cover)}>
             {cover && <img src={cover.url} alt={cover.title} fetchPriority="high" />}
-            {coverHeading && <div className={styles.coverCopy}>
-              {profile.tagline && coverCategory && <p>{coverCategory}</p>}
-              <div>{coverHeading}</div>
+            {!cover && coverHeading && <div className={styles.coverCopy}>
+              <p className={styles.coverHeading}>{coverHeading}</p>
+              {profile.tagline && coverCategory && <p className={styles.coverCategory}>{coverCategory}</p>}
             </div>}
           </div>}
           <div className={styles.identity}>
@@ -310,11 +300,11 @@ export default function RichVendorProfile({ profile, products, services }: {
             </div>
             <div className={styles.actions}>
               <div className={styles.actionGroup}>
-                <a href="#quote" className={`${styles.button} ${styles.primary}`}><FileText size={17} aria-hidden="true" /> Request a quote</a>
+                <a href="#quote" className={`${styles.button} ${styles.goldButton}`}><FileText size={17} aria-hidden="true" /> Request a quote</a>
                 {(profile.unclaimed || profile.claimRequested) && <ClaimBusiness id={profile.id} href={profile.href} requested={profile.claimRequested} />}
               </div>
               <div className={styles.actionGroup}>
-                {profile.phone && <a href={`tel:${profile.phone}`} className={`${styles.button} ${styles.actionSecondary}`} aria-label="Call" title="Call"><Phone size={17} aria-hidden="true" /><span>Call</span></a>}
+                {profile.phone && <a href={`tel:${profile.phone}`} className={`${styles.button} ${styles.goldButton} ${styles.actionSecondary}`} aria-label="Call" title="Call"><Phone size={17} aria-hidden="true" /><span>Call</span></a>}
                 {profile.website && <a href={profile.website} className={`${styles.button} ${styles.actionSecondary}`} target="_blank" rel="noreferrer" aria-label="Website" title="Website"><Globe size={17} aria-hidden="true" /><span>Website</span></a>}
                 <ShareProfile href={profile.href} name={profile.name} />
               </div>
@@ -329,26 +319,32 @@ export default function RichVendorProfile({ profile, products, services }: {
 
         <div className={styles.contentGrid}>
           <div className={styles.mainColumn}>
-            <section id="overview" className={`${styles.panel} ${styles.aboutPanel}`} aria-labelledby="overview-title">
-              <div className={styles.iconHeading}>
-                <span className={styles.iconTile}><Building2 size={17} aria-hidden="true" /></span>
-                <h2 id="overview-title">About the business</h2>
-              </div>
-              {profile.description && <p className={styles.prose}>{profile.description}</p>}
-              {profile.offerings && <dl className={styles.aboutOfferings}>
-                <dt>Offerings</dt><dd>{profile.offerings}</dd>
-              </dl>}
-              {leadFacts.length > 0 && <dl className={styles.businessFacts}>
-                {leadFacts.map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
-              </dl>}
-              {(remainingFacts.length > 0 || profile.director) && <details className={styles.companyDetails}>
-                <summary>Company details <ChevronDown size={17} aria-hidden="true" /></summary>
+            <AboutBusiness description={profile.description}
+              offerings={profile.offerings ? <dl className={styles.aboutOfferings}>
+                <dt>What we offer</dt><dd>{profile.offerings}</dd>
+              </dl> : null}
+              snapshot={leadFacts.length > 0 ? <div className={styles.businessSnapshot}>
+                <dl className={styles.businessFacts} aria-label="Business facts">
+                  {leadFacts.map(({ label, value }) => {
+                    const Icon = businessFactIcons[label] || Building2;
+                    return <div key={label}>
+                      <dt><span className={styles.businessFactIcon}><Icon size={16} aria-hidden="true" /></span>{label}</dt>
+                      <dd>{value}</dd>
+                    </div>;
+                  })}
+                </dl>
+              </div> : null}
+              companyDetails={(remainingFacts.length > 0 || profile.director) ? <section className={styles.companyDetails} aria-labelledby="company-details-title">
+                <div className={styles.companyDetailsHeading}>
+                  <FileText size={18} aria-hidden="true" />
+                  <h3 id="company-details-title">Company details</h3>
+                </div>
                 <div className={styles.companyDetailsBody}>
-                  <Facts items={remainingFacts} />
+                  <Facts items={remainingFacts} className={styles.companyFacts} />
                   {profile.director && <Person name={profile.director.name} title="Director" role={profile.director.role} photo={directorPhoto} />}
                 </div>
-              </details>}
-              {profile.sustainability.length > 0 && <section className={styles.sustainability} aria-labelledby="sustainability-title">
+              </section> : null}
+              sustainability={profile.sustainability.length > 0 ? <section className={styles.sustainability} aria-labelledby="sustainability-title">
                 <div className={styles.sustainabilityHeading}>
                   <div className={styles.iconHeading}>
                     <Leaf size={17} aria-hidden="true" />
@@ -357,14 +353,20 @@ export default function RichVendorProfile({ profile, products, services }: {
                   {sustainabilityStatus && <p className={styles.claimStatus}>{sustainabilityStatus.label} <strong>{sustainabilityStatus.value}</strong></p>}
                 </div>
                 <Facts items={sustainabilityFacts} />
-              </section>}
-            </section>
+              </section> : null}
+            />
             {products.total > 0 && <CatalogGrid vendorId={profile.id} kind="Product" initial={products} />}
             {services.total > 0 && <CatalogGrid vendorId={profile.id} kind="Service" initial={services} />}
             <PromotionalVideos videos={videoAds} />
             <Gallery images={gallery} />
             <ProfileVideos introduction={introduction} products={productVideos} />
             <Credentials profile={profile} />
+            <Awards profile={profile} id={hasCertificates ? undefined : "credentials"} />
+            {hasMemberships && <Panel id={hasCertificates || hasAwards ? undefined : "credentials"} title="Trade associations and memberships"><ul className={styles.related}>
+              {profile.memberships.map((item, index) => <li key={`${item.name}-${index}`}>
+                {safeWebUrl(item.proofUrl) ? <a href={item.proofUrl} target="_blank" rel="noreferrer">{item.name}</a> : item.name}
+              </li>)}
+            </ul></Panel>}
             {profile.caseStudies && <Panel title="Project case studies"><div className={styles.caseStudy}><p className={styles.prose}>{profile.caseStudies}</p></div></Panel>}
             {partners.length > 0 && <section className={styles.panel} aria-labelledby="partners-title">
               <div className={styles.iconHeading}>
@@ -378,7 +380,6 @@ export default function RichVendorProfile({ profile, products, services }: {
                 </li>)}
               </ul>
             </section>}
-            <Awards profile={profile} />
             {profile.commercial.length > 0 && <section className={styles.panel} aria-labelledby="capabilities-title">
               <div className={styles.iconHeading}>
                 <span className={styles.iconTile}><Factory size={17} aria-hidden="true" /></span>
@@ -387,11 +388,6 @@ export default function RichVendorProfile({ profile, products, services }: {
               <Facts items={profile.commercial} className={styles.capabilityFacts} />
             </section>}
             {profile.procurement.length > 0 && <Panel title="Procurement preferences"><Facts items={profile.procurement} /></Panel>}
-            {profile.memberships.length > 0 && <Panel title="Trade associations and memberships"><ul className={styles.related}>
-              {profile.memberships.map((item, index) => <li key={`${item.name}-${index}`}>
-                {safeWebUrl(item.proofUrl) ? <a href={item.proofUrl} target="_blank" rel="noreferrer">{item.name}</a> : item.name}
-              </li>)}
-            </ul></Panel>}
             {profile.news.length > 0 && <LatestNews updates={profile.news} />}
           </div>
 
@@ -415,7 +411,7 @@ export default function RichVendorProfile({ profile, products, services }: {
                   ))}
                 </ul>}
                 {profile.whatsapp && (
-                  <a className={`${styles.button} ${styles.tint} ${styles.contactWhatsApp}`} href={`https://wa.me/${profile.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
+                  <a className={`${styles.button} ${styles.goldButton} ${styles.contactWhatsApp}`} href={`https://wa.me/${profile.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
                     <MessageCircle size={17} aria-hidden="true" /> Chat on WhatsApp
                   </a>
                 )}
@@ -465,8 +461,7 @@ export default function RichVendorProfile({ profile, products, services }: {
                   <p className={styles.catalogueFormat}>PDF document</p>
                 </div>
               </div>
-              <FileLink href={brochure.url} label="Download PDF" download="Download catalogue.pdf"
-                className={`${styles.button} ${styles.tint} ${styles.catalogueDownload}`} />
+              <CatalogueDownload href={brochure.url} />
             </SidebarCard>}
           </aside>
         </div>
@@ -474,7 +469,7 @@ export default function RichVendorProfile({ profile, products, services }: {
         <div className={styles.cta}>
           <span className={styles.ctaIcon}><FileText size={24} aria-hidden="true" /></span>
           <div><h2>Have a project in mind?</h2><p>Tell {profile.name} what you need and get a quote for your project.</p></div>
-          <a href="#quote" className={styles.button}>Request a quote now</a>
+          <a href="#quote" className={`${styles.button} ${styles.goldButton}`}>Request a quote now</a>
         </div>
       </main>
     </div>

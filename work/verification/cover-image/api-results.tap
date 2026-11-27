@@ -1,0 +1,158 @@
+
+> sustainly-marketplace@0.1.0 test:cover-images
+> node tests/coverImage.test.mjs
+
+TAP version 13
+# Subtest: admin cover upload rejects anonymous, expired, buyer and vendor credentials
+ok 1 - admin cover upload rejects anonymous, expired, buyer and vendor credentials
+  ---
+  duration_ms: 948.650095
+  type: 'test'
+  ...
+# Subtest: cover upload accepts PNG, trims title and uses private Storage
+ok 2 - cover upload accepts PNG, trims title and uses private Storage
+  ---
+  duration_ms: 43.257702
+  type: 'test'
+  ...
+# Subtest: invalid, empty, spoofed, oversized and missing cover files fail before storage
+ok 3 - invalid, empty, spoofed, oversized and missing cover files fail before storage
+  ---
+  duration_ms: 195.372851
+  type: 'test'
+  ...
+# Subtest: blank title and image URL are rejected without uploading
+ok 4 - blank title and image URL are rejected without uploading
+  ---
+  duration_ms: 55.909474
+  type: 'test'
+  ...
+# Subtest: replacement saves new file before deleting old Storage object
+ok 5 - replacement saves new file before deleting old Storage object
+  ---
+  duration_ms: 44.133546
+  type: 'test'
+  ...
+# Subtest: replacement requires an existing cover ID and a new file
+ok 6 - replacement requires an existing cover ID and a new file
+  ---
+  duration_ms: 81.220836
+  type: 'test'
+  ...
+# Subtest: rejected replacement preserves original and cleans only the new upload
+ok 7 - rejected replacement preserves original and cleans only the new upload
+  ---
+  duration_ms: 33.08646
+  type: 'test'
+  ...
+# Subtest: ambiguous commit failure does not delete either possible live object
+ok 8 - ambiguous commit failure does not delete either possible live object
+  ---
+  duration_ms: 18.97443
+  type: 'test'
+  ...
+# Subtest: non-retried database requests preserve their caller's timeout signal
+ok 9 - non-retried database requests preserve their caller's timeout signal
+  ---
+  duration_ms: 2.312101
+  type: 'test'
+  ...
+# Subtest: Storage upload failure never commits or deletes the current cover
+ok 10 - Storage upload failure never commits or deletes the current cover
+  ---
+  duration_ms: 274.04004
+  type: 'test'
+  ...
+# Subtest: transient Storage failure retries the same path and commits once
+ok 11 - transient Storage failure retries the same path and commits once
+  ---
+  duration_ms: 271.018183
+  type: 'test'
+  ...
+# Subtest: lost upload response is recovered by verifying stored bytes
+ok 12 - lost upload response is recovered by verifying stored bytes
+  ---
+  duration_ms: 16.550499
+  type: 'test'
+  ...
+# Subtest: retry handles Supabase's HTTP 400 duplicate without overwriting
+ok 13 - retry handles Supabase's HTTP 400 duplicate without overwriting
+  ---
+  duration_ms: 266.768793
+  type: 'test'
+  ...
+# Subtest: different bytes at a retry path never count as a successful upload
+ok 14 - different bytes at a retry path never count as a successful upload
+  ---
+  duration_ms: 269.77085
+  type: 'test'
+  ...
+# Subtest: permanent storage rejection is not retried and gives an upload-specific message
+ok 15 - permanent storage rejection is not retried and gives an upload-specific message
+  ---
+  duration_ms: 13.448038
+  type: 'test'
+  ...
+# Subtest: upload timeout returns a useful message and preserves current cover
+ok 16 - upload timeout returns a useful message and preserves current cover
+  ---
+  duration_ms: 275.466954
+  type: 'test'
+  ...
+# Subtest: lost commit response returns the saved cover without repeating the mutation
+ok 17 - lost commit response returns the saved cover without repeating the mutation
+  ---
+  duration_ms: 47.230457
+  type: 'test'
+  ...
+# Subtest: old-object cleanup failure does not misreport a committed replacement
+ok 18 - old-object cleanup failure does not misreport a committed replacement
+  ---
+  duration_ms: 19.607026
+  type: 'test'
+  ...
+# Subtest: malformed multipart returns a client error
+ok 19 - malformed multipart returns a client error
+  ---
+  duration_ms: 17.264411
+  type: 'test'
+  ...
+# Subtest: editor returns a file version so replacing a cover invalidates its blob preview
+ok 20 - editor returns a file version so replacing a cover invalidates its blob preview
+  ---
+  duration_ms: 24.001343
+  type: 'test'
+  ...
+# Subtest: public cover is available only on active, approved rich profiles
+ok 21 - public cover is available only on active, approved rich profiles
+  ---
+  duration_ms: 85.1283
+  type: 'test'
+  ...
+# Subtest: admin can preview an inactive cover and HEAD returns no body
+ok 22 - admin can preview an inactive cover and HEAD returns no body
+  ---
+  duration_ms: 17.214541
+  type: 'test'
+  ...
+# Subtest: private preview allows the owner and rejects unrelated vendors and buyers
+ok 23 - private preview allows the owner and rejects unrelated vendors and buyers
+  ---
+  duration_ms: 87.096336
+  type: 'test'
+  ...
+# Subtest: invalid media IDs/types never query Storage
+ok 24 - invalid media IDs/types never query Storage
+  ---
+  duration_ms: 22.266586
+  type: 'test'
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3153.768241

@@ -1,4 +1,5 @@
 import { readProductSpecifications, type ProductSpecification } from "@/lib/productSpecifications";
+import type { MoqUnit } from "@/lib/productMoq";
 
 type SupabaseVendorRow = {
   id: string;
@@ -51,6 +52,7 @@ type SupabaseProductRow = {
   price: number | string | null;
   currency: string | null;
   moq: number | string | null;
+  moq_unit: MoqUnit | null;
   ship_regions: string[] | null;
   in_stock: boolean | null;
   sustainability_claim: string | null;
@@ -146,6 +148,7 @@ export type PublicProduct = {
   price?: number;
   currency: string;
   moq?: number;
+  moqUnit?: MoqUnit;
   sustainabilityTags: string[];
   tagNames: string[];
   approved: boolean;
@@ -229,6 +232,7 @@ const PRODUCT_SELECT = [
   "price",
   "currency",
   "moq",
+  "moq_unit",
   "ship_regions",
   "in_stock",
   "sustainability_claim",
@@ -412,6 +416,7 @@ function mapProduct(row: SupabaseProductRow): PublicProduct {
     price: numberValue(row.price),
     currency: stringValue(row.currency) || "INR",
     moq: numberValue(row.moq),
+    moqUnit: row.moq_unit ?? undefined,
     sustainabilityTags: sustainabilityClaim ? [sustainabilityClaim] : [],
     tagNames: sustainabilityClaim ? [sustainabilityClaim] : [],
     approved: Boolean(row.approved),

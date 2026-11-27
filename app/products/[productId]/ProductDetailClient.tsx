@@ -17,6 +17,7 @@ import Header from "@/app/components/Header";
 import Footer from "@/app/components/layouts/Footer";
 import BuyerRFQModal from "../../components/ContactVendorModal";
 import { getStoredSession } from "@/lib/supabaseAuth";
+import { formatMoq } from "@/lib/productMoq";
 import type { PublicProduct } from "@/lib/supabasePublic";
 import { categoryHref, productHref, vendorHref } from "@/lib/slug";
 import ProductSpecificationsTable from "@/app/components/product-specifications/ProductSpecificationsTable";
@@ -49,6 +50,7 @@ export default function ProductDetailClient({
     typeof product.price === "number" &&
     product.price > 0 &&
     product.priceType !== "Price on Request";
+  const minimumOrder = formatMoq(product.moq, product.moqUnit);
 
   const categoryBreadcrumbs: Array<{ label: string; href?: string }> = [];
   if (product.categoryName) {
@@ -233,11 +235,11 @@ export default function ProductDetailClient({
                       </p>
                     </>
                   )}
-                  {typeof product.moq === "number" && product.moq > 0 && (
+                  {minimumOrder && (
                     <p className="mt-1 text-sm text-gray-600">
                       Minimum order:{" "}
                       <span className="font-semibold text-gray-800">
-                        {product.moq}
+                        {minimumOrder}
                       </span>
                     </p>
                   )}

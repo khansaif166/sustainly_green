@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Empty cover shows format, size, crop and publication guidance",
+    "status": "PASS"
+  },
+  {
+    "name": "image/png: selected image decodes, previews and submits",
+    "status": "PASS"
+  },
+  {
+    "name": "image/jpeg: selected image decodes, previews and submits",
+    "status": "PASS"
+  },
+  {
+    "name": "image/webp: selected image decodes, previews and submits",
+    "status": "PASS"
+  },
+  {
+    "name": "unsupported SVG: rejected before upload",
+    "status": "PASS"
+  },
+  {
+    "name": "empty PNG: rejected before upload",
+    "status": "PASS"
+  },
+  {
+    "name": "oversized PNG: rejected before upload",
+    "status": "PASS"
+  },
+  {
+    "name": "corrupt PNG: rejected before upload",
+    "status": "PASS"
+  },
+  {
+    "name": "Replacing cover sends its ID without deleting first",
+    "status": "PASS"
+  },
+  {
+    "name": "Failed replacement keeps selection and old cover for retry",
+    "status": "PASS"
+  },
+  {
+    "name": "Blank description disables save and custom description survives reselection",
+    "status": "PASS"
+  },
+  {
+    "name": "Clear selection releases blob and supports choosing the same file again",
+    "status": "PASS"
+  },
+  {
+    "name": "Double submit during delayed upload produces one request and disabled controls",
+    "status": "PASS"
+  },
+  {
+    "name": "Successful save remains visible when editor refresh fails",
+    "status": "PASS"
+  },
+  {
+    "name": "Existing banner does not block editing a stored cover",
+    "status": "PASS"
+  },
+  {
+    "name": "Read-only vendor sees cover preview and no upload/remove controls",
+    "status": "PASS"
+  },
+  {
+    "name": "Authenticated preview supports retry after failure",
+    "status": "PASS"
+  },
+  {
+    "name": "Replacing an opened cover invalidates old preview blob",
+    "status": "PASS"
+  },
+  {
+    "name": "Remove confirmation can cancel and successful removal permits reupload",
+    "status": "PASS"
+  },
+  {
+    "name": "Cover controls and preview fit at 375px",
+    "status": "PASS"
+  },
+  {
+    "name": "Cover controls and preview fit at 768px",
+    "status": "PASS"
+  },
+  {
+    "name": "Cover controls and preview fit at 1440px",
+    "status": "PASS"
+  }
+]

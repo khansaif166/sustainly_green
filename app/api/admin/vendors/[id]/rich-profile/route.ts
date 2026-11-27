@@ -6,7 +6,8 @@ type Context = { params: Promise<{ id: string }> };
 export async function GET(request: Request, { params }: Context) {
   try {
     const editor = await getEditorActor(request, (await params).id);
-    const [profile, catalog] = await Promise.all([loadRichEditor(editor), loadCatalogOptions()]);
+    const catalogRequest = loadCatalogOptions();
+    const [profile, catalog] = await Promise.all([loadRichEditor(editor, catalogRequest), catalogRequest]);
     return apiOk({ profile, catalog });
   } catch (error) {
     return richApiError(error);

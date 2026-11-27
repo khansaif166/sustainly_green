@@ -1,444 +1,509 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useForm, FormProvider } from "react-hook-form";
-import { OnboardingFormData } from "../../../vendor/onboarding/schema";
+import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { FormProvider, useForm } from "react-hook-form";
+import { Toaster, toast } from "sonner";
 import {
-  ArrowLeft, CheckCircle2, XCircle, Edit3, Save, X,
-  ExternalLink, ShieldCheck, Building2, User, ShoppingBag,
+  Building2, Check, Circle, CircleCheck, Clock3, ExternalLink,
+  Leaf, LoaderCircle, MapPin, Pencil, Save, ShieldCheck, ShoppingBag, Sparkles, User, X,
+  type LucideIcon,
 } from "lucide-react";
+import type { OnboardingFormData } from "../../../vendor/onboarding/schema";
 import { Input, Select, TextArea, MultiSelect, Toggle, FileUpload } from "../../../vendor/onboarding/_components/FormFields";
+import RichProfileEditor from "@/app/components/rich-vendor/RichProfileEditor";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { uploadFileToSupabaseStorage } from "@/lib/storage";
-import { getVendorBadgeMeta, VENDOR_BADGES, type VendorBadgeType } from "@/lib/vendorBadges";
-import RichProfileEditor from "@/app/components/rich-vendor/RichProfileEditor";
+import { getVendorBadgeMeta, VENDOR_BADGES, type VendorBadgeLike } from "@/lib/vendorBadges";
+import styles from "./vendorProfile.module.css";
 
-export default function AdminVendorDetailsPage() {
-  const router = useRouter();
-  const { uid } = useParams();
+const fields = [
+  "companyName", "registrationType", "cinRegistration", "gstNumber", "yearOfIncorporation",
+  "businessEmail", "whatsapp", "primaryContactName", "designation", "city", "state", "pinCode",
+  "country", "businessType", "primaryCategory", "subCategories", "shortDescription", "keyProducts",
+  "exportCapability", "exportMarkets", "primarySustainabilityCert", "issuingBody",
+  "sustainabilityPractice", "recycledContent", "carbonFootprint", "socialCompliance",
+] as const satisfies readonly (keyof OnboardingFormData)[];
 
-  const [loading,    setLoading]    = useState(true);
-  const [isEditing,  setIsEditing]  = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [vendorData, setVendorData] = useState<any>(null);
+type BasicFields = Pick<OnboardingFormData, (typeof fields)[number]>;
+type BasicForm = BasicFields & { logoFile?: File; certificateFile?: File };
+type Vendor = BasicFields & VendorBadgeLike & {
+  id: string;
+  approved: boolean;
+  updatedAt: string;
+  logoUrl: string;
+  registeredAddress: string;
+  certificateFileUrl: string;
+  listingTier: string;
+  language: string;
+  paymentTerms: string;
+  awardsImageUrl: string;
+};
 
-  const methods = useForm<OnboardingFormData>({ mode: "onChange" });
-  const { reset, handleSubmit } = methods;
+const views = [
+  { id: "basic", label: "Basic Profile", description: "Company details and verification", icon: Building2 },
+  { id: "rich", label: "Rich Profile", description: "Enhanced content, media and ads", icon: Sparkles },
+] as const;
 
-  function getAuthHeaders() {
-    const session = getStoredSession();
-    if (!session) throw new Error("Please sign in again.");
-    return { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" };
-  }
+type ProfileView = (typeof views)[number]["id"];
+const notificationId = "admin-vendor-profile";
 
-  useEffect(() => {
-    async function load() {
-      if (!uid) return;
-      try {
-        const res     = await fetch(`/api/admin/vendors/${uid}`, { headers: { Authorization: getAuthHeaders().Authorization } });
-        const payload = await res.json();
-        if (!res.ok) throw new Error(payload?.error?.message || "Unable to load vendor.");
-        setVendorData(payload.vendor);
-        reset(payload.vendor as any);
-      } catch (err) { console.error(err); } finally { setLoading(false); }
-    }
-    load();
-  }, [uid, reset]);
+async function vendorRequest<T = { ok: true }>(uid: string, updates?: Partial<Vendor>): Promise<T> {
+  const session = getStoredSession();
+  if (!session) throw new Error("Please sign in again.");
+  const response = await fetch(`/api/admin/vendors/${encodeURIComponent(uid)}`, {
+    method: updates ? "PATCH" : "GET",
+    headers: { Authorization: `Bearer ${session.accessToken}`, ...(updates && { "Content-Type": "application/json" }) },
+    body: updates && JSON.stringify(updates),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error?.message || "Unable to update or load this vendor.");
+  return data as T;
+}
 
-  const handleApprove = async () => {
-    if (!uid) return;
-    setSubmitting(true);
-    try {
-      const res     = await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify({ approved: true }) });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error?.message || "Error approving vendor");
-      setVendorData((p: any) => ({ ...p, approved: true }));
-    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
-    setSubmitting(false);
-  };
-
-  const handleReject = async () => {
-    if (!uid) return;
-    setSubmitting(true);
-    try {
-      const res     = await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify({ approved: false }) });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error?.message || "Error rejecting vendor");
-      setVendorData((p: any) => ({ ...p, approved: false }));
-    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
-    setSubmitting(false);
-  };
-
-  const handleSetVendorBadge = async (listingBadgeType: VendorBadgeType | "") => {
-    if (!uid || !vendorData) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify({ listingBadgeType }) });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error?.message || "Error updating verified badge");
-      setVendorData((p: any) => ({
-        ...p,
-        listingVerified: Boolean(listingBadgeType),
-        listingBadgeType,
-        publicContact: {
-          ...(p?.publicContact || {}),
-          sustainlyBadgeType: listingBadgeType || undefined,
-        },
-      }));
-    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
-    setSubmitting(false);
-  };
-
-  const onSubmit = async (data: OnboardingFormData) => {
-    if (!uid) return;
-    setSubmitting(true);
-    try {
-      const { logoFile, certificateFile, awardsFile, ...cleanData } = data;
-      const session = getStoredSession();
-      if (!session) { router.push("/login"); return; }
-      const [logoUp, certUp, awardsUp] = await Promise.all([
-        logoFile instanceof File ? uploadFileToSupabaseStorage(logoFile, { bucket: "marketplace", folder: "vendors/logos", accessToken: session.accessToken }) : Promise.resolve(null),
-        certificateFile instanceof File ? uploadFileToSupabaseStorage(certificateFile, { bucket: "marketplace", folder: "vendors/certificates", accessToken: session.accessToken }) : Promise.resolve(null),
-        awardsFile instanceof File ? uploadFileToSupabaseStorage(awardsFile, { bucket: "marketplace", folder: "vendors/awards", accessToken: session.accessToken }) : Promise.resolve(null),
-      ]);
-      const payload = { ...cleanData, ...(logoUp ? { logoUrl: logoUp.url } : {}), ...(certUp ? { certificateFileUrl: certUp.url } : {}), ...(awardsUp ? { awardsImageUrl: awardsUp.url } : {}) };
-      const res = await fetch(`/api/admin/vendors/${uid}`, { method: "PATCH", headers: getAuthHeaders(), body: JSON.stringify(payload) });
-      const rp  = await res.json();
-      if (!res.ok) throw new Error(rp?.error?.message || "Error updating vendor profile");
-      setVendorData((p: any) => ({ ...p, ...payload }));
-      setIsEditing(false);
-    } catch (err) { alert(err instanceof Error ? err.message : "Error"); }
-    setSubmitting(false);
-  };
-
-  if (loading) return (
-    <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 32, height: 32, border: "4px solid #dcfce7", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  );
-
-  if (!vendorData) return (
-    <div style={{ minHeight: "40vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
-      <p style={{ color: "#6b7280" }}>Vendor profile not found.</p>
-      <button onClick={() => router.back()} style={{ color: "#16a34a", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}>← Go Back</button>
-    </div>
-  );
-
-  const D = ({ label, value }: { label: string; value?: any }) => (
-    <div>
-      <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 3px" }}>{label}</p>
-      <p style={{ fontSize: 13, fontWeight: 600, color: "#111", margin: 0 }}>{value || "—"}</p>
-    </div>
-  );
-
-  const SH = ({ icon: Icon, title, desc, bg = "#f0fdf4", ic = "#16a34a" }: any) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-      <div style={{ width: 38, height: 38, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <Icon size={18} color={ic} />
-      </div>
-      <div>
-        <p style={{ fontSize: 14, fontWeight: 800, color: "#111", margin: 0 }}>{title}</p>
-        {desc && <p style={{ fontSize: 11.5, color: "#9ca3af", margin: 0 }}>{desc}</p>}
-      </div>
-    </div>
-  );
-
+function Detail({ label, children, wide }: { label: string; children?: ReactNode; wide?: boolean }) {
   return (
-    <>
-      <style>{`
-        .avd-page{display:flex;flex-direction:column;gap:20px;padding-bottom:40px}
-        .avd-hero{background:linear-gradient(135deg,#0a1a10 0%,#0f2318 60%,#0c1e13 100%);border-radius:22px;padding:20px 24px;position:relative;overflow:hidden}
-        .avd-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 380px 230px at 90% 50%,rgba(22,163,74,.18) 0%,transparent 65%);pointer-events:none}
-        .avd-hero-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-        .avd-back{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:rgba(255,255,255,.4);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;transition:color .15s;margin-bottom:10px}
-        .avd-back:hover{color:rgba(255,255,255,.75)}
-        .avd-logo{width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#4ade80;flex-shrink:0;overflow:hidden}
-        .avd-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:50px;font-size:11.5px;font-weight:700}
-        .avd-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-        .avd-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;border:none}
-        .avd-btn-outline{background:rgba(255,255,255,.1);color:#fff;border:1.5px solid rgba(255,255,255,.18)}
-        .avd-btn-outline:hover{background:rgba(255,255,255,.18)}
-        .avd-btn-green{background:#16a34a;color:#fff;box-shadow:0 3px 10px rgba(22,163,74,.35)}
-        .avd-btn-green:hover{background:#15803d}
-        .avd-btn-red{background:rgba(239,68,68,.15);color:#f87171;border:1.5px solid rgba(239,68,68,.2)}
-        .avd-btn-red:hover{background:rgba(239,68,68,.25)}
+    <div className={wide ? styles.wide : undefined}>
+      <dt>{label}</dt>
+      <dd>{children || "—"}</dd>
+    </div>
+  );
+}
 
-        .avd-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
-        @media(max-width:900px){.avd-grid{grid-template-columns:1fr}}
-        .avd-card{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:20px;padding:20px 22px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
-        .avd-data-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-        @media(max-width:600px){.avd-data-grid{grid-template-columns:repeat(2,1fr)}}
+function Card({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: ReactNode }) {
+  return (
+    <section className={styles.card}>
+      <h3><span className={styles.sectionIcon}><Icon size={18} aria-hidden="true" /></span>{title}</h3>
+      {children}
+    </section>
+  );
+}
 
-        .avd-checklist{display:flex;flex-direction:column;gap:10px}
-        .avd-check-item{display:flex;align-items:center;gap:10px}
-        .avd-check-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-        .avd-spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
-        .avd-eco-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:50px;font-size:11.5px;font-weight:800;background:rgba(16,185,129,.16);color:#6ee7b7;border:1px solid rgba(110,231,183,.2)}
-        .avd-eco-badge img{width:20px;height:24px;object-fit:cover;border-radius:4px}
-        .avd-badge-preview{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:#f8fafc;border:1px solid #e5e7eb;margin-top:14px}
-        .avd-badge-preview img{width:54px;height:66px;object-fit:cover;border-radius:7px;box-shadow:0 8px 18px rgba(15,23,42,.12)}
-        .avd-badge-choice-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
-        .avd-badge-choice{justify-content:center;width:100%;border-radius:12px}
-        @keyframes spin{to{transform:rotate(360deg)}}
-      `}</style>
-
-      <div className="avd-page">
-
-        {/* Hero */}
-        <div className="avd-hero">
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <button onClick={() => router.push("/admin/vendors")} className="avd-back"><ArrowLeft size={13} />Back to Vendors</button>
-            <div className="avd-hero-inner">
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div className="avd-logo">
-                  {vendorData.logoUrl
-                    ? <img src={vendorData.logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : (vendorData.companyName?.charAt(0) || "V")
-                  }
-                </div>
-                <div>
-                  <p style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 5px", letterSpacing: "-.02em" }}>{vendorData.companyName}</p>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span className="avd-badge" style={vendorData.approved ? { background: "rgba(74,222,128,.15)", color: "#4ade80" } : { background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>
-                      {vendorData.approved ? <CheckCircle2 size={12} /> : null}
-                      {vendorData.approved ? "Verified Vendor" : "Pending Verification"}
-                    </span>
-                    {getVendorBadgeMeta(vendorData) && (
-                      <span className="avd-eco-badge">
-                        <img src={getVendorBadgeMeta(vendorData)?.src} alt="" />
-                        {getVendorBadgeMeta(vendorData)?.label}
-                      </span>
-                    )}
-                    {vendorData.updatedAt && <span style={{ fontSize: 11, color: "rgba(255,255,255,.3)" }}>Updated {new Date(vendorData.updatedAt).toLocaleDateString()}</span>}
-                  </div>
-                </div>
-              </div>
-
-              <div className="avd-actions">
-                {isEditing ? (
-                  <>
-                    <button onClick={() => setIsEditing(false)} className="avd-btn avd-btn-outline"><X size={14} />Cancel</button>
-                    <button onClick={handleSubmit(onSubmit)} disabled={submitting} className="avd-btn avd-btn-green">
-                      {submitting ? <div className="avd-spinner" /> : <Save size={14} />}Save Changes
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => setIsEditing(true)} className="avd-btn avd-btn-outline"><Edit3 size={14} />Edit</button>
-                    <button onClick={() => handleSetVendorBadge("verified_supplier")} disabled={submitting} className={getVendorBadgeMeta(vendorData)?.type === "verified_supplier" ? "avd-btn avd-btn-green" : "avd-btn avd-btn-outline"}>
-                      {submitting ? <div className="avd-spinner" /> : <ShieldCheck size={14} />}
-                      Verified Supplier
-                    </button>
-                    {vendorData.listingVerified && <button onClick={() => handleSetVendorBadge("")} disabled={submitting} className="avd-btn avd-btn-red">Remove Badge</button>}
-                    {!vendorData.approved && <button onClick={handleApprove} disabled={submitting} className="avd-btn avd-btn-green">{submitting ? <div className="avd-spinner" /> : <CheckCircle2 size={14} />}Approve</button>}
-                    {vendorData.approved && <button onClick={handleReject} disabled={submitting} className="avd-btn avd-btn-red"><XCircle size={14} />Suspend</button>}
-                  </>
-                )}
-              </div>
-            </div>
+function ProfileLoading({ backLink }: { backLink: ReactNode }) {
+  return (
+    <div className={styles.page}>
+      <header className={styles.hero}>
+        <div className={styles.identity}>
+          <span className={styles.logo} aria-hidden="true"><LoaderCircle size={24} className={styles.loadingSpinner} /></span>
+          <div className={styles.company}>
+            <p className={styles.loadingTitle} role="status">Loading vendor profile…</p>
+            <span className={`${styles.skeleton} ${styles.loadingMetadata}`} aria-hidden="true" />
           </div>
         </div>
+        {backLink}
+      </header>
 
-        <RichProfileEditor key={`${vendorData.id}:${vendorData.approved}`} adminVendorId={vendorData.id} />
-
-        {/* Main grid */}
-        <FormProvider {...methods}>
-          <div className="avd-grid">
-
-            {/* Left */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-              {/* Identity */}
-              <div className="avd-card">
-                <SH icon={User} title="Identity & Legal" desc="Company registration and contact details" />
-                {isEditing ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div style={{ gridColumn: "1/-1" }}><FileUpload name="logoFile" label="Company Logo" /></div>
-                    <Input name="companyName" label="Company Name *" />
-                    <Select name="registrationType" label="Registration Type *" options={[{label:"Pvt Ltd",value:"pvt-ltd"},{label:"LLP",value:"llp"},{label:"Sole Proprietorship",value:"sole-proprietorship"}]} />
-                    <Input name="cinRegistration" label="CIN Number *" />
-                    <Input name="gstNumber" label="GST Number *" />
-                    <Input name="yearOfIncorporation" label="Year of Incorporation *" />
-                    <Input name="businessEmail" label="Business Email *" />
-                    <Input name="whatsapp" label="WhatsApp / Mobile *" />
-                    <Input name="primaryContactName" label="Primary Contact *" />
-                    <Input name="designation" label="Designation *" />
-                    <Input name="city" label="City *" />
-                    <Input name="state" label="State *" />
-                    <Input name="pinCode" label="PIN Code *" />
-                    <Input name="country" label="Country *" />
-                  </div>
-                ) : (
-                  <div className="avd-data-grid">
-                    <D label="Company Name"       value={vendorData.companyName} />
-                    <D label="Registration Type"  value={vendorData.registrationType} />
-                    <D label="CIN Number"         value={vendorData.cinRegistration} />
-                    <D label="GST Number"         value={vendorData.gstNumber} />
-                    <D label="Established"        value={vendorData.yearOfIncorporation} />
-                    <D label="Business Email"     value={vendorData.businessEmail} />
-                    <D label="Primary Contact"    value={vendorData.primaryContactName} />
-                    <D label="Designation"        value={vendorData.designation} />
-                    <D label="WhatsApp"           value={vendorData.whatsapp} />
-                    <div style={{ gridColumn: "1/-1" }}>
-                      <D label="Registered Address" value={[vendorData.registeredAddress, vendorData.city, vendorData.state, vendorData.pinCode, vendorData.country].filter(Boolean).join(", ")} />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Business Overview */}
-              <div className="avd-card">
-                <SH icon={Building2} title="Business Overview" desc="Operations, scale and market reach" bg="#eff6ff" ic="#3b82f6" />
-                {isEditing ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <Select name="businessType" label="Business Type *" options={[{label:"Manufacturer",value:"manufacturer"},{label:"Trader",value:"trader"}]} />
-                    <Input name="primaryCategory" label="Primary Category *" />
-                    <div style={{ gridColumn: "1/-1" }}><MultiSelect name="subCategories" label="Sub-Categories" max={3} /></div>
-                    <div style={{ gridColumn: "1/-1" }}><TextArea name="shortDescription" label="Company Description *" rows={3} /></div>
-                    <MultiSelect name="keyProducts" label="Key Products" max={5} />
-                    <Toggle name="exportCapability" label="Export Capability" />
-                    <Input name="exportMarkets" label="Export Markets" />
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    <div className="avd-data-grid">
-                      <D label="Business Type"      value={vendorData.businessType} />
-                      <D label="Primary Category"   value={vendorData.primaryCategory} />
-                      <D label="Export Capability"  value={vendorData.exportCapability ? "Yes" : "No"} />
-                      <D label="Export Markets"     value={vendorData.exportMarkets} />
-                    </div>
-                    <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
-                      <D label="Company Description" value={vendorData.shortDescription} />
-                    </div>
-                    {Array.isArray(vendorData.keyProducts) && vendorData.keyProducts.length > 0 && (
-                      <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
-                        <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 8px" }}>Key Products</p>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                          {vendorData.keyProducts.map((p: string) => <span key={p} style={{ padding: "3px 10px", background: "#f3f4f6", color: "#374151", fontSize: 12, fontWeight: 600, borderRadius: 50 }}>{p}</span>)}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Sustainability */}
-              <div className="avd-card">
-                <SH icon={ShieldCheck} title="Sustainability Credentials" desc="Environmental compliance and certifications" />
-                {isEditing ? (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <Input name="primarySustainabilityCert" label="Primary Certification *" />
-                    <Input name="issuingBody" label="Issuing Body *" />
-                    <div style={{ gridColumn: "1/-1" }}><FileUpload name="certificateFile" label="Sustainability Certificate" /></div>
-                    <div style={{ gridColumn: "1/-1" }}><TextArea name="sustainabilityPractice" label="Sustainability Description *" rows={3} /></div>
-                    <Input name="recycledContent" label="Recycled Content %" />
-                    <Input name="carbonFootprint" label="Carbon Footprint" />
-                    <Input name="socialCompliance" label="Social Compliance" />
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#f0fdf4", borderRadius: 14, gap: 12 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 11, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><ShieldCheck size={18} color="#16a34a" /></div>
-                        <div>
-                          <p style={{ fontSize: 13, fontWeight: 800, color: "#111", margin: 0 }}>{vendorData.primarySustainabilityCert || "—"}</p>
-                          <p style={{ fontSize: 11.5, color: "#6b7280", margin: 0 }}>Issued by {vendorData.issuingBody || "—"}</p>
-                        </div>
-                      </div>
-                      {vendorData.certificateFileUrl && (
-                        <a href={vendorData.certificateFileUrl} target="_blank" style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", background: "#fff", color: "#16a34a", fontSize: 12, fontWeight: 700, borderRadius: 50, border: "1.5px solid rgba(22,163,74,.2)", textDecoration: "none" }}>
-                          <ExternalLink size={12} />View Cert
-                        </a>
-                      )}
-                    </div>
-                    <div className="avd-data-grid">
-                      <D label="Recycled Content %"  value={vendorData.recycledContent} />
-                      <D label="Carbon Footprint"    value={vendorData.carbonFootprint} />
-                      <D label="Social Compliance"   value={vendorData.socialCompliance} />
-                    </div>
-                    <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
-                      <D label="Sustainability Practice" value={vendorData.sustainabilityPractice} />
-                    </div>
-                  </div>
-                )}
-              </div>
+      <div className={styles.panel} aria-hidden="true">
+        <div className={styles.tabs}>
+          {views.map(({ id }) => (
+            <div key={id} className={styles.loadingTab}>
+              <span className={`${styles.skeleton} ${styles.tabIcon}`} />
+              <div className={styles.loadingLines}><span className={styles.skeleton} /><span className={styles.skeleton} /></div>
             </div>
-
-            {/* Right */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-              {/* Marketplace */}
-              <div className="avd-card">
-                <SH icon={ShoppingBag} title="Marketplace" desc="Preferences & listing" bg="#fefce8" ic="#f59e0b" />
-                <div style={{ background: "#f9fafb", borderRadius: 12, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-                  <D label="Listing Tier"   value={vendorData.listingTier} />
-                  <D label="Language"       value={vendorData.language} />
-                  <D label="Payment Terms"  value={vendorData.paymentTerms} />
-                  <D label="Buyer-facing Badge" value={getVendorBadgeMeta(vendorData)?.label || "Not assigned"} />
+          ))}
+        </div>
+        <div className={styles.toolbar}>
+          <span className={`${styles.skeleton} ${styles.loadingHeading}`} />
+          <span className={`${styles.skeleton} ${styles.loadingAction}`} />
+        </div>
+        <div className={styles.columns}>
+          {[{ id: "details", fields: 9, layout: styles.details }, { id: "checklist", fields: 4, layout: styles.loadingList }]
+            .map(({ id, fields, layout }) => (
+              <div className={styles.card} key={id}>
+                <div className={styles.loadingCardHeading}>
+                  <span className={`${styles.skeleton} ${styles.sectionIcon}`} />
+                  <span className={`${styles.skeleton} ${styles.loadingHeading}`} />
                 </div>
-                <div className="avd-badge-choice-grid">
-                  <button type="button" onClick={() => handleSetVendorBadge("verified_supplier")} disabled={submitting} className={getVendorBadgeMeta(vendorData)?.type === "verified_supplier" ? "avd-btn avd-btn-green avd-badge-choice" : "avd-btn avd-btn-outline avd-badge-choice"}>
-                    {VENDOR_BADGES.verified_supplier.label}
-                  </button>
-                  {vendorData.listingVerified && (
-                    <button type="button" onClick={() => handleSetVendorBadge("")} disabled={submitting} className="avd-btn avd-btn-red avd-badge-choice">
-                      Remove Badge
-                    </button>
-                  )}
-                </div>
-                {getVendorBadgeMeta(vendorData) && (
-                  <div className="avd-badge-preview">
-                    <img src={getVendorBadgeMeta(vendorData)?.src} alt={`${getVendorBadgeMeta(vendorData)?.label} badge`} />
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 800, color: "#111", margin: "0 0 3px" }}>{getVendorBadgeMeta(vendorData)?.label} badge active</p>
-                      <p style={{ fontSize: 11.5, color: "#6b7280", margin: 0 }}>Buyers can see this badge on the public vendor listing and profile.</p>
-                    </div>
-                  </div>
-                )}
-                {vendorData.awardsImageUrl && (
-                  <div style={{ marginTop: 14 }}>
-                    <p style={{ fontSize: 10.5, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 8px" }}>Awards &amp; Recognitions</p>
-                    <a href={vendorData.awardsImageUrl} target="_blank" style={{ display: "block", borderRadius: 12, overflow: "hidden", border: "1px solid rgba(0,0,0,.07)" }}>
-                      <img src={vendorData.awardsImageUrl} alt="Award" style={{ width: "100%", display: "block" }} />
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Verification Checklist */}
-              <div style={{ background: "linear-gradient(170deg,#0a1a10 0%,#0d2218 55%,#0b1e14 100%)", borderRadius: 20, padding: "20px 22px" }}>
-                <p style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: "0 0 16px" }}>Verification Checklist</p>
-                <div className="avd-checklist">
-                  {[
-                    { label: "Valid GST / CIN Registered",          check: !!vendorData.gstNumber },
-                    { label: "Sustainability Certificate Provided",  check: !!vendorData.certificateFileUrl },
-                    { label: "Contact Details Verified",             check: !!vendorData.whatsapp },
-                    { label: "Admin Approved",                       check: vendorData.approved },
-                  ].map((item, i) => (
-                    <div key={i} className="avd-check-item">
-                      <div className="avd-check-dot" style={{ background: item.check ? "#16a34a" : "rgba(255,255,255,.1)" }}>
-                        <CheckCircle2 size={12} color="#fff" />
-                      </div>
-                      <span style={{ fontSize: 13, color: item.check ? "#fff" : "rgba(255,255,255,.4)", fontWeight: 600 }}>{item.label}</span>
-                    </div>
+                <div className={layout}>
+                  {Array.from({ length: fields }, (_, index) => (
+                    <div key={index} className={styles.loadingLines}><span className={styles.skeleton} /><span className={styles.skeleton} /></div>
                   ))}
                 </div>
-                {!vendorData.approved && (
-                  <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,.08)" }}>
-                    <p style={{ fontSize: 11.5, color: "rgba(255,255,255,.3)", margin: "0 0 12px" }}>Once approved, the vendor&apos;s profile will be live on the marketplace.</p>
-                    <button onClick={handleApprove} disabled={submitting} style={{ width: "100%", padding: "11px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                      {submitting ? <div className="avd-spinner" /> : <CheckCircle2 size={15} />}Approve &amp; Go Live
+              </div>
+            ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AdminVendorDetailsPage() {
+  const { uid } = useParams<{ uid: string }>();
+  return (
+    <>
+      <Toaster
+        id={notificationId}
+        position="top-right"
+        className={styles.toastStack}
+        offset={{ top: "var(--vendor-toast-top, 24px)", right: 24 }}
+        mobileOffset={{ top: 64, left: 12, right: 12 }}
+        duration={4500}
+        closeButton
+        icons={{ success: <Check size={20} aria-hidden="true" /> }}
+        toastOptions={{
+          unstyled: true,
+          closeButtonAriaLabel: "Dismiss notification",
+          classNames: {
+            toast: styles.toast,
+            icon: styles.toastIcon,
+            title: styles.toastTitle,
+            description: styles.toastDescription,
+            closeButton: styles.toastClose,
+          },
+        }}
+      />
+      <VendorDetails key={uid} uid={uid} />
+    </>
+  );
+}
+
+function VendorDetails({ uid }: { uid: string }) {
+  const [vendor, setVendor] = useState<Vendor | null>(null);
+  const [loadFailure, setLoadFailure] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [view, setView] = useState<ProfileView>("basic");
+  const [richOpened, setRichOpened] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [updateError, setUpdateError] = useState("");
+  const methods = useForm<BasicForm>();
+  const { reset, handleSubmit } = methods;
+
+  useEffect(() => {
+    let current = true;
+    vendorRequest<{ vendor: Vendor }>(uid).then(({ vendor }) => {
+      if (current) setVendor(vendor);
+    }).catch(error => {
+      if (current) setLoadFailure(error instanceof Error ? error.message : "Unable to load this vendor.");
+    });
+    return () => { current = false; };
+  }, [uid, loadAttempt]);
+
+  function selectView(next: ProfileView) {
+    if (next === "rich") setRichOpened(true);
+    setView(next);
+  }
+
+  function navigateTabs(event: KeyboardEvent<HTMLButtonElement>, current: ProfileView) {
+    let next: ProfileView;
+    switch (event.key) {
+      case "ArrowLeft":
+      case "ArrowRight": next = current === "basic" ? "rich" : "basic"; break;
+      case "Home": next = "basic"; break;
+      case "End": next = "rich"; break;
+      default: return;
+    }
+    event.preventDefault();
+    selectView(next);
+    document.getElementById(`vendor-tab-${next}`)?.focus();
+  }
+
+  function notifySaved(message: string, companyName = vendor?.companyName) {
+    toast.success(message, { toasterId: notificationId, description: companyName });
+  }
+
+  async function runUpdate(update: () => Promise<Partial<Vendor>>, message: string) {
+    setBusy(true);
+    setUpdateError("");
+    try {
+      const changes = await update();
+      setVendor(current => current && { ...current, ...changes });
+      notifySaved(message, changes.companyName);
+      return true;
+    } catch (error) {
+      setUpdateError(error instanceof Error ? error.message : "Unable to update this vendor.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function updateListing(changes: Partial<Vendor>, message: string) {
+    return runUpdate(async () => {
+      await vendorRequest(uid, changes);
+      return changes;
+    }, message);
+  }
+
+  async function saveBasicProfile(data: BasicForm) {
+    const saved = await runUpdate(async () => {
+      const session = getStoredSession();
+      if (!session) throw new Error("Please sign in again.");
+      const [logo, certificate] = await Promise.all([
+        data.logoFile instanceof File ? uploadFileToSupabaseStorage(data.logoFile, { bucket: "marketplace", folder: "vendors/logos", accessToken: session.accessToken }) : null,
+        data.certificateFile instanceof File ? uploadFileToSupabaseStorage(data.certificateFile, { bucket: "marketplace", folder: "vendors/certificates", accessToken: session.accessToken }) : null,
+      ]);
+      const updates = {
+        ...Object.fromEntries(fields.map(field => [field, data[field]])),
+        ...(logo && { logoUrl: logo.url }),
+        ...(certificate && { certificateFileUrl: certificate.url }),
+      };
+      await vendorRequest(uid, updates);
+      return updates;
+    }, "Basic Profile saved");
+    if (saved) setEditing(false);
+  }
+
+  const backLink = (
+    <Link href="/admin/vendors" className={styles.backButton}>
+      Back to vendors
+    </Link>
+  );
+
+  if (!vendor && !loadFailure) return <ProfileLoading backLink={backLink} />;
+
+  if (!vendor) return (
+    <div className={styles.page}>
+      <div className={styles.empty}>
+        {backLink}
+        <h1>Couldn’t open vendor profile</h1>
+        <p role="alert">{loadFailure}</p>
+        <button type="button" className={styles.button} onClick={() => {
+          setLoadFailure("");
+          setLoadAttempt(attempt => attempt + 1);
+        }}>Try again</button>
+      </div>
+    </div>
+  );
+
+  const badge = getVendorBadgeMeta(vendor);
+  const location = [vendor.city, vendor.state, vendor.country].filter(Boolean).join(", ");
+  const address = [vendor.registeredAddress, vendor.city, vendor.state, vendor.pinCode, vendor.country].filter(Boolean).join(", ");
+
+  return (
+    <div className={styles.page}>
+      <header className={styles.hero}>
+        <div className={styles.identity}>
+          <div className={styles.logo} aria-hidden="true">
+            {vendor.logoUrl
+              // eslint-disable-next-line @next/next/no-img-element -- vendor logos may come from external sites.
+              ? <img src={vendor.logoUrl} alt="" />
+              : <Building2 size={28} />}
+          </div>
+          <div className={styles.company}>
+            <div className={styles.companyTitle}>
+              <h1>{vendor.companyName || "Vendor profile"}</h1>
+              <span className={styles.status} data-approved={vendor.approved}>
+                {vendor.approved ? <CircleCheck size={14} aria-hidden="true" /> : <Clock3 size={14} aria-hidden="true" />}
+                {vendor.approved ? "Approved" : "Pending verification"}
+              </span>
+            </div>
+            {(location || vendor.primaryCategory || vendor.updatedAt) && (
+              <div className={styles.metadata}>
+                {location && <span><MapPin size={15} aria-hidden="true" />{location}</span>}
+                {vendor.primaryCategory && <span><ShoppingBag size={15} aria-hidden="true" />{vendor.primaryCategory}</span>}
+                {vendor.updatedAt && (
+                  <span>
+                    <Clock3 size={15} aria-hidden="true" />
+                    <time dateTime={vendor.updatedAt}>Updated {new Date(vendor.updatedAt).toLocaleDateString(undefined, { dateStyle: "medium" })}</time>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        {backLink}
+      </header>
+
+      {updateError && <p className={styles.updateError} role="alert">{updateError}</p>}
+
+      <div className={styles.tabs} role="tablist" aria-label="Vendor profiles">
+        {views.map(({ id, label, description, icon: Icon }) => (
+          <button key={id} type="button" role="tab" id={`vendor-tab-${id}`} aria-controls={`vendor-panel-${id}`}
+            aria-selected={view === id} aria-label={label} aria-describedby={`vendor-description-${id}`}
+            tabIndex={view === id ? 0 : -1} onClick={() => selectView(id)} onKeyDown={event => navigateTabs(event, id)}>
+            <span className={styles.tabIcon}><Icon size={20} aria-hidden="true" /></span>
+            <span><strong>{label}</strong><small id={`vendor-description-${id}`}>{description}</small></span>
+          </button>
+        ))}
+      </div>
+
+      <section role="tabpanel" id="vendor-panel-basic" aria-labelledby="vendor-tab-basic" tabIndex={0}
+        className={styles.panel} hidden={view !== "basic"}>
+        <FormProvider {...methods}>
+          <form className={styles.panel} onSubmit={handleSubmit(saveBasicProfile)}>
+            <div className={styles.toolbar}>
+              <h2>{editing ? "Edit Basic Profile" : "Basic Profile"}</h2>
+              <div className={styles.actions}>
+                {editing ? (
+                  <>
+                    <button type="button" className={styles.button} disabled={busy} onClick={() => setEditing(false)}>Cancel</button>
+                    <button type="submit" className={`${styles.button} ${styles.primary}`} disabled={busy}>
+                      <Save size={16} aria-hidden="true" /> {methods.formState.isSubmitting ? "Saving…" : "Save changes"}
                     </button>
-                  </div>
+                  </>
+                ) : (
+                  <button type="button" className={styles.button} disabled={busy} onClick={() => {
+                    reset(vendor);
+                    setEditing(true);
+                  }}><Pencil size={16} aria-hidden="true" /> Edit profile</button>
                 )}
               </div>
             </div>
-          </div>
+
+            <div className={styles.columns}>
+              <div className={styles.stack}>
+                <Card icon={User} title="Identity & legal">
+                  {editing ? (
+                    <div className={styles.formGrid}>
+                      <div className={styles.wide}><FileUpload name="logoFile" label="Company logo" /></div>
+                      <Input name="companyName" id="companyName" label="Company name" />
+                      <Select name="registrationType" id="registrationType" label="Registration type" options={[{ label: "Pvt Ltd", value: "pvt-ltd" }, { label: "LLP", value: "llp" }, { label: "Sole Proprietorship", value: "sole-proprietorship" }]} />
+                      <Input name="cinRegistration" id="cinRegistration" label="CIN number" />
+                      <Input name="gstNumber" id="gstNumber" label="GST number" />
+                      <Input name="yearOfIncorporation" id="yearOfIncorporation" label="Year of incorporation" />
+                      <Input name="businessEmail" id="businessEmail" label="Business email" />
+                      <Input name="whatsapp" id="whatsapp" label="WhatsApp / mobile" />
+                      <Input name="primaryContactName" id="primaryContactName" label="Primary contact" />
+                      <Input name="designation" id="designation" label="Designation" />
+                      <Input name="city" id="city" label="City" />
+                      <Input name="state" id="state" label="State" />
+                      <Input name="pinCode" id="pinCode" label="PIN code" />
+                      <Input name="country" id="country" label="Country" />
+                    </div>
+                  ) : (
+                    <dl className={styles.details}>
+                      <Detail label="Company name">{vendor.companyName}</Detail>
+                      <Detail label="Registration type">{vendor.registrationType}</Detail>
+                      <Detail label="Year of incorporation">{vendor.yearOfIncorporation}</Detail>
+                      <Detail label="CIN number">{vendor.cinRegistration}</Detail>
+                      <Detail label="GST number">{vendor.gstNumber}</Detail>
+                      <Detail label="Business email">{vendor.businessEmail}</Detail>
+                      <Detail label="Primary contact">{vendor.primaryContactName}</Detail>
+                      <Detail label="Designation">{vendor.designation}</Detail>
+                      <Detail label="WhatsApp / mobile">{vendor.whatsapp}</Detail>
+                      <Detail label="Registered address" wide>{address}</Detail>
+                    </dl>
+                  )}
+                </Card>
+
+                <Card icon={Building2} title="Business overview">
+                  {editing ? (
+                    <div className={styles.formGrid}>
+                      <Select name="businessType" id="businessType" label="Business type" options={[{ label: "Manufacturer", value: "manufacturer" }, { label: "Trader", value: "trader" }]} />
+                      <Input name="primaryCategory" id="primaryCategory" label="Primary category" />
+                      <div className={styles.wide}><MultiSelect name="subCategories" label="Subcategories" max={3} /></div>
+                      <div className={styles.wide}><TextArea name="shortDescription" id="shortDescription" label="Company description" rows={3} /></div>
+                      <div className={styles.wide}><MultiSelect name="keyProducts" label="Key products" max={5} /></div>
+                      <Toggle name="exportCapability" label="Export capability" />
+                      <Input name="exportMarkets" id="exportMarkets" label="Export markets" />
+                    </div>
+                  ) : (
+                    <dl className={styles.details}>
+                      <Detail label="Business type">{vendor.businessType}</Detail>
+                      <Detail label="Primary category">{vendor.primaryCategory}</Detail>
+                      <Detail label="Export capability">{vendor.exportCapability ? "Yes" : "No"}</Detail>
+                      <Detail label="Export markets">{vendor.exportMarkets}</Detail>
+                      <Detail label="Subcategories">{vendor.subCategories.join(", ")}</Detail>
+                      <Detail label="Company description" wide>{vendor.shortDescription}</Detail>
+                      {vendor.keyProducts.length > 0 && (
+                        <Detail label="Key products" wide>
+                          <ul className={styles.chips}>{vendor.keyProducts.map((product, index) => <li key={index}>{product}</li>)}</ul>
+                        </Detail>
+                      )}
+                    </dl>
+                  )}
+                </Card>
+
+                <Card icon={Leaf} title="Sustainability credentials">
+                  {editing ? (
+                    <div className={styles.formGrid}>
+                      <Input name="primarySustainabilityCert" id="primarySustainabilityCert" label="Primary certification" />
+                      <Input name="issuingBody" id="issuingBody" label="Issuing body" />
+                      <div className={styles.wide}><FileUpload name="certificateFile" label="Sustainability certificate" /></div>
+                      <div className={styles.wide}><TextArea name="sustainabilityPractice" id="sustainabilityPractice" label="Sustainability practice" rows={3} /></div>
+                      <Input name="recycledContent" id="recycledContent" label="Recycled content %" />
+                      <Input name="carbonFootprint" id="carbonFootprint" label="Carbon footprint" />
+                      <Input name="socialCompliance" id="socialCompliance" label="Social compliance" />
+                    </div>
+                  ) : (
+                    <>
+                      <dl className={styles.details}>
+                        <Detail label="Primary certification">{vendor.primarySustainabilityCert}</Detail>
+                        <Detail label="Issuing body">{vendor.issuingBody}</Detail>
+                        <Detail label="Recycled content %">{vendor.recycledContent}</Detail>
+                        <Detail label="Carbon footprint">{vendor.carbonFootprint}</Detail>
+                        <Detail label="Social compliance">{vendor.socialCompliance}</Detail>
+                        <Detail label="Sustainability practice" wide>{vendor.sustainabilityPractice}</Detail>
+                      </dl>
+                      {vendor.certificateFileUrl && (
+                        <a className={styles.documentLink} href={vendor.certificateFileUrl} target="_blank" rel="noreferrer">
+                          View certificate <ExternalLink size={14} aria-hidden="true" />
+                        </a>
+                      )}
+                    </>
+                  )}
+                </Card>
+              </div>
+
+              <div className={styles.stack}>
+                <Card icon={ShieldCheck} title="Verification checklist">
+                  <ul className={styles.checklist}>
+                    {[
+                      { label: "GST or CIN number provided", complete: Boolean(vendor.gstNumber || vendor.cinRegistration) },
+                      { label: "Sustainability certificate uploaded", complete: Boolean(vendor.certificateFileUrl) },
+                      { label: "Contact details provided", complete: Boolean(vendor.whatsapp || vendor.businessEmail) },
+                      { label: "Admin approval", complete: vendor.approved },
+                    ].map(({ label, complete }) => {
+                      const Icon = complete ? CircleCheck : Circle;
+                      return (
+                        <li key={label} data-complete={complete}>
+                          <Icon size={17} aria-hidden="true" /><span className="sr-only">{complete ? "Complete. " : "Incomplete. "}</span>{label}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className={styles.verificationActions}>
+                    <button type="button" disabled={busy} className={`${styles.button} ${vendor.approved ? styles.danger : styles.primary}`}
+                      onClick={() => void updateListing({ approved: !vendor.approved }, vendor.approved ? "Vendor suspended." : "Vendor approved.")}>
+                      {vendor.approved ? <X size={16} aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
+                      {vendor.approved ? "Suspend vendor" : "Approve vendor"}
+                    </button>
+                  </div>
+                </Card>
+
+                <Card icon={ShoppingBag} title="Marketplace">
+                  <dl className={styles.details}>
+                    <Detail label="Listing tier">{vendor.listingTier}</Detail>
+                    <Detail label="Language">{vendor.language}</Detail>
+                    <Detail label="Payment terms">{vendor.paymentTerms}</Detail>
+                    <Detail label="Buyer-facing badge" wide>{badge?.label || "Not assigned"}</Detail>
+                  </dl>
+                  <div className={styles.badgeActions}>
+                    {badge && (
+                      // eslint-disable-next-line @next/next/no-img-element -- this is a small badge preview.
+                      <img src={badge.src} alt="" width={34} height={42} />
+                    )}
+                    <button type="button" className={styles.button} disabled={busy} onClick={() => {
+                      const listingBadgeType = badge ? "" : "verified_supplier";
+                      void updateListing({ listingBadgeType, listingVerified: Boolean(listingBadgeType) }, badge ? "Buyer-facing badge removed." : "Verified Supplier badge assigned.");
+                    }}>{badge ? "Remove badge" : `Assign ${VENDOR_BADGES.verified_supplier.label} badge`}</button>
+                  </div>
+                  {vendor.awardsImageUrl && (
+                    <a className={styles.awards} href={vendor.awardsImageUrl} target="_blank" rel="noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- awards may come from external sites. */}
+                      <img src={vendor.awardsImageUrl} alt="" loading="lazy" />
+                      <span className={styles.documentLink}>View awards &amp; recognitions <ExternalLink size={14} aria-hidden="true" /></span>
+                    </a>
+                  )}
+                </Card>
+              </div>
+            </div>
+          </form>
         </FormProvider>
-      </div>
-    </>
+      </section>
+
+      <section role="tabpanel" id="vendor-panel-rich" aria-labelledby="vendor-tab-rich" tabIndex={0}
+        className={styles.panel} hidden={view !== "rich"}>
+        {richOpened && (
+          <RichProfileEditor
+            adminVendorId={vendor.id}
+            adminVendorApproved={vendor.approved}
+            onSaveSuccess={() => notifySaved("Rich Profile saved")}
+          />
+        )}
+      </section>
+    </div>
   );
 }

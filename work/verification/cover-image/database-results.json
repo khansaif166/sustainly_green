@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Original rich profile SQL regression suite",
+    "status": "PASS"
+  },
+  {
+    "name": "Admin can upload a cover before activating Rich Profile",
+    "status": "PASS"
+  },
+  {
+    "name": "Second add is rejected and original cover survives",
+    "status": "PASS"
+  },
+  {
+    "name": "Replacement at the one-cover limit is atomic and returns the old path",
+    "status": "PASS"
+  },
+  {
+    "name": "Invalid replacement payload rolls back without touching current cover",
+    "status": "PASS"
+  },
+  {
+    "name": "Unknown ID and other vendor's cover cannot be replaced",
+    "status": "PASS"
+  },
+  {
+    "name": "Replacing a non-cover media ID is rejected",
+    "status": "PASS"
+  },
+  {
+    "name": "Inactive vendor and buyer cannot replace covers",
+    "status": "PASS"
+  },
+  {
+    "name": "Approved owner can replace cover after activation",
+    "status": "PASS"
+  },
+  {
+    "name": "Replacement racing after deletion fails without recreating the cover",
+    "status": "PASS"
+  },
+  {
+    "name": "Anonymous/authenticated roles cannot execute the write RPC",
+    "status": "PASS"
+  }
+]
