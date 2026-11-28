@@ -2,8 +2,8 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Building2, ChevronLeft, ChevronRight, Copy, FileText, Image, LayoutGrid, Megaphone, Newspaper, Package, Phone, Play, Send, Share2, ShieldCheck, Video as VideoIcon, Wrench } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { ArrowRight, ArrowUpRight, Building2, ChevronDown, ChevronLeft, ChevronRight, Copy, Download, FileText, Image as ImageIcon, LayoutGrid, LoaderCircle, Megaphone, Newspaper, Package, Phone, Play, Send, Share2, ShieldCheck, Video as VideoIcon, Wrench, X } from "lucide-react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   AUTH_SESSION_CLEARED_EVENT,
   AUTH_SESSION_SAVED_EVENT,
@@ -19,7 +19,181 @@ import styles from "./richProfile.module.css";
 type Video = { id: string; title: string; url: string; embedded?: boolean; thumbnailUrl?: string };
 type Ad = Video & { linkUrl?: string };
 
-const sectionIcons = { Overview: LayoutGrid, Products: Package, Services: Wrench, "Promotional videos": Megaphone, Gallery: Image, Videos: VideoIcon, Credentials: ShieldCheck, Contact: Phone };
+const sectionIcons = { Overview: LayoutGrid, Products: Package, Services: Wrench, "Promotional videos": Megaphone, Gallery: ImageIcon, Videos: VideoIcon, Credentials: ShieldCheck, Contact: Phone };
+
+export function CatalogueDownload({ href }: { href: string }) {
+  const [status, setStatus] = useState<"idle" | "loading" | "started" | "error">("idle");
+  const request = useRef<AbortController | null>(null);
+
+  useEffect(() => () => request.current?.abort(), []);
+
+  async function download() {
+    if (request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setStatus("loading");
+    try {
+      const response = await fetch(href, { signal: controller.signal });
+      if (!response.ok) throw new Error("Catalogue download failed");
+      const blob = await response.blob();
+      if (controller.signal.aborted) return;
+      if (!blob.size) throw new Error("Catalogue is empty");
+      const url = URL.createObjectURL(blob);
+      try {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "Download catalogue.pdf";
+        document.body.appendChild(link);
+        try { link.click(); } finally { link.remove(); }
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      }
+      setStatus("started");
+    } catch {
+      if (!controller.signal.aborted) setStatus("error");
+    } finally {
+      request.current = null;
+    }
+  }
+
+  return <div className={styles.catalogueDownloadAction}>
+    <button type="button" className={`${styles.button} ${styles.tint} ${styles.catalogueDownload}`}
+      onClick={download} disabled={status === "loading"} aria-busy={status === "loading"}>
+      {status === "loading" ? <LoaderCircle size={18} className={styles.catalogueSpinner} aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}
+      {status === "loading" ? "Downloading…" : "Download PDF"}
+    </button>
+    <p className={styles.catalogueFeedback} role="status" aria-live="polite">
+      {status === "loading" ? "Preparing your download…" : status === "started" ? "Download started." : status === "error" ? <>
+        Unable to download. <a href={href} target="_blank" rel="noreferrer">Open PDF in a new tab</a> or try again.
+      </> : null}
+    </p>
+  </div>;
+}
+
+export function AboutBusiness({ description, offerings, snapshot, companyDetails, sustainability }: {
+  description?: string | null;
+  offerings: ReactNode;
+  snapshot: ReactNode;
+  companyDetails: ReactNode;
+  sustainability: ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [descriptionOverflows, setDescriptionOverflows] = useState(false);
+  const descriptionRef = useRef<HTMLParagraphElement>(null);
+  const descriptionViewport = useRef<HTMLDivElement>(null);
+  const extrasRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const animations = useRef<Animation[]>([]);
+  const transitionStart = useRef<{ description: number; extras: number; margin: number } | null>(null);
+  const transitionGeneration = useRef(0);
+  const contentId = useId();
+  const hasAdditionalContent = Boolean(offerings || snapshot || sustainability);
+
+  useEffect(() => {
+    const paragraph = descriptionRef.current;
+    if (!paragraph) return;
+    let active = true;
+    const measure = () => {
+      if (!active) return;
+      const lineHeight = parseFloat(getComputedStyle(paragraph).lineHeight);
+      setDescriptionOverflows(paragraph.scrollHeight > lineHeight * 3 + 1);
+    };
+    measure();
+    const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    resize?.observe(paragraph);
+    window.addEventListener("resize", measure);
+    void document.fonts.ready.then(measure);
+    return () => {
+      active = false;
+      resize?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [description]);
+
+  useLayoutEffect(() => {
+    const start = transitionStart.current;
+    if (!start) return;
+    transitionStart.current = null;
+    const generation = transitionGeneration.current;
+    const viewport = descriptionViewport.current;
+    const paragraph = descriptionRef.current;
+    const extras = extrasRef.current;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const running: Animation[] = [];
+
+    const finish = () => {
+      if (generation !== transitionGeneration.current) return;
+      if (extras) extras.hidden = !expanded;
+      running.forEach(animation => animation.cancel());
+      animations.current = [];
+      if (expanded) return;
+      const toggle = toggleRef.current;
+      if (!toggle) return;
+      const bounds = toggle.getBoundingClientRect();
+      if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
+        toggle.scrollIntoView({ block: "nearest", behavior: reducedMotion ? "instant" : "smooth" });
+      }
+    };
+
+    // Keep closing content measurable until its animation completes. It is
+    // already inert and hidden from assistive technology in the compact state.
+    if (extras) extras.hidden = false;
+    const timing: KeyframeAnimationOptions = { duration: 250, easing: "cubic-bezier(.4,0,.2,1)", fill: "both" };
+    if (!reducedMotion && viewport?.animate && paragraph) {
+      const fullHeight = paragraph.getBoundingClientRect().height;
+      const compactHeight = parseFloat(getComputedStyle(paragraph).lineHeight) * 3;
+      running.push(viewport.animate([
+        { maxHeight: `${start.description}px` },
+        { maxHeight: `${expanded ? fullHeight : Math.min(fullHeight, compactHeight)}px` },
+      ], timing));
+    }
+    if (!reducedMotion && extras?.animate) {
+      const fullHeight = extras.getBoundingClientRect().height;
+      const margin = parseFloat(getComputedStyle(extras).marginTop) || 0;
+      running.push(extras.animate([
+        { height: `${start.extras}px`, marginTop: `${start.margin}px` },
+        { height: `${expanded ? fullHeight : 0}px`, marginTop: `${expanded ? margin : 0}px` },
+      ], timing));
+    }
+    animations.current = running;
+    if (running.length) void Promise.all(running.map(animation => animation.finished)).then(finish, () => {});
+    else finish();
+    return () => running.forEach(animation => animation.cancel());
+  }, [expanded]);
+
+  return <section id="overview" className={`${styles.panel} ${styles.aboutPanel}`} aria-labelledby="overview-title">
+    <div className={`${styles.iconHeading} ${styles.aboutHeading}`}>
+      <span className={styles.iconTile}><Building2 size={17} aria-hidden="true" /></span>
+      <h2 id="overview-title">About the business</h2>
+    </div>
+    <div id={contentId} className={styles.aboutContent}>
+      {description && <div ref={descriptionViewport} className={styles.aboutDescriptionViewport} data-compact={!expanded}>
+        <p ref={descriptionRef} className={`${styles.prose} ${styles.aboutDescription}`}>{description}</p>
+      </div>}
+      {companyDetails}
+      {hasAdditionalContent && <div ref={extrasRef} className={styles.aboutExtras}
+        hidden={!expanded} inert={!expanded} aria-hidden={!expanded}>
+        {offerings}{snapshot}{sustainability}
+      </div>}
+    </div>
+    {(expanded || Boolean(description && descriptionOverflows) || hasAdditionalContent) && <button ref={toggleRef} type="button"
+      className={styles.aboutToggle} aria-expanded={expanded} aria-controls={contentId}
+      onClick={() => {
+        const extras = extrasRef.current;
+        transitionStart.current = {
+          description: descriptionViewport.current?.getBoundingClientRect().height ?? 0,
+          extras: extras?.getBoundingClientRect().height ?? 0,
+          margin: extras && !extras.hidden ? parseFloat(getComputedStyle(extras).marginTop) || 0 : 0,
+        };
+        transitionGeneration.current += 1;
+        animations.current.forEach(animation => animation.cancel());
+        setExpanded(!expanded);
+      }}>
+      {expanded ? "View less" : "View more"}
+      <ChevronDown size={16} aria-hidden="true" />
+    </button>}
+  </section>;
+}
 
 export function ProfileNavigation({ sections }: { sections: { id: string; title: string }[] }) {
   const nav = useRef<HTMLElement>(null);
@@ -264,10 +438,11 @@ export function CatalogGrid({ vendorId, kind, initial }: {
   </section>;
 }
 
-export function CredentialCarousel({ count, children }: { count: number; children: ReactNode }) {
+export function CredentialCarousel({ count, heading, children }: { count: number; heading: ReactNode; children: ReactNode }) {
   const track = useRef<HTMLUListElement>(null);
   const previousArrow = useRef<HTMLButtonElement>(null);
   const nextArrow = useRef<HTMLButtonElement>(null);
+  const destination = useRef<number | null>(null);
   const [edges, setEdges] = useState({ previous: false, next: false });
   const canScroll = edges.previous || edges.next;
 
@@ -276,25 +451,32 @@ export function CredentialCarousel({ count, children }: { count: number; childre
     if (!row) return;
 
     const update = () => {
+      if (destination.current !== null && Math.abs(row.scrollLeft - destination.current) <= 1) {
+        destination.current = null;
+      }
       const previous = row.scrollLeft > 1;
       const next = row.scrollLeft + row.clientWidth < row.scrollWidth - 1;
       const focused = row.ownerDocument.activeElement;
       if (focused && ((!previous && focused === previousArrow.current) || (!next && focused === nextArrow.current))) {
         const remainingArrow = previous ? previousArrow.current : next ? nextArrow.current : null;
-        (remainingArrow ?? row).focus({ preventScroll: true });
+        (remainingArrow && !remainingArrow.disabled ? remainingArrow : row).focus({ preventScroll: true });
       }
       setEdges(current => current.previous === previous && current.next === next ? current : { previous, next });
     };
-    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    const clearDestination = () => { destination.current = null; };
+    const resize = () => { clearDestination(); update(); };
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize);
     observer?.observe(row);
     row.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    update();
+    row.addEventListener("scrollend", clearDestination);
+    window.addEventListener("resize", resize);
+    resize();
 
     return () => {
       observer?.disconnect();
       row.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
+      row.removeEventListener("scrollend", clearDestination);
+      window.removeEventListener("resize", resize);
     };
   }, [count]);
 
@@ -304,25 +486,33 @@ export function CredentialCarousel({ count, children }: { count: number; childre
     const cards = Array.from(row.children);
     const origin = cards[0]?.getBoundingClientRect().left ?? 0;
     const offsets = cards.map(card => card.getBoundingClientRect().left - origin);
+    const from = destination.current ?? row.scrollLeft;
+    const max = row.scrollWidth - row.clientWidth;
     const left = direction === "next"
-      ? offsets.find(offset => offset > row.scrollLeft + 1) ?? row.scrollWidth
-      : offsets.reverse().find(offset => offset < row.scrollLeft - 1) ?? 0;
-    row.scrollTo({ left });
+      ? Math.min(offsets.find(offset => offset > from + 1) ?? max, max)
+      : offsets.reverse().find(offset => offset < from - 1) ?? 0;
+    if (Math.abs(left - from) <= 1) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    destination.current = reducedMotion ? null : left;
+    row.scrollTo({ left, behavior: reducedMotion ? "instant" : "smooth" });
   }
 
-  return <div className={styles.credentialCarousel} data-multiple={count > 1}>
-    {edges.previous && (
-      <button ref={previousArrow} type="button" className={`${styles.credentialArrow} ${styles.credentialPrevious}`}
-        aria-label="Previous card" aria-controls="credential-cards" onClick={() => move("previous")}>
-        <ChevronLeft size={19} aria-hidden="true" />
-      </button>
-    )}
-    {edges.next && (
-      <button ref={nextArrow} type="button" className={`${styles.credentialArrow} ${styles.credentialNext}`}
-        aria-label="Next card" aria-controls="credential-cards" onClick={() => move("next")}>
-        <ChevronRight size={19} aria-hidden="true" />
-      </button>
-    )}
+  return <div className={styles.credentialCarousel}>
+    <div className={styles.credentialHeading}>
+      {heading}
+      {canScroll && <div className={styles.credentialControls}>
+        <button ref={previousArrow} type="button" className={`${styles.credentialArrow} ${styles.credentialPrevious}`}
+          disabled={!edges.previous} aria-hidden={!edges.previous}
+          aria-label="Previous card" aria-controls="credential-cards" onClick={() => move("previous")}>
+          <ChevronLeft size={19} aria-hidden="true" />
+        </button>
+        <button ref={nextArrow} type="button" className={`${styles.credentialArrow} ${styles.credentialNext}`}
+          disabled={!edges.next} aria-hidden={!edges.next}
+          aria-label="Next card" aria-controls="credential-cards" onClick={() => move("next")}>
+          <ChevronRight size={19} aria-hidden="true" />
+        </button>
+      </div>}
+    </div>
     <ul id="credential-cards" ref={track} className={styles.credentialTrack} role="list"
       aria-label="Certification and document cards" tabIndex={canScroll ? 0 : undefined}>
       {children}
@@ -330,11 +520,70 @@ export function CredentialCarousel({ count, children }: { count: number; childre
   </div>;
 }
 
+export function CredentialDetails({ title, children }: { title: string; children: ReactNode }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+
+  return <>
+    <button ref={trigger} type="button" className={`${styles.credentialAction} ${styles.credentialSecondary}`}
+      aria-haspopup="dialog" aria-label={`Details for ${title}`} onClick={() => dialog.current?.showModal()}>
+      Details
+    </button>
+    <dialog ref={dialog} className={`${styles.dialog} ${styles.credentialDialog}`} aria-labelledby={titleId}
+      onClose={() => trigger.current?.focus({ preventScroll: true })}>
+      <div className={styles.credentialDialogHeader}>
+        <h2 id={titleId}>{title}</h2>
+        <button type="button" className={styles.galleryClose} aria-label="Close certificate details" onClick={() => dialog.current?.close()}>
+          <X size={19} aria-hidden="true" />
+        </button>
+      </div>
+      {children}
+    </dialog>
+  </>;
+}
+
 export function Gallery({ images }: { images: { id: string; title: string; url: string }[] }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const track = useRef<HTMLDivElement>(null);
+  const previousArrow = useRef<HTMLButtonElement>(null);
+  const nextArrow = useRef<HTMLButtonElement>(null);
+  const [edges, setEdges] = useState({ previous: false, next: false });
   const [selected, setSelected] = useState(0);
-  const current = images[selected];
+
+  useEffect(() => {
+    const row = track.current;
+    if (!row) return;
+    const update = () => {
+      const previous = row.scrollLeft > 1;
+      const next = row.scrollLeft + row.clientWidth < row.scrollWidth - 1;
+      if ((!previous && document.activeElement === previousArrow.current) || (!next && document.activeElement === nextArrow.current)) {
+        row.focus({ preventScroll: true });
+      }
+      setEdges(current => current.previous === previous && current.next === next ? current : { previous, next });
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(row);
+    row.addEventListener("scroll", update, { passive: true });
+    update();
+    return () => {
+      observer.disconnect();
+      row.removeEventListener("scroll", update);
+    };
+  }, [images.length]);
+
+  function scrollGallery(direction: number) {
+    const row = track.current;
+    if (!row) return;
+    row.scrollBy({
+      left: direction * row.clientWidth * .8,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+    });
+  }
+
+  const index = images.length ? selected % images.length : 0;
+  const current = images[index];
   if (!current) return null;
   const move = (step: number) => setSelected(index => (index + step + images.length) % images.length);
   function open(index: number, button: HTMLButtonElement) {
@@ -342,26 +591,46 @@ export function Gallery({ images }: { images: { id: string; title: string; url: 
     setSelected(index);
     dialog.current?.showModal();
   }
-  return <section className={styles.panel} id="gallery">
-    <div className={styles.sectionHeading}>
-      <h2>Gallery</h2>
-      <button className={styles.textButton} type="button" onClick={event => open(0, event.currentTarget)}>View full gallery</button>
+  return <section className={`${styles.panel} ${styles.galleryPanel}`} id="gallery" aria-labelledby="gallery-title">
+    <div className={`${styles.sectionHeading} ${styles.galleryHeading}`}>
+      <div className={styles.iconHeading}>
+        <span className={styles.iconTile}><ImageIcon size={17} aria-hidden="true" /></span><h2 id="gallery-title">Gallery</h2>
+      </div>
+      <button className={`${styles.button} ${styles.galleryViewAll}`} type="button" aria-haspopup="dialog" onClick={event => open(0, event.currentTarget)}>
+        View All<ArrowUpRight size={15} aria-hidden="true" />
+      </button>
     </div>
-    <div className={styles.gallery}>
-      {images.slice(0, 4).map((image, index) => <button key={image.id} type="button" onClick={event => open(index, event.currentTarget)} aria-label={`Open ${image.title}`}>
-        <img src={image.url} alt={image.title} loading="lazy" />
-      </button>)}
+    <div className={styles.galleryCarousel}>
+      <div ref={track} id="gallery-photos" className={styles.gallery} role="group" aria-label="Gallery photos" tabIndex={0}>
+        {images.map((image, index) => <button key={image.id} type="button" aria-haspopup="dialog" onClick={event => open(index, event.currentTarget)} aria-label={`Open ${image.title}`}>
+          <img src={image.url} alt={image.title} loading="lazy" />
+          <span className={styles.galleryCaption}>{image.title}</span>
+        </button>)}
+      </div>
+      <button ref={previousArrow} type="button" className={`${styles.galleryBrowseArrow} ${styles.galleryPrevious}`} disabled={!edges.previous}
+        aria-label="Previous photos" aria-controls="gallery-photos" onClick={() => scrollGallery(-1)}><ChevronLeft size={24} aria-hidden="true" /></button>
+      <button ref={nextArrow} type="button" className={`${styles.galleryBrowseArrow} ${styles.galleryNext}`} disabled={!edges.next}
+        aria-label="Next photos" aria-controls="gallery-photos" onClick={() => scrollGallery(1)}><ChevronRight size={24} aria-hidden="true" /></button>
     </div>
-    <dialog ref={dialog} className={styles.dialog} aria-labelledby="rich-gallery-title" onClose={() => trigger.current?.focus()} onKeyDown={event => {
-      if (event.key === "ArrowLeft") move(-1);
-      if (event.key === "ArrowRight") move(1);
+    <dialog ref={dialog} className={`${styles.dialog} ${styles.galleryDialog}`} aria-labelledby="rich-gallery-title" onClose={() => trigger.current?.focus({ preventScroll: true })} onKeyDown={event => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        move(event.key === "ArrowLeft" ? -1 : 1);
+      }
     }}>
-      <div className={styles.sectionHeading}><h2 id="rich-gallery-title">Gallery</h2><button type="button" className={styles.button} onClick={() => dialog.current?.close()}>Close</button></div>
-      <img className={styles.galleryFull} src={current.url} alt={current.title} loading="lazy" />
-      <div className={styles.controls}>
-        {images.length > 1 && <button type="button" className={styles.button} onClick={() => move(-1)}>Previous</button>}
-        <span aria-live="polite">{current.title} ({selected + 1}/{images.length})</span>
-        {images.length > 1 && <button type="button" className={styles.button} onClick={() => move(1)}>Next</button>}
+      <div className={styles.galleryViewerHeader}>
+        <h2 id="rich-gallery-title">Gallery</h2>
+        <button type="button" className={styles.galleryClose} aria-label="Close gallery" onClick={() => dialog.current?.close()}><X size={20} aria-hidden="true" /></button>
+      </div>
+      <div className={styles.galleryCanvas}>
+        <img className={styles.galleryFull} src={current.url} alt={current.title} />
+        {images.length > 1 && <>
+          <button type="button" className={`${styles.galleryArrow} ${styles.galleryPrevious}`} aria-label="Previous photo" onClick={() => move(-1)}><ChevronLeft size={22} aria-hidden="true" /></button>
+          <button type="button" className={`${styles.galleryArrow} ${styles.galleryNext}`} aria-label="Next photo" onClick={() => move(1)}><ChevronRight size={22} aria-hidden="true" /></button>
+        </>}
+      </div>
+      <div className={styles.galleryViewerCaption} aria-live="polite" aria-atomic="true">
+        <strong>{current.title}</strong><span>{index + 1} / {images.length}</span>
       </div>
     </dialog>
   </section>;
@@ -473,12 +742,13 @@ function VideoStill({ url }: { url: string }) {
   }} onError={() => setReady(false)} />;
 }
 
-function VideoThumbnail({ video }: { video?: Video }) {
+function VideoThumbnail({ video, category }: { video?: Video; category?: string }) {
   const thumbnailUrl = video?.thumbnailUrl;
   return <span className={styles.videoThumbnail} aria-hidden="true">
     {thumbnailUrl
       ? <img key={thumbnailUrl} src={thumbnailUrl} alt="" loading="lazy" onError={event => { event.currentTarget.hidden = true; }} />
       : video && !video.embedded && <VideoStill key={video.url} url={video.url} />}
+    {category && <span className={styles.videoCategory}>{category}</span>}
     <span className={styles.playIcon}><Play size={19} fill="currentColor" /></span>
   </span>;
 }
@@ -544,17 +814,24 @@ export function PromotionalVideos({ videos }: { videos: Ad[] }) {
   const video = videos[selected];
   if (!video) return null;
   return <section className={`${styles.panel} ${styles.ads}`} id="promotional-videos" aria-labelledby="promotional-videos-title">
-    <div className={styles.sectionHeading}>
-      <h2 id="promotional-videos-title">Promotional videos</h2>
+    <div className={`${styles.sectionHeading} ${styles.promoHeading}`}>
+      <div className={styles.iconHeading}>
+        <span className={styles.iconTile}><Megaphone size={17} aria-hidden="true" /></span>
+        <h2 id="promotional-videos-title">Promotional videos</h2>
+      </div>
       <p className={styles.adLabel}>Advertisement</p>
     </div>
     <VideoPlayer key={video.id} video={video} auto={!started} start={started} muted />
-    {video.linkUrl && <a className={styles.textButton} href={video.linkUrl} rel="sponsored noopener noreferrer" target="_blank">Open advertiser link</a>}
-    {videos.length > 1 && <div className={styles.controls} role="group" aria-label="Select a video">
-      {videos.map((entry, index) => <button className={styles.button} key={entry.id} type="button" aria-pressed={selected === index}
-        onClick={() => { setSelected(index); setStarted(true); }}>
-        <span>{entry.title}</span>
-      </button>)}
+    {(video.linkUrl || videos.length > 1) && <div className={styles.promoFooter}>
+      {videos.length > 1 && <div className={styles.promoSelectors} role="group" aria-label="Select a video">
+        {videos.map((entry, index) => <button className={styles.promoSelector} key={entry.id} type="button" aria-pressed={selected === index}
+          onClick={() => { setSelected(index); setStarted(true); }}>
+          {entry.title}
+        </button>)}
+      </div>}
+      {video.linkUrl && <a className={styles.promoAdvertiserLink} href={video.linkUrl} rel="sponsored noopener noreferrer" target="_blank">
+        Open advertiser link<ArrowUpRight size={15} aria-hidden="true" />
+      </a>}
     </div>}
   </section>;
 }
@@ -579,19 +856,19 @@ export function ProfileVideos({ introduction, products }: { introduction: Video[
     setSelected(video);
   }
 
-  return <section className={styles.panel} id="videos" aria-labelledby="videos-title">
-    <h2 id="videos-title">Videos</h2>
-    <div className={styles.videoGroups} data-split={groups.length > 1}>
-      {groups.map(group => <section key={group.id} className={styles.videoGroup} aria-labelledby={`${group.id}-title`}>
-        <h3 id={`${group.id}-title`}>{group.title}</h3>
-        <div className={styles.videoCards} data-group={group.id}>
-          {group.videos.map(video => <button key={video.id} className={styles.videoCard} type="button" aria-haspopup="dialog"
-            aria-label={`Play ${video.title}`} onClick={event => open(video, event.currentTarget)}>
-            <VideoThumbnail video={video} />
-            <span className={styles.videoCardTitle}>{video.title}</span>
-          </button>)}
-        </div>
-      </section>)}
+  return <section className={`${styles.panel} ${styles.profileVideos}`} id="videos" aria-labelledby="videos-title">
+    <div className={styles.iconHeading}>
+      <span className={styles.iconTile}><VideoIcon size={17} aria-hidden="true" /></span>
+      <h2 id="videos-title">Videos</h2>
+    </div>
+    <div className={styles.profileVideoGrid}>
+      {groups.flatMap(group => group.videos.map(video => <button key={video.id} className={styles.videoCard} type="button" aria-haspopup="dialog"
+        aria-label={`Play ${video.title} — ${group.title}`} onClick={event => open(video, event.currentTarget)}>
+        <VideoThumbnail video={video} category={group.title} />
+        <span className={styles.videoCardCopy}>
+          <span className={styles.videoCardTitle}>{video.title}</span>
+        </span>
+      </button>))}
     </div>
     <dialog ref={dialog} className={`${styles.dialog} ${styles.videoDialog}`} aria-labelledby="profile-video-title" onClose={event => {
       event.currentTarget.querySelector("video")?.pause();
@@ -831,7 +1108,7 @@ export function ClaimBusiness({ id, href, requested }: { id: string; href: strin
 
   if (done || requested) return <span className={styles.badge} role="status">Claim under review</span>;
   return <>
-    <button type="button" className={`${styles.button} ${styles.claimButton}`} aria-label="Claim this business" onClick={() => void open()}>
+    <button type="button" className={`${styles.button} ${styles.primary}`} aria-label="Claim this business" onClick={() => void open()}>
       <Building2 size={17} aria-hidden="true" />
       <span>Claim<span className={styles.claimLabelSuffix}> this business</span></span>
     </button>

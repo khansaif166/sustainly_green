@@ -1,5 +1,6 @@
 import { supabaseServiceFetch, supabaseServiceFetchAll } from "@/lib/supabaseServer";
 import { productSpecificationsPayload } from "@/lib/productSpecifications";
+import { productMoqPayload } from "@/lib/productMoq";
 import {
   PRODUCT_SELECT,
   PRODUCT_DETAIL_SELECT,
@@ -218,7 +219,7 @@ export function buildAdminProductPayload(
     price_type: stringOrNull(body.priceType),
     price: numberOrNull(body.price),
     currency: stringOrNull(body.currency) || "INR",
-    moq: numberOrNull(body.moq),
+    ...productMoqPayload(body, numberOrNull(body.moq)),
     discount: stringOrNull(body.discount),
     ship_regions: stringArray(body.shipRegions),
     in_stock: body.inStock !== false,

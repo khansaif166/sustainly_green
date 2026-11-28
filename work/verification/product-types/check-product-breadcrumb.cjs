@@ -19,11 +19,17 @@ const {default:ProductDetail}=compile('app/products/[productId]/ProductDetailCli
   '@/app/components/layouts/Footer':{default:()=>null},
   '../../components/ContactVendorModal':{default:()=>null},
   '@/lib/supabaseAuth':{getStoredSession:()=>null},
+  '@/lib/productMoq':compile('lib/productMoq.ts',{}),
   '@/lib/slug':slug,
   './ProductDetailClient.module.css':{default:{breadcrumbLink:'breadcrumbLink'}},
   '@/app/components/product-specifications/ProductSpecificationsTable':{default:()=>null},
 });
 const base={id:'p1',title:'All-in-One Desktop PC',vendorId:'v1',vendorName:'Elite Computers',categoryId:'c1',categoryName:'Computers',categorySlug:'Computers',subcategoryId:'s1',subcategoryName:'Desktops',productTypeId:'t1',productTypeName:'All-in-One PCs',listingType:'Product',images:[],availableFor:['B2B'],shipRegions:['Countrywide'],inStock:true,currency:'INR',approved:true,ecoVerified:false,featured:false,sustainabilityTags:[],tagNames:[],description:'An efficient desktop for your workspace, with a compact design and an integrated display.'};
+for (const [moq, moqUnit, expected] of [[1, 'box', '1 box'], [2.5, 'kilogram', '2.5 kilograms'], [15, undefined, '15'], [undefined, undefined, null]]) {
+  const html = renderToStaticMarkup(React.createElement(ProductDetail, {product: {...base, moq, moqUnit}}));
+  if (expected === null) assert(!html.includes('Minimum order:'));
+  else assert(html.includes(`>${expected}</span>`));
+}
 const cases={full:{},optional:{productTypeId:undefined,productTypeName:undefined},category:{subcategoryId:undefined,subcategoryName:undefined,productTypeId:undefined,productTypeName:undefined},legacy:{categoryId:undefined,categorySlug:undefined,subcategoryId:undefined,productTypeId:undefined},service:{listingType:'Service',productTypeId:undefined,productTypeName:undefined},none:{categoryName:undefined},long:{categoryName:'Sustainable technology and computing equipment',subcategoryName:'Energy-efficient desktop computers and workstations',productTypeName:'All-in-One PCs with integrated high-resolution displays'}};
 for(const [name,patch]of Object.entries(cases)) {
  const product={...base,...patch};

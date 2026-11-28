@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchCurrentProfile, getStoredSession } from "@/lib/supabaseAuth";
+import { formatMoq, type MoqUnit } from "@/lib/productMoq";
 import Link from "next/link";
 import {
   ArrowLeft, Send, Package, MapPin, AlarmClock,
@@ -26,6 +27,7 @@ type Product = {
   price: number | string | null;
   currency: string;
   moq: number | string | null;
+  moqUnit: MoqUnit | null;
   imageUrl: string | null;
 };
 
@@ -121,50 +123,53 @@ function ProductPickerModal({ token, onSelect, onClose }: {
 
           {!loading && filtered.length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-              {filtered.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => onSelect(p)}
-                  style={{
-                    background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 14,
-                    padding: 0, cursor: "pointer", textAlign: "left", transition: "all .15s",
-                    overflow: "hidden", display: "flex", flexDirection: "column",
-                    fontFamily: "inherit",
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#16a34a";
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 16px rgba(22,163,74,0.12)";
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb";
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
-                  }}
-                >
-                  {/* Image */}
-                  <div style={{ width: "100%", height: 130, background: "#f9fafb", overflow: "hidden", position: "relative" }}>
-                    {p.imageUrl
-                      ? <img src={p.imageUrl} alt={p.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <Package size={32} color="#d1d5db" />
-                        </div>
-                    }
-                  </div>
-                  {/* Info */}
-                  <div style={{ padding: "12px 14px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-                    <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "#111", lineHeight: 1.35 }}>{p.title}</p>
-                    <p style={{ margin: 0, fontSize: 11.5, color: "#6b7280", fontWeight: 600 }}>by {p.vendorName}</p>
-                    {(p.price || p.moq) && (
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
-                        {p.price && <span style={{ fontSize: 12, fontWeight: 700, color: "#16a34a" }}>{p.currency} {p.price}</span>}
-                        {p.moq && <span style={{ fontSize: 11.5, color: "#9ca3af" }}>MOQ: {p.moq}</span>}
-                      </div>
-                    )}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: "auto", color: "#16a34a", fontSize: 12, fontWeight: 700 }}>
-                      Select <ChevronRight size={12} />
+              {filtered.map(p => {
+                const minimumOrder = formatMoq(p.moq, p.moqUnit);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => onSelect(p)}
+                    style={{
+                      background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 14,
+                      padding: 0, cursor: "pointer", textAlign: "left", transition: "all .15s",
+                      overflow: "hidden", display: "flex", flexDirection: "column",
+                      fontFamily: "inherit",
+                    }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = "#16a34a";
+                      (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 16px rgba(22,163,74,0.12)";
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb";
+                      (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
+                    }}
+                  >
+                    {/* Image */}
+                    <div style={{ width: "100%", height: 130, background: "#f9fafb", overflow: "hidden", position: "relative" }}>
+                      {p.imageUrl
+                        ? <img src={p.imageUrl} alt={p.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Package size={32} color="#d1d5db" />
+                          </div>
+                      }
                     </div>
-                  </div>
-                </button>
-              ))}
+                    {/* Info */}
+                    <div style={{ padding: "12px 14px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                      <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "#111", lineHeight: 1.35 }}>{p.title}</p>
+                      <p style={{ margin: 0, fontSize: 11.5, color: "#6b7280", fontWeight: 600 }}>by {p.vendorName}</p>
+                      {(p.price || minimumOrder) && (
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
+                          {p.price && <span style={{ fontSize: 12, fontWeight: 700, color: "#16a34a" }}>{p.currency} {p.price}</span>}
+                          {minimumOrder && <span style={{ fontSize: 11.5, color: "#9ca3af" }}>MOQ: {minimumOrder}</span>}
+                        </div>
+                      )}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: "auto", color: "#16a34a", fontSize: 12, fontWeight: 700 }}>
+                        Select <ChevronRight size={12} />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

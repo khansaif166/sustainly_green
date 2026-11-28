@@ -105,8 +105,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const SidebarContent = () => (
     <>
       <style>{`
-        .al-logo{padding:18px 14px 14px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between}
-        .al-nav{flex:1;padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:0}
+        .al-logo{flex-shrink:0;padding:18px 14px 14px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between}
+        .al-nav{flex:1;min-height:0;padding:12px 10px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent;display:flex;flex-direction:column;gap:0}
         .al-section-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.22);padding:10px 12px 4px}
         .al-section-label:not(:first-child){margin-top:6px}
         .al-nav-item{display:flex;align-items:center;gap:9px;padding:8.5px 11px;border-radius:11px;font-size:13px;font-weight:600;color:rgba(255,255,255,.5);text-decoration:none;transition:all .15s;border-left:3px solid transparent}
@@ -115,7 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         .al-divider{height:1px;background:rgba(255,255,255,.06);margin:8px 0}
         .al-logout{display:flex;align-items:center;gap:9px;width:100%;padding:9px 11px;border-radius:11px;font-size:13px;font-weight:600;color:rgba(248,113,113,.7);border:none;background:none;cursor:pointer;font-family:inherit;transition:all .15s;text-align:left}
         .al-logout:hover{color:#f87171;background:rgba(239,68,68,.08)}
-        .al-user{padding:12px 14px 18px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:10px}
+        .al-user{flex-shrink:0;min-width:0;padding:12px 14px 18px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:10px}
         .al-avatar{width:32px;height:32px;border-radius:10px;background:rgba(74,222,128,.18);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#4ade80;flex-shrink:0}
       `}</style>
 
@@ -157,9 +157,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* User */}
       <div className="al-user">
         <div className="al-avatar">{initials}</div>
-        <div style={{ minWidth: 0 }}>
-          <p className="app-account-label" style={{ fontWeight: 700, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{adminName}</p>
-          <p style={{ fontSize: 10.5, color: "rgba(255,255,255,.3)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{adminEmail}</p>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="app-account-label" title={adminName} style={{ fontWeight: 700, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{adminName}</p>
+          <p title={adminEmail} style={{ fontSize: 10.5, color: "rgba(255,255,255,.6)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{adminEmail}</p>
         </div>
       </div>
     </>

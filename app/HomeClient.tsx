@@ -57,7 +57,8 @@ export type ProductCard = {
   id: string;
   title: string;
   price: string;
-  unit: string;
+  unit?: string;
+  minimumOrder?: string;
   vendor: string;
   image?: string;
   ecoVerified?: boolean;
@@ -972,10 +973,11 @@ export default function HomeClient({
                     <h3>{product.title}</h3>
                     <div className="product-price-row">
                       <p className="product-price">{product.price}</p>
-                      {!product.price.toLowerCase().includes("request") && (
+                      {product.unit && !product.price.toLowerCase().includes("request") && (
                         <span className="product-unit">/ {product.unit}</span>
                       )}
                     </div>
+                    {product.minimumOrder && <p className="product-unit product-moq">MOQ {product.minimumOrder}</p>}
                     <p className="product-vendor">By: {product.vendor}</p>
                     <p className="verified-label">Approved listing</p>
                   </div>
@@ -1140,10 +1142,11 @@ export default function HomeClient({
                   <h3>{product.title}</h3>
                   <div className="product-price-row">
                     <p className="product-price">{product.price}</p>
-                    {!product.price.toLowerCase().includes("request") && (
+                    {product.unit && !product.price.toLowerCase().includes("request") && (
                       <span className="product-unit">/ {product.unit}</span>
                     )}
                   </div>
+                  {product.minimumOrder && <p className="product-unit product-moq">MOQ {product.minimumOrder}</p>}
                   <p className="product-vendor">By: {product.vendor}</p>
                   <p className="verified-label">Approved listing</p>
                 </div>
@@ -3110,6 +3113,10 @@ export default function HomeClient({
           flex: 0 0 auto;
           color: #60796b;
           font-weight: 500;
+        }
+
+        .product-moq {
+          margin-bottom: 8px;
         }
 
         .split-section .product-info {

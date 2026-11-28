@@ -179,7 +179,7 @@ export async function supabaseServiceFetch<T>(
   };
   const response = retryTransientFailures
     ? await fetchWithRetry(url, init)
-    : await fetch(url, { ...init, signal: AbortSignal.timeout(SUPABASE_FETCH_TIMEOUT_MS) });
+    : await fetch(url, { ...init, signal: init.signal || AbortSignal.timeout(SUPABASE_FETCH_TIMEOUT_MS) });
 
   return parseSupabaseResponse<T>(response);
 }

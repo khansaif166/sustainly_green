@@ -10,6 +10,7 @@ import ProductImagePicker from "@/app/components/product-images/ProductImagePick
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
 import ProductTypeSelect, { type ProductTypeOption } from "@/app/components/ProductTypeSelect";
+import ProductMoqFields from "@/app/components/ProductMoqFields";
 import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 import {
   ArrowLeft, Package, IndianRupee, Leaf, Truck,
@@ -51,6 +52,7 @@ export default function EditProductPage() {
   const [price,              setPrice]              = useState("");
   const [currency,           setCurrency]           = useState("INR");
   const [moq,                setMoq]                = useState("");
+  const [moqUnit, setMoqUnit] = useState("");
   const [discount,           setDiscount]           = useState("");
   const [selectedTags,       setSelectedTags]       = useState<string[]>([]);
   const [sustainabilityClaim,setSustainabilityClaim]= useState("");
@@ -84,6 +86,7 @@ export default function EditProductPage() {
         setPrice(p.price?.toString() || "");
         setCurrency(p.currency || "INR");
         setMoq(p.moq?.toString() || "");
+        setMoqUnit(p.moqUnit || "");
         setDiscount(p.discount || "");
         setSelectedTags(p.sustainabilityTagIds || []);
         setSustainabilityClaim(p.sustainabilityClaim || "");
@@ -110,6 +113,7 @@ export default function EditProductPage() {
   }
 
   const filteredSubs = subCategories.filter(s => s.categoryId === categoryId);
+  const showsPrice = priceType === "Fixed Price" || priceType === "Starts From";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -128,7 +132,7 @@ export default function EditProductPage() {
       const res = await fetch(`/api/vendor/products/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ listingType, title, description, categoryId, subCategoryId, productTypeId, images: ordered, specifications: specificationValues, availableFor, priceType, price, currency, moq, discount, sustainabilityTagIds: selectedTags, sustainabilityClaim, shipRegions, inStock }),
+        body: JSON.stringify({ listingType, title, description, categoryId, subCategoryId, productTypeId, images: ordered, specifications: specificationValues, availableFor, priceType, price, currency, moq, moqUnit, discount, sustainabilityTagIds: selectedTags, sustainabilityClaim, shipRegions, inStock }),
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error?.message || "Update failed.");
@@ -195,8 +199,9 @@ export default function EditProductPage() {
 
         .ep-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
         @media(max-width:500px){.ep-grid2{grid-template-columns:1fr}}
-        .ep-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-        @media(max-width:500px){.ep-grid3{grid-template-columns:1fr}}
+        .ep-commercial-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+        @media(min-width:1024px){.ep-commercial-grid[data-priced="true"]{grid-template-columns:repeat(4,minmax(0,1fr))}}
+        @media(max-width:500px){.ep-commercial-grid{grid-template-columns:1fr}}
 
         .ep-checkbox-row{display:flex;align-items:center;gap:10px;cursor:pointer}
         .ep-checkbox{width:18px;height:18px;border-radius:6px;border:2px solid rgba(0,0,0,.15);appearance:none;cursor:pointer;position:relative;flex-shrink:0;transition:all .15s}
@@ -309,26 +314,34 @@ export default function EditProductPage() {
                 </select>
               </div>
 
-              {(priceType === "Fixed Price" || priceType === "Starts From") && (
-                <div className="ep-grid3">
-                  <div className="ep-field">
-                    <span className="ep-label">Price</span>
-                    <input className="ep-input" type="number" placeholder="e.g. 5000" value={price} onChange={e => setPrice(e.target.value)} />
-                  </div>
-                  <div className="ep-field">
-                    <span className="ep-label">Currency</span>
-                    <select className="ep-select" value={currency} onChange={e => setCurrency(e.target.value)}>
-                      <option value="INR">INR</option>
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                  </div>
-                  <div className="ep-field">
-                    <span className="ep-label">MOQ</span>
-                    <input className="ep-input" placeholder="Min order qty" value={moq} onChange={e => setMoq(e.target.value)} />
-                  </div>
-                </div>
-              )}
+              <div className="ep-commercial-grid" data-priced={showsPrice}>
+                {showsPrice && (
+                  <>
+                    <div className="ep-field">
+                      <span className="ep-label">Price</span>
+                      <input className="ep-input" type="number" placeholder="e.g. 5000" value={price} onChange={e => setPrice(e.target.value)} />
+                    </div>
+                    <div className="ep-field">
+                      <span className="ep-label">Currency</span>
+                      <select className="ep-select" value={currency} onChange={e => setCurrency(e.target.value)}>
+                        <option value="INR">INR</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                <ProductMoqFields
+                  quantity={moq}
+                  unit={moqUnit}
+                  onQuantityChange={setMoq}
+                  onUnitChange={setMoqUnit}
+                  fieldClassName="ep-field"
+                  labelClassName="ep-label"
+                  inputClassName="ep-input"
+                  selectClassName="ep-select"
+                />
+              </div>
 
               <div className="ep-field">
                 <span className="ep-label">Discount / Offer <span style={{ color: "#9ca3af", fontWeight: 500 }}>(optional)</span></span>

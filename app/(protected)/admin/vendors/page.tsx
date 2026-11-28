@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, XCircle, ExternalLink, Search, Trash2, Upload, Download, FileSpreadsheet, Plus, Building2, MapPin, ShieldCheck, ArrowRight, LoaderCircle } from "lucide-react";
+import { CheckCircle2, Clock3, XCircle, ExternalLink, Search, Trash2, Upload, Download, FileSpreadsheet, Plus, Building2, MapPin, ShieldCheck, ArrowRight, LoaderCircle, Store } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { getStoredSession } from "@/lib/supabaseAuth";
 import { getVendorBadgeMeta, VENDOR_BADGES, type VendorBadgeType } from "@/lib/vendorBadges";
@@ -274,15 +274,41 @@ export default function AdminVendorsPage() {
     <>
       <style>{`
         .av-page{display:flex;flex-direction:column;gap:18px;padding-bottom:40px}
-        .av-hero{background:linear-gradient(135deg,#0a1a10 0%,#0f2318 60%,#0c1e13 100%);border-radius:22px;padding:22px 26px;position:relative;overflow:hidden}
-        .av-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 380px 230px at 90% 50%,rgba(22,163,74,.18) 0%,transparent 65%);pointer-events:none}
-        .av-hero-inner{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
-        .av-hero-title{font-size:21px;font-weight:900;color:#fff;margin:0 0 3px;letter-spacing:-.025em}
-        .av-hero-sub{font-size:13px;color:rgba(255,255,255,.38);margin:0}
-        .av-hero-stats{display:flex;gap:20px}
-        .av-hero-stat{text-align:right}
-        .av-hero-stat-val{font-size:26px;font-weight:900;color:#4ade80;letter-spacing:-.03em;line-height:1;margin:0}
-        .av-hero-stat-label{font-size:10.5px;color:rgba(255,255,255,.3);margin:3px 0 0;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+        .av-hero{
+          zoom:.9;
+          display:grid;align-items:center;gap:20px;min-width:0;
+          padding:clamp(16px,2.4vw,28px);border:1px solid #214737;border-radius:18px;
+          background:linear-gradient(115deg,#10291e,#153b2a);
+        }
+        .av-hero-intro{display:flex;align-items:center;gap:14px;min-width:0}
+        .av-hero-icon{
+          display:grid;place-items:center;flex:none;width:52px;height:52px;
+          border:1px solid #426754;border-radius:13px;background:#254c39;color:#b7e8c9;
+        }
+        .av-hero-title{margin:0;color:#f6fcf8;font-size:clamp(21px,2.5vw,29px);font-weight:800;letter-spacing:-.025em;line-height:1.2}
+        .av-hero-sub{margin:6px 0 0;color:#c8ded1;font-size:13px;line-height:1.5}
+        .av-hero-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0;margin:0}
+        .av-hero-stat{
+          --av-stat-color:#f2faf5;
+          display:grid;align-content:start;gap:7px;min-width:0;padding:11px 12px;
+          border:1px solid #426754;border-radius:11px;background:#204332;
+        }
+        .av-hero-stat[data-status=pending]{--av-stat-color:#ffda88}
+        .av-hero-stat[data-status=approved]{--av-stat-color:#9ce8b6}
+        .av-hero-stat dt{display:flex;align-items:center;gap:6px;color:#d2e5d9;font-size:12px;font-weight:650;line-height:1.3}
+        .av-hero-stat dt svg{flex:none;color:var(--av-stat-color)}
+        .av-hero-stat dd{margin:0;color:var(--av-stat-color);font-size:clamp(21px,2.3vw,27px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1;overflow-wrap:anywhere}
+        @media(min-width:1080px){
+          .av-hero{grid-template-columns:minmax(0,1fr) clamp(350px,32vw,420px);gap:24px}
+        }
+        @media(max-width:480px){
+          .av-hero-intro{align-items:flex-start;gap:11px}
+          .av-hero-icon{width:42px;height:42px;border-radius:10px}
+          .av-hero-icon svg{width:21px;height:21px}
+          .av-hero-stat{padding:9px 7px;text-align:center}
+          .av-hero-stat dt{justify-content:center;font-size:11px}
+          .av-hero-stat dt svg{display:none}
+        }
 
         .av-bar{background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:18px;padding:14px 16px;display:flex;gap:12px;flex-wrap:wrap}
         .av-search{position:relative;flex:1;min-width:180px}
@@ -392,30 +418,29 @@ export default function AdminVendorsPage() {
       <div className="av-page">
         <Toaster position="top-right" richColors closeButton duration={4000} />
 
-        {/* Hero */}
-        <div className="av-hero">
-          <div className="av-hero-inner">
+        <header className="av-hero">
+          <div className="av-hero-intro">
+            <span className="av-hero-icon"><Store size={25} aria-hidden="true" /></span>
             <div>
               <h1 className="av-hero-title">Vendor Management</h1>
-              <p className="av-hero-sub">Review registrations, add vendor profiles, and import listings</p>
-            </div>
-            <div className="av-hero-stats">
-              <div className="av-hero-stat">
-                <p className="av-hero-stat-val">{vendors.length}</p>
-                <p className="av-hero-stat-label">Total</p>
-              </div>
-              <div className="av-hero-stat">
-                <p className="av-hero-stat-val" style={{ color: "#fbbf24" }}>{pending}</p>
-                <p className="av-hero-stat-label">Pending</p>
-              </div>
-              <div className="av-hero-stat">
-                <p className="av-hero-stat-val">{approved}</p>
-                <p className="av-hero-stat-label">Approved</p>
-              </div>
+              <p className="av-hero-sub">Review registrations and manage vendor listings.</p>
             </div>
           </div>
-        </div>
-
+          <dl className="av-hero-stats">
+            <div className="av-hero-stat">
+              <dt><Building2 size={14} aria-hidden="true" /> Total</dt>
+              <dd>{vendors.length.toLocaleString("en-IN")}</dd>
+            </div>
+            <div className="av-hero-stat" data-status="pending">
+              <dt><Clock3 size={14} aria-hidden="true" /> Pending</dt>
+              <dd>{pending.toLocaleString("en-IN")}</dd>
+            </div>
+            <div className="av-hero-stat" data-status="approved">
+              <dt><CheckCircle2 size={14} aria-hidden="true" /> Approved</dt>
+              <dd>{approved.toLocaleString("en-IN")}</dd>
+            </div>
+          </dl>
+        </header>
 
         <section className="av-import" aria-labelledby="add-vendor-profiles-title">
           <div className="av-import-head">

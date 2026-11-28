@@ -1,0 +1,90 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import RichProfileEditor from '../../../app/components/rich-vendor/RichProfileEditor';
+
+const root = createRoot(document.getElementById('root'));
+const png = atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1sAAAAASUVORK5CYII=');
+const image = new Blob([Uint8Array.from(png, c => c.charCodeAt(0))], { type: 'image/png' });
+const id = '10000000-0000-4000-8000-000000000002';
+const cover = { id, purpose: 'cover', title: 'Original company cover', sourceUrl: null, mimeType: 'image/png', fileVersion: 'original' };
+let serial = 0;
+window.nativeCreateURL = URL.createObjectURL.bind(URL);
+window.nativeRevokeURL = URL.revokeObjectURL.bind(URL);
+URL.createObjectURL = value => { const url = window.nativeCreateURL(value); window.created.push(url); return url; };
+URL.revokeObjectURL = url => { window.revoked.push(url); window.nativeRevokeURL(url); };
+window.start = async (options = {}) => {
+  window.options = options;
+  window.calls = []; window.created = []; window.revoked = [];
+  window.failSave = false; window.failRefresh = false; window.previewFailure = Boolean(options.previewFailure);
+  window.version = 1;
+  window.profile = {
+    active: options.active ?? true, approved: options.approved ?? true, editable: options.editable ?? true,
+    revision: 0, content: { fields: {}, categories: [], socialLinks: [], certificates: [], awards: [], memberships: [], news: [] },
+    media: options.existing ? [{...cover}] : [],
+    ads: options.banner ? [{ id: 'banner', kind: 'banner', vendorEnabled: true, adminEnabled: true, deleted: false, title: 'Banner' }] : [],
+    href: '/find-vendors/test-company'
+  };
+  root.render(<RichProfileEditor key={++serial} adminVendorId={options.admin === false ? undefined : "10000000-0000-4000-8000-000000000001"} />);
+  await window.pause(); await window.pause();
+  if (options.admin === false) {
+    const details = [...document.querySelectorAll('details')].find(el => el.querySelector(':scope > summary')?.textContent === 'Photos, videos and documents');
+    details.open = true;
+  } else {
+    window.click('Media'); await window.pause(); window.click('Photos and logos');
+  }
+  await window.pause();
+};
+window.fetch = async (url, init = {}) => {
+  if (String(url).includes('/api/rich-vendor-media/')) {
+    window.calls.push({ preview: true, headers: init.headers });
+    return window.previewFailure ? new Response(null, {status: 503}) : new Response(image);
+  }
+  if (init.method === 'PATCH') {
+    const data = init.body instanceof FormData ? Object.fromEntries(init.body) : JSON.parse(init.body);
+    window.calls.push(data);
+    await new Promise(r => setTimeout(r, window.options.delay ?? 30));
+    if (window.failSave) return Response.json({ error: { message: 'Simulated upload failure' } }, { status: 503 });
+    if (data.action === 'delete_media') window.profile.media = window.profile.media.filter(item => item.id !== data.id);
+    else if (data.action === 'add_media' || data.action === 'replace_cover') {
+      window.profile.media = [{...cover, title: data.title, fileVersion: String(++window.version)}];
+    }
+    return Response.json({id});
+  }
+  if (window.failRefresh) return Response.json({error: {message: 'Refresh failed'}}, {status: 503});
+  return Response.json({profile: window.profile, catalog: {categories: [], subcategories: [], bodies: []}});
+};
+window.pause = () => new Promise(r => setTimeout(r, 75));
+window.assert = (ok, message) => { if (!ok) throw Error(message); };
+window.waitFor = async (predicate, message) => {
+  const deadline = performance.now() + 3000;
+  while (!predicate() && performance.now() < deadline) await window.pause();
+  window.assert(predicate(), message);
+};
+window.click = (text, scope = document) => {
+  const button = [...scope.querySelectorAll('button')].find(el => el.textContent.trim() === text);
+  window.assert(button, `Missing button ${text}`); button.click(); return button;
+};
+window.card = () => [...document.querySelectorAll('h4')].find(el => el.textContent === 'Cover image')?.closest('section');
+window.fileInput = () => window.card().querySelector('input[type="file"]');
+window.selectFile = async file => {
+  const transfer = new DataTransfer(); transfer.items.add(file);
+  const input = window.fileInput(); input.files = transfer.files; input.dispatchEvent(new Event('change', {bubbles: true}));
+  await window.pause(); await window.pause();
+};
+window.goodFile = async (type = 'image/png', name = 'company_cover.png') => {
+  const canvas = document.createElement('canvas'); canvas.width = 1600; canvas.height = 400;
+  const ctx = canvas.getContext('2d'); ctx.fillStyle = '#285743'; ctx.fillRect(0,0,1600,400);
+  const blob = await new Promise(resolve => canvas.toBlob(resolve,type));
+  return new File([blob], name, {type});
+};
+window.submitCover = async () => {
+  const form = window.card().querySelector('form');
+  form.dispatchEvent(new Event('submit', {bubbles: true,cancelable: true}));
+  await window.pause();
+  await window.waitFor(() => form.getAttribute('aria-busy') === 'false', 'Cover save did not finish');
+};
+window.change = (input, value) => {
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+};
+window.ready = true;

@@ -42,7 +42,7 @@ w.fetch=async (path:string,options:any={})=>{
  if(path.endsWith('/master/product-types'))return response({items:currentTypes});
  if(path.includes('masters=1'))return response({masters:masters()});
  if(path==='/api/vendor/catalog')return response({categories,subcategories,productTypes:currentTypes,tags:[]});
- if(/\/products\//.test(path))return response({product:{id:uuid(80),vendorId:i.vendor,title:'Existing test product',description:'Sustainable computer equipment '.repeat(160),listingType:'Product',categoryId:i.cat,subCategoryId:i.sub,productTypeId:w.inactiveEdit?i.inactive:i.type,priceType:'Price on Request',availableFor:['B2B'],images:[],specifications:[],sustainabilityTagIds:[],shipRegions:[],currency:'INR',inStock:true},masters:masters()});
+ if(/\/products\//.test(path))return response({product:{id:uuid(80),vendorId:i.vendor,title:'Existing test product',description:'Sustainable computer equipment '.repeat(160),listingType:'Product',categoryId:i.cat,subCategoryId:i.sub,productTypeId:w.inactiveEdit?i.inactive:i.type,priceType:'Price on Request',availableFor:['B2B'],images:[],specifications:[],sustainabilityTagIds:[],shipRegions:[],currency:'INR',inStock:true,moq:w.editMoq?.quantity,moqUnit:w.editMoq?.unit},masters:masters()});
  throw new Error('Unexpected mock URL '+path);
 };
 w.requestedVersion=0;w.renderedVersion=0;
@@ -64,7 +64,7 @@ w.commitNavigation=(url:string,replace=false,writeHistory=true)=>{
 window.addEventListener('popstate',()=>{w.search=new URLSearchParams(location.search);renderFixture();});
 w.mount=(name:string,opts:any={})=>{
  currentName=name;currentOptions=opts;mountKey++;
- w.calls=[];w.nav=null;w.forceError=false;w.inactiveEdit=opts.inactive||false;w.confirmations=[];w.alerts=[];w.search=new URLSearchParams(opts.search||'');w.navigations=[];w.refreshes=0;w.autoNavigate=opts.autoNavigate||false;w.loadError=opts.loadError||false;w.recoverOnRetry=false;
+ w.calls=[];w.nav=null;w.forceError=false;w.inactiveEdit=opts.inactive||false;w.editMoq=opts.moq;w.confirmations=[];w.alerts=[];w.search=new URLSearchParams(opts.search||'');w.navigations=[];w.refreshes=0;w.autoNavigate=opts.autoNavigate||false;w.loadError=opts.loadError||false;w.recoverOnRetry=false;
  currentTypes=(opts.empty?[]:types).map(t=>({...t}));
  renderFixture();
 };

@@ -15,7 +15,7 @@ async function check(name,fn){try{await fn();results.push({name,status:'PASS'});
  create schema storage;create table storage.buckets(id text primary key,name text,public boolean);
  create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,owner_id text,metadata jsonb);
  alter table storage.objects enable row level security;grant usage on schema public,auth,storage to anon,authenticated,service_role;`);
- for(const file of ['20260623055559_initial_sustainly_schema.sql','20260623070000_vendor_claims.sql','20260726090000_product_eco_verified_badge.sql','20261101090000_product_spreadsheet_import.sql','20261102090000_product_specifications.sql','20261116090000_product_types.sql'])await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'));
+ for(const file of ['20260623055559_initial_sustainly_schema.sql','20260623070000_vendor_claims.sql','20260726090000_product_eco_verified_badge.sql','20261101090000_product_spreadsheet_import.sql','20261102090000_product_specifications.sql','20261116090000_product_types.sql','20261127095000_fix_assigned_product_type_visibility.sql'])await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'));
  await db.exec('grant select,insert,update,delete on all tables in schema public to anon,authenticated,service_role; grant all on all tables in schema auth,storage to service_role;');
  results.push({name:'Apply base, import, specifications and product type migrations',status:'PASS'});
  const ids={};for(const k of ['adminU','admin','vendorU','vendorProfile','buyerU','buyer','vendor','cat','otherCat','sub','otherSub','freeSub','type','otherType','freeType','product'])ids[k]=randomUUID();
@@ -46,6 +46,16 @@ async function check(name,fn){try{await fn();results.push({name,status:'PASS'});
  await check('Existing inactive type preserved on unrelated edit',()=>db.query('update products set price=125,product_type_id=$1 where id=$2',[ids.type,ids.product]));
  await check('Public can read inactive type assigned to an approved product',async()=>{
   await db.exec('set role anon');try{const r=await db.query('select id from product_types where id=$1',[ids.type]);assert.equal(r.rows.length,1,'Inactive assigned type disappeared from public reads');}finally{await db.exec('reset role');}
+ });
+ await check('Public cannot read an inactive type whose assigned product is pending',async()=>{
+  await db.query('update products set approved=false where id=$1',[ids.product]);
+  await db.exec('set role anon');
+  try {
+   assert.equal((await db.query('select id from product_types where id=$1',[ids.type])).rows.length,0);
+  } finally {
+   await db.exec('reset role');
+   await db.query('update products set approved=true where id=$1',[ids.product]);
+  }
  });
  await check('Non-admin cannot create product types',async()=>{
   await db.exec('set role authenticated');try{await assert.rejects(db.query('insert into product_types(subcategory_id,name) values($1,$2)',[ids.sub,'Unauthorized type']),e=>e.code==='42501');}finally{await db.exec('reset role');}

@@ -10,6 +10,7 @@ import ProductImagePicker from "@/app/components/product-images/ProductImagePick
 import { useProductImages } from "@/app/components/product-images/useProductImages";
 import ProductSpecificationsEditor from "@/app/components/product-specifications/ProductSpecificationsEditor";
 import ProductTypeSelect, { type ProductTypeOption } from "@/app/components/ProductTypeSelect";
+import ProductMoqFields from "@/app/components/ProductMoqFields";
 import { useProductSpecifications } from "@/app/components/product-specifications/useProductSpecifications";
 
 const LISTING_TYPES = ["Product", "Service"];
@@ -41,6 +42,7 @@ export default function AdminAddProductPage() {
   const [price,             setPrice]             = useState("");
   const [currency,          setCurrency]          = useState("INR");
   const [moq,               setMoq]               = useState("");
+  const [moqUnit, setMoqUnit] = useState("");
   const [discount,          setDiscount]          = useState("");
 
   const [selectedTags,      setSelectedTags]      = useState<string[]>([]);
@@ -83,6 +85,7 @@ export default function AdminAddProductPage() {
   }
 
   const filteredSubCats = subCategories.filter(s => s.categoryId === categoryId);
+  const showsPrice = priceType === "Fixed Price" || priceType === "Starts From";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -104,7 +107,7 @@ export default function AdminAddProductPage() {
           categoryId, subCategoryId, productTypeId,
           images: orderedImages,
           specifications: specificationValues,
-          priceType, price, currency, moq, discount,
+          priceType, price, currency, moq, moqUnit, discount,
           shipRegions, inStock,
           sustainabilityTagIds: selectedTags,
           sustainabilityClaim,
@@ -154,7 +157,9 @@ export default function AdminAddProductPage() {
 
 
         .apn-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-        .apn-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+        .apn-commercial-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+        @media(min-width:1024px){.apn-commercial-grid[data-priced="true"]{grid-template-columns:repeat(4,minmax(0,1fr))}}
+        @media(max-width:500px){.apn-commercial-grid{grid-template-columns:1fr}}
         .apn-checkbox{display:flex;align-items:center;gap:9px;font-size:13px;color:#374151;cursor:pointer}
         .apn-checkbox input{width:16px;height:16px;accent-color:#16a34a;cursor:pointer}
 
@@ -275,22 +280,29 @@ export default function AdminAddProductPage() {
                   {PRICE_TYPES.map(p => <option key={p}>{p}</option>)}
                 </select>
               </div>
-              {(priceType === "Fixed Price" || priceType === "Starts From") && (
-                <div className="apn-3col">
-                  <div>
-                    <p className="apn-label">Price</p>
-                    <input className="apn-input" type="number" placeholder="0" value={price} onChange={e => setPrice(e.target.value)} />
-                  </div>
-                  <div>
-                    <p className="apn-label">Currency</p>
-                    <input className="apn-input" placeholder="INR" value={currency} onChange={e => setCurrency(e.target.value)} />
-                  </div>
-                  <div>
-                    <p className="apn-label">MOQ</p>
-                    <input className="apn-input" placeholder="Optional" value={moq} onChange={e => setMoq(e.target.value)} />
-                  </div>
-                </div>
-              )}
+              <div className="apn-commercial-grid" data-priced={showsPrice}>
+                {showsPrice && (
+                  <>
+                    <div>
+                      <p className="apn-label">Price</p>
+                      <input className="apn-input" type="number" placeholder="0" value={price} onChange={e => setPrice(e.target.value)} />
+                    </div>
+                    <div>
+                      <p className="apn-label">Currency</p>
+                      <input className="apn-input" placeholder="INR" value={currency} onChange={e => setCurrency(e.target.value)} />
+                    </div>
+                  </>
+                )}
+                <ProductMoqFields
+                  quantity={moq}
+                  unit={moqUnit}
+                  onQuantityChange={setMoq}
+                  onUnitChange={setMoqUnit}
+                  labelClassName="apn-label"
+                  inputClassName="apn-input"
+                  selectClassName="apn-select"
+                />
+              </div>
               <div>
                 <p className="apn-label">Discount / Offer</p>
                 <input className="apn-input" placeholder="Eg: 10% off on bulk orders (optional)" value={discount} onChange={e => setDiscount(e.target.value)} />
